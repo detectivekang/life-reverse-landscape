@@ -2510,14 +2510,17 @@ function nextVipTier() {
 }
 
 // ===== 미니게임 랭크 (누적으로 딴 돈 기준, 롤 티어 스타일) =====
+// 메인 게임 후반 재화가 조~경 단위까지 올라가기 때문에, 등급 기준도 그 스케일에 맞춰
+// 넉넉하게 잡아야 최고 등급이 변별력을 유지한다.
 const rankTiers = [
   { name: '브론즈', threshold: 0, icon: '🟫' },
-  { name: '실버', threshold: 10000000, icon: '⚪' },
-  { name: '골드', threshold: 100000000, icon: '🟡' },
-  { name: '플래티넘', threshold: 1000000000, icon: '🔷' },
-  { name: '다이아몬드', threshold: 10000000000, icon: '💎' },
-  { name: '마스터', threshold: 100000000000, icon: '🟣' },
-  { name: '챔피언', threshold: 1000000000000, icon: '👑' }
+  { name: '실버', threshold: 1e8, icon: '⚪' },        // 1억
+  { name: '골드', threshold: 1e10, icon: '🟡' },       // 100억
+  { name: '플래티넘', threshold: 1e12, icon: '🔷' },   // 1조
+  { name: '다이아몬드', threshold: 1e14, icon: '💎' }, // 100조
+  { name: '마스터', threshold: 1e16, icon: '🟣' },     // 1경
+  { name: '그랜드마스터', threshold: 1e18, icon: '🔴' }, // 100경
+  { name: '챔피언', threshold: 1e20, icon: '👑' }      // 1해
 ];
 function getRankTier() {
   let tier = rankTiers[0];
