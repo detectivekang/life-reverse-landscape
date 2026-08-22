@@ -3,6 +3,31 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<script>
+// ===== 자동 업데이트 확인 =====
+// GitHub Pages/브라우저 캐시 때문에 파일을 새로 올려도 예전 화면이 계속 보이는 문제를 막기 위한 장치.
+// 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
+// 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
+(function() {
+  var CURRENT_VERSION = '2026082211';
+  try {
+    if (sessionStorage.getItem('lrVersionChecked') === CURRENT_VERSION) return;
+    fetch(location.pathname + '?_cb=' + Date.now(), { cache: 'no-store' })
+      .then(function(r) { return r.text(); })
+      .then(function(html) {
+        sessionStorage.setItem('lrVersionChecked', CURRENT_VERSION);
+        var m = html.match(/CURRENT_VERSION\s*=\s*'(\d+)'/);
+        if (m && m[1] !== CURRENT_VERSION) {
+          location.href = location.pathname + '?v=' + Date.now();
+        }
+      })
+      .catch(function() {});
+  } catch (e) {}
+})();
+</script>
 <title>인생역전 - 무일푼에서 글로벌 재벌까지</title>
 <meta name="description" content="탭 하나로 시작하는 인생 역전 방치형(放置形) 게임. 노숙자에서 시작해 상가, 행운의 거리, 월드 비즈니스까지 확장하며 재벌이 되어보세요.">
 <meta name="theme-color" content="#3A2E1F">
