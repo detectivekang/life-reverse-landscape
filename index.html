@@ -12,7 +12,7 @@
 // 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
 // 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
 (function() {
-  var CURRENT_VERSION = '2026082211';
+  var CURRENT_VERSION = '2026082212';
   try {
     if (sessionStorage.getItem('lrVersionChecked') === CURRENT_VERSION) return;
     fetch(location.pathname + '?_cb=' + Date.now(), { cache: 'no-store' })
@@ -1155,6 +1155,32 @@ function getWealthTitle() {
   let title = wealthTitles[0];
   wealthTitles.forEach(t => { if (totalEarned >= t.threshold) title = t; });
   return title;
+}
+function getWealthTitleIndex() {
+  let idx = 0;
+  wealthTitles.forEach((t, i) => { if (totalEarned >= t.threshold) idx = i; });
+  return idx;
+}
+
+// ===== 칭호에 따라 함께 올라가는 카지노 판돈 단위 =====
+// 10^exp 값을 "백만/천만/억/십억/백억/..." 같은 한국식 단위 이름으로 변환
+const magnitudeUnits = ['', '만', '억', '조', '경', '해', '자', '양', '구', '간', '정'];
+const magnitudeSub = ['', '십', '백', '천'];
+function magnitudeLabel(exp) {
+  const g = Math.floor(exp / 4);
+  const r = exp % 4;
+  return magnitudeSub[r] + (magnitudeUnits[g] || '');
+}
+// 칭호가 오를 때마다(가진 돈 기준) 판돈 단위도 한 단계씩 위로 밀려 올라간다.
+// 예) 칭호 1단계: 백만/천만/억/십억  →  칭호 2단계: 천만/억/십억/백억  → ...
+function getBetChipDefs() {
+  const startExp = 6 + getWealthTitleIndex();
+  const chips = [];
+  for (let i = 0; i < 4; i++) {
+    const exp = startExp + i;
+    chips.push({ amount: Math.pow(10, exp), label: '+' + magnitudeLabel(exp) });
+  }
+  return chips;
 }
 
 const boosters = {
@@ -2587,7 +2613,7 @@ function checkPeriodRollover() {
 function adjustBet(val) {
   if (val === 'reset') casinoBet = 0;
   else if (val === 'allin') casinoBet = Math.floor(money);
-  else casinoBet = Math.min(Math.floor(money), casinoBet + parseInt(val));
+  else casinoBet = Math.min(Math.floor(money), casinoBet + parseFloat(val));
   const el = document.getElementById('betAmountText');
   if (el) el.textContent = formatWon(casinoBet) + '원';
 }
@@ -2800,11 +2826,8 @@ function renderCasinoPanel() {
       <span class="bet-amount" id="betAmountText">${formatWon(casinoBet)}원</span>
     </div>
     <div class="chip-row">
-      <button class="chip-btn" data-add="10000000">+1천만</button>
-      <button class="chip-btn" data-add="100000000">+1억</button>
-      <button class="chip-btn" data-add="1000000000">+10억</button>
-      <button class="chip-btn" data-add="10000000000">+100억</button>
-      <button class="chip-btn" data-add="allin">가진 돈 전부</button>
+      ${getBetChipDefs().map(c => `<button class="chip-btn" data-add="${c.amount}">${c.label}</button>`).join('')}
+      <button class="chip-btn" data-add="allin">전체</button>
       <button class="chip-btn" data-add="reset">초기화</button>
     </div>
     ${gameHtml}
