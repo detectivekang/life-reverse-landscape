@@ -1599,7 +1599,7 @@ function renderUpgrade() {
   }
   card.classList.toggle('disabled', !affordable);
   document.getElementById('upgradeName').textContent = `💪 ${cu.name}`;
-  document.getElementById('upgradeMeta').textContent = `레벨업 시 +${cu.add}원 · Lv.${lv} · 현재 클릭 수익 ${formatWon(getClickValue())}원`;
+  document.getElementById('upgradeMeta').textContent = `레벨업 시 Lv.${lv} · 현재 클릭 수익 ${formatWon(getClickValue())}원`;
   document.getElementById('upgradeCostText').textContent = `${formatWon(cost)}원`;
 }
 
