@@ -1174,9 +1174,15 @@ function getSpeedMult() { return boosters.speed15.remaining > 0 ? boosters.speed
 function getClickMult() { return boosters.click5.remaining > 0 ? boosters.click5.mult : 1; }
 
 function getClickValue() {
-  let val = baseClickValue;
-  for (let s = 0; s < stages.length; s++) val += clickUpgradeLevel[s] * stages[s].clickUpgrade.add;
-  return val * getClickMult() * prestigeMult * getCollectionMult() * getAchievementMult();
+  let flatVal = baseClickValue;
+  for (let s = 0; s < stages.length; s++) flatVal += clickUpgradeLevel[s] * stages[s].clickUpgrade.add;
+  flatVal *= getClickMult() * prestigeMult * getCollectionMult() * getAchievementMult();
+  // 상가/월드비즈니스 단계로 진출하면 클릭 업그레이드가 더 이상 없어서 클릭 수익이
+  // 초반 수준(900원대)에 계속 고정돼 보이는 문제가 있었음. 그래서 클릭 수익에
+  // "현재 초당 자동수입의 일정 비율"을 함께 더해서, 사업 규모가 커질수록 클릭 수익도
+  // 자연스럽게 같이 커지도록 한다.
+  const passiveBonus = passiveTotalLabel() * 0.05;
+  return flatVal + passiveBonus;
 }
 function passiveTotalLabel() {
   let total = 0;
@@ -1568,7 +1574,7 @@ function renderUpgrade() {
   }
   card.classList.toggle('disabled', !affordable);
   document.getElementById('upgradeName').textContent = `💪 ${cu.name}`;
-  document.getElementById('upgradeMeta').textContent = `클릭당 +${cu.add}원 · Lv.${lv}`;
+  document.getElementById('upgradeMeta').textContent = `레벨업 시 +${cu.add}원 · Lv.${lv} · 현재 클릭 수익 ${formatWon(getClickValue())}원`;
   document.getElementById('upgradeCostText').textContent = `${formatWon(cost)}원`;
 }
 
