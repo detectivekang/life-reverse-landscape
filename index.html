@@ -12,7 +12,7 @@
 // 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
 // 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
 (function() {
-  var CURRENT_VERSION = '2026082211';
+  var CURRENT_VERSION = '2026082214';
   try {
     if (sessionStorage.getItem('lrVersionChecked') === CURRENT_VERSION) return;
     fetch(location.pathname + '?_cb=' + Date.now(), { cache: 'no-store' })
