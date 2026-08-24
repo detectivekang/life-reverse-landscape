@@ -54,6 +54,22 @@ service cloud.firestore {
         // 랭킹판에 올라가는 금액도 저장본(saves)의 casinoTotalWinnings를 벗어날 수 없게 이중 확인
         && request.resource.data.amount <= get(/databases/$(database)/documents/saves/$(userId)).data.casinoTotalWinnings + 1;
     }
+    // 주간/월간 랭킹은 컬렉션 이름 자체에 기간이 들어가서(leaderboard_weekly_2026-W34 등)
+    // 매번 새 컬렉션이 생기므로, 이름 패턴으로 와일드카드 매칭해서 같은 방식으로 검증한다.
+    // (이 블록은 이름이 패턴에 안 맞으면 항상 false를 반환하므로 위 saves/leaderboard 규칙엔 영향 없음)
+    match /{coll}/{userId} {
+      allow read: if coll.matches('^leaderboard_weekly_.*$') || coll.matches('^leaderboard_monthly_.*$');
+      allow write: if request.auth != null && request.auth.uid == userId
+        && request.resource.data.amount is number
+        && request.resource.data.amount >= 0
+        && (
+          (coll.matches('^leaderboard_weekly_.*$')
+            && request.resource.data.amount <= get(/databases/$(database)/documents/saves/$(userId)).data.weeklyWinnings + 1)
+          ||
+          (coll.matches('^leaderboard_monthly_.*$')
+            && request.resource.data.amount <= get(/databases/$(database)/documents/saves/$(userId)).data.monthlyWinnings + 1)
+        );
+    }
   }
 
   function isPlausibleSave() {
@@ -97,6 +113,7 @@ service cloud.firestore {
 - `saves`: 최초 생성은 자유, 이후 덮어쓰기는 **일반 진행(직전 저장 이후 경과 시간 × 이론상 최대 초당 수입을 넘지 않음)** 이거나 **환생(총 수입·보유금이 0으로 리셋되고 프레스티지 포인트만 정상 범위로 늘어남)** 둘 중 하나일 때만 허용됩니다. 조작으로 누적수입을 순간적으로 몇 자릿수씩 뻥튀기해서 저장하면 저장 자체가 거부돼요.
 - 카지노로 딴 돈은 `totalEarned`엔 안 잡히고 `money`에만 더해지는 구조라, `money`의 상한은 `totalEarned + casinoTotalWinnings`까지 허용하고, `casinoTotalWinnings` 자체도 별도의 증가 속도 상한을 둡니다.
 - `leaderboard`: 카지노 누적 수익금도 `saves` 문서의 값과 대조해서, 랭킹판 조작(saves는 안 건드리고 leaderboard 문서만 직접 조작)까지 함께 막습니다.
+- `leaderboard_weekly_*` / `leaderboard_monthly_*`: 컬렉션 이름 자체가 기간별로 바뀌기 때문에 정규식 패턴(`coll.matches(...)`)으로 와일드카드 매칭해서, 마찬가지로 `saves` 문서의 `weeklyWinnings`/`monthlyWinnings`와 대조합니다. 이 블록이 없으면 이 두 컬렉션은 무방비이거나(테스트 모드) 아예 안 써질 수 있어요(엄격 모드).
 - 위 `maxIncomePerSec` / `maxCasinoGainPerSec` 값은 게임 밸런스(특히 map5Jobs 최고 등급 수입, 부스터 배율, 환생 배율, 카지노 최고 배당)를 참고해서 "정상적으로 절대 넘을 수 없는" 값으로 넉넉히 잡아야 합니다. 너무 타이트하게 잡으면 정상 플레이도 막힐 수 있으니, 실제 최고 등급 수입 × 부스터 배율 × 환생 배율을 계산해 몇 배 여유를 둔 값으로 넣어주세요.
 - 이 검증은 "잡레벨(jobLevels)을 실제로 돈 주고 산 게 맞는지"까지는 확인하지 않습니다(그건 구매 내역 전체를 서버가 재계산해야 해서 훨씬 큰 작업이에요). 다만 잡레벨을 조작해도 `totalEarned` 증가 속도 자체가 위 상한에 막히기 때문에, 실질적인 이득(돈 자체를 불리는 것)은 여전히 차단됩니다.
 - 완화된 규칙은 "로그인만 하면 아무 문서나 접근 가능"이라 보안이 약해지니, 가능하면 2번을 진행하세요.)
