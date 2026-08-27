@@ -17,13 +17,13 @@
 
 ```js
 const firebaseConfig = {
-  apiKey: "AIzaSyCOb3K_f97ixIh38jMa8VBwtG-VvyPX5MY",
-  authDomain: "life-reverse.firebaseapp.com",
-  projectId: "life-reverse",
-  storageBucket: "life-reverse.firebasestorage.app",
-  messagingSenderId: "577288194017",
-  appId: "1:577288194017:web:8eaf748df1e1553b7234a0",
-  measurementId: "G-18DGRBJ484"
+  apiKey: "AIzaSyCsQpXhZF6q7L-gWgOd2NcKbA0ya-jikz0",
+  authDomain: "life-reverse-d643d.firebaseapp.com",
+  projectId: "life-reverse-d643d",
+  storageBucket: "life-reverse-d643d.firebasestorage.app",
+  messagingSenderId: "570917473549",
+  appId: "1:570917473549:web:cc2dbdf9a83d1df591f444",
+  measurementId: "G-NZ48LCTKZ6"
 };
 ```
 
@@ -105,10 +105,12 @@ service cloud.firestore {
       // 카지노에서 딴 돈은 totalEarned에는 안 잡히고 money에만 더해지므로,
       // money의 상한은 "totalEarned + 지금까지 카지노로 번 누적 수익"까지 허용
       && neu.money <= neu.totalEarned + neu.casinoTotalWinnings + buffer
-      // 프레스티지 포인트는 환생 때가 아니어도 "주간 랭킹 시즌 보상"으로 소폭 늘 수 있음(최대 10P).
-      // 그 외에는 절대 줄거나 큰 폭으로 늘 수 없다.
+      // 프레스티지 포인트는 환생 때가 아니어도 늘 수 있는 경로가 두 가지 있음:
+      // 주간 랭킹 시즌 보상(최대 10P) + 카지노 상점의 특성 포인트 교환권(회당 1P, 코인만
+      // 있으면 짧은 시간에 여러 번 살 수 있음). 정상적인 몰아사기까지 커버하도록
+      // 넉넉하게 100P까지 허용하고, 그 이상은 조작으로 간주해 거부한다.
       && neu.prestigePoints >= old.prestigePoints
-      && neu.prestigePoints <= old.prestigePoints + 20;
+      && neu.prestigePoints <= old.prestigePoints + 100;
 
     let rebirthCaseOk = isRebirth
       && neu.totalEarned <= buffer
@@ -126,7 +128,7 @@ service cloud.firestore {
 }
 ```
 
-- `saves`: **최초 저장(create)도 검증합니다** — 신규 계정인데 `totalEarned`/`money`/`casinoTotalWinnings`가 1억원을 넘거나, 환생·프레스티지 포인트가 이미 있는 상태로 시작하면 거부됩니다(비교할 "직전 값"이 없다는 점을 악용해 처음부터 조작된 값으로 로그인하는 걸 막기 위함). 클라이언트도 `totalEarned`가 1억원을 넘으면 비로그인 상태에서는 더 이상 돈이 늘지 않고 구글 로그인 모달이 강제로 뜨도록 막아뒀고(로그인 전까지 닫기 불가), 첫 클라우드 업로드 시점에도 1억원 초과분은 클라이언트에서 잘라내고 올리므로, 이 서버 쪽 상한은 개발자도구 등으로 게이트를 우회한 경우를 잡아내는 이중 방어선입니다. 이후 덮어쓰기(update)는 **일반 진행(직전 저장 이후 경과 시간 × 이론상 최대 초당 수입을 넘지 않음, 프레스티지 포인트는 주간 랭킹 시즌 보상으로 최대 20P까지만 늘 수 있음)** 이거나 **환생(총 수입·보유금이 0으로 리셋되고 프레스티지 포인트만 정상 범위로 늘어남)** 둘 중 하나일 때만 허용됩니다.
+- `saves`: **최초 저장(create)도 검증합니다** — 신규 계정인데 `totalEarned`/`money`/`casinoTotalWinnings`가 1억원을 넘거나, 환생·프레스티지 포인트가 이미 있는 상태로 시작하면 거부됩니다(비교할 "직전 값"이 없다는 점을 악용해 처음부터 조작된 값으로 로그인하는 걸 막기 위함). 클라이언트도 `totalEarned`가 1억원을 넘으면 비로그인 상태에서는 더 이상 돈이 늘지 않고 구글 로그인 모달이 강제로 뜨도록 막아뒀고(로그인 전까지 닫기 불가), 첫 클라우드 업로드 시점에도 1억원 초과분은 클라이언트에서 잘라내고 올리므로, 이 서버 쪽 상한은 개발자도구 등으로 게이트를 우회한 경우를 잡아내는 이중 방어선입니다. 이후 덮어쓰기(update)는 **일반 진행(직전 저장 이후 경과 시간 × 이론상 최대 초당 수입을 넘지 않음, 프레스티지 포인트는 주간 랭킹 시즌 보상·카지노 상점 교환권으로 최대 100P까지만 늘 수 있음)** 이거나 **환생(총 수입·보유금이 0으로 리셋되고 프레스티지 포인트만 정상 범위로 늘어남)** 둘 중 하나일 때만 허용됩니다.
 - 카지노로 딴 돈은 `totalEarned`엔 안 잡히고 `money`에만 더해지는 구조라, `money`의 상한은 `totalEarned + casinoTotalWinnings`까지 허용하고, `casinoTotalWinnings` 자체도 별도의 증가 속도 상한을 둡니다.
 - `leaderboard`: 카지노 누적 수익금도 `saves` 문서의 값과 대조해서, 랭킹판 조작(saves는 안 건드리고 leaderboard 문서만 직접 조작)까지 함께 막습니다.
 - `leaderboard_weekly_*` / `leaderboard_monthly_*`: 컬렉션 이름 자체가 기간별로 바뀌기 때문에 정규식 패턴(`coll.matches(...)`)으로 와일드카드 매칭해서, 마찬가지로 `saves` 문서의 `weeklyWinnings`/`monthlyWinnings`와 대조합니다. 이 블록이 없으면 이 두 컬렉션은 무방비이거나(테스트 모드) 아예 안 써질 수 있어요(엄격 모드).
