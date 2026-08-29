@@ -82,6 +82,24 @@ service cloud.firestore {
             && request.resource.data.amount <= get(/databases/$(database)/documents/saves/$(userId)).data.monthlyWinnings + 1)
         );
     }
+    // 친구 초대(바이럴 루프). 문서 ID = 초대받은 사람의 uid.
+    match /referrals/{newUserId} {
+      // 로그인한 사람이면 누구나 읽을 수 있어야, "내가 초대한 사람 목록"을 referrerUid로
+      // 조회해서 보상을 셀프 수령할 수 있다 (초대한 사람이 남의 uid로 직접 못 쓰니, 이 방식으로
+      // 본인이 스스로 가져가게 한다). 랭킹/돈처럼 민감한 데이터가 아니라 읽기는 넉넉하게 허용.
+      allow read: if request.auth != null;
+      // 최초 생성은 "초대받은 그 신규 계정 본인"만, 자기 자신을 초대할 순 없고 claimed는 항상 false로 시작.
+      allow create: if request.auth != null && request.auth.uid == newUserId
+        && request.resource.data.referrerUid is string
+        && request.resource.data.referrerUid != newUserId
+        && request.resource.data.claimed == false;
+      // 이후 수정은 딱 하나만 허용: referrerUid는 그대로 두고 claimed를 false->true로 뒤집는 것.
+      // (초대한 사람이 보상을 셀프 수령하면서 "다 받았다"고 표시하는 용도)
+      allow update: if request.auth != null
+        && resource.data.claimed == false
+        && request.resource.data.claimed == true
+        && request.resource.data.referrerUid == resource.data.referrerUid;
+    }
   }
 
   function isPlausibleSave() {
