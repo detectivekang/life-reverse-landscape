@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://detectivekang.github.io/life-reverse-landscape/sitemap.xml

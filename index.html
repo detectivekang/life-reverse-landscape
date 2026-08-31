@@ -153,6 +153,13 @@
     padding: 7px 10px; animation: seasonBannerShimmer 3s linear infinite;
   }
   @keyframes seasonBannerShimmer { 0% { background-position: 0% 0; } 100% { background-position: 200% 0; } }
+  #installBanner {
+    flex: 0 0 auto; display: flex; align-items: center; justify-content: center; gap: 10px;
+    font-size: 11.5px; color: var(--paper); background: #2A241D; border-bottom: 1px solid var(--gold-dim);
+    padding: 8px 10px;
+  }
+  #installBannerBtn { background: var(--gold); color: var(--ink); border: none; border-radius: 8px; padding: 5px 12px; font-size: 11px; font-weight: bold; cursor: pointer; }
+  #installBannerCloseBtn { background: none; border: none; color: var(--paper-dim); font-size: 13px; cursor: pointer; padding: 0 4px; }
   .map-switch { display: flex; gap: 3px; background: #2A241D; border-radius: 14px; padding: 3px; flex: 0 0 auto; }
   .map-btn { border: none; background: transparent; color: var(--paper-dim); font-size: 10.5px; padding: 4px 9px; border-radius: 11px; cursor: pointer; white-space: nowrap; }
   .map-btn.active { background: var(--gold); color: var(--ink); font-weight: bold; }
@@ -742,6 +749,11 @@
     </div>
   </div>
   <div id="seasonEventBanner" style="display:none;"></div>
+  <div id="installBanner" style="display:none;">
+    <span>📲 홈 화면에 추가하면 앱처럼 바로 켤 수 있어요!</span>
+    <button id="installBannerBtn">추가하기</button>
+    <button id="installBannerCloseBtn">✕</button>
+  </div>
 
   <div id="part1Screen">
     <div class="scene">
@@ -4307,6 +4319,46 @@ initFirebase();
 // 아니지만, 탭을 완전히 종료하지 않는 대다수 상황에선 잘 동작한다.
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js').catch(e => console.warn('서비스워커 등록 실패:', e));
+}
+
+// ===== 홈 화면에 추가(PWA 설치) 유도 배너 =====
+// 처음 들어오자마자 권유하면 이탈률만 올라가니, 어느 정도 놀고 나서(2분 뒤) 자연스럽게
+// 띄운다. 이미 설치했거나 한 번 닫았으면 다시 안 뜨게 로컬스토리지에 기록해둔다.
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  if (localStorage.getItem('installBannerDismissed')) return;
+  setTimeout(() => {
+    if (deferredInstallPrompt) document.getElementById('installBanner').style.display = 'flex';
+  }, 120000); // 2분 후
+});
+document.getElementById('installBannerBtn').addEventListener('click', async () => {
+  document.getElementById('installBanner').style.display = 'none';
+  if (!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt = null;
+});
+document.getElementById('installBannerCloseBtn').addEventListener('click', () => {
+  document.getElementById('installBanner').style.display = 'none';
+  localStorage.setItem('installBannerDismissed', '1');
+});
+window.addEventListener('appinstalled', () => {
+  document.getElementById('installBanner').style.display = 'none';
+});
+
+// iOS 사파리는 beforeinstallprompt 자체가 없어서(애플이 지원 안 함), "공유 -> 홈 화면에
+// 추가"를 직접 안내해야 한다. 이미 PWA로 실행 중이면(standalone) 안 띄운다.
+const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+if (isIos && !isStandalone && !localStorage.getItem('installBannerDismissed')) {
+  setTimeout(() => {
+    const banner = document.getElementById('installBanner');
+    banner.querySelector('span').textContent = '📲 공유 버튼(⬆️) → "홈 화면에 추가"를 누르면 앱처럼 쓸 수 있어요!';
+    document.getElementById('installBannerBtn').style.display = 'none';
+    banner.style.display = 'flex';
+  }, 120000);
 }
 
 function scheduleGameNotifications() {
