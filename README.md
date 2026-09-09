@@ -116,8 +116,14 @@ service cloud.firestore {
     // 환생(프레스티지)은 rebirthCount가 1 증가하면서 totalEarned/money가 0으로
     // 리셋되는 게 정상 동작이라, 일반 케이스와 분리해서 따로 허용해준다.
     let isRebirth = neu.rebirthCount == old.rebirthCount + 1;
+    // 밸런스를 크게 갈아엎을 때 GAME_VERSION을 올려서 기존 세이브를 강제 초기화시키는
+    // 경우. rebirthCount 증가 없이도 모든 진행 상황이 0 근처로 리셋될 수 있게 별도로
+    // 허용한다(사실상 새 계정과 동일한 상태가 되는 것). 예전 세이브엔 gameVersion
+    // 필드 자체가 없을 수 있어 get()으로 기본값 0을 준다.
+    let oldVersion = old.get('gameVersion', 0);
+    let isVersionReset = ('gameVersion' in neu) && neu.gameVersion is int && neu.gameVersion > oldVersion;
 
-    let normalCaseOk = !isRebirth
+    let normalCaseOk = !isRebirth && !isVersionReset
       && neu.totalEarned >= old.totalEarned
       && (neu.totalEarned - old.totalEarned) <= elapsedSec * maxIncomePerSec + buffer
       // 카지노에서 딴 돈은 totalEarned에는 안 잡히고 money에만 더해지므로,
@@ -128,20 +134,30 @@ service cloud.firestore {
       // 있으면 짧은 시간에 여러 번 살 수 있음). 정상적인 몰아사기까지 커버하도록
       // 넉넉하게 100P까지 허용하고, 그 이상은 조작으로 간주해 거부한다.
       && neu.prestigePoints >= old.prestigePoints
-      && neu.prestigePoints <= old.prestigePoints + 100;
+      && neu.prestigePoints <= old.prestigePoints + 100
+      && neu.casinoTotalWinnings >= old.casinoTotalWinnings // 카지노 누적 수익은 줄어들 수 없음
+      && (neu.casinoTotalWinnings - old.casinoTotalWinnings) <= elapsedSec * maxCasinoGainPerSec + buffer;
 
-    let rebirthCaseOk = isRebirth
+    let rebirthCaseOk = isRebirth && !isVersionReset
       && neu.totalEarned <= buffer
       && neu.money <= buffer
       && neu.prestigePoints >= old.prestigePoints
-      && neu.prestigePoints <= old.prestigePoints + 1000000; // 환생 1회당 얻는 포인트 상한(넉넉하게)
+      && neu.prestigePoints <= old.prestigePoints + 1000000 // 환생 1회당 얻는 포인트 상한(넉넉하게)
+      && neu.casinoTotalWinnings >= old.casinoTotalWinnings
+      && (neu.casinoTotalWinnings - old.casinoTotalWinnings) <= elapsedSec * maxCasinoGainPerSec + buffer;
+
+    // 버전 리셋은 카지노 누적수익/프레스티지 포인트까지 포함해서 전부 0 근처로
+    // 떨어지는 걸 허용한다 - 새 계정을 만드는 것과 사실상 동일한 상황이기 때문.
+    let versionResetCaseOk = isVersionReset
+      && neu.totalEarned <= buffer
+      && neu.money <= buffer
+      && neu.prestigePoints <= buffer
+      && neu.casinoTotalWinnings <= buffer;
 
     return neu.totalEarned is number && neu.money is number
       && neu.casinoTotalWinnings is number && neu.rebirthCount is number && neu.prestigePoints is number
       && neu.serverSavedAt == request.time  // 클라이언트가 시간 조작 못 하게 서버 시각 강제
-      && neu.casinoTotalWinnings >= old.casinoTotalWinnings // 카지노 누적 수익은 줄어들 수 없음
-      && (neu.casinoTotalWinnings - old.casinoTotalWinnings) <= elapsedSec * maxCasinoGainPerSec + buffer
-      && (normalCaseOk || rebirthCaseOk);
+      && (normalCaseOk || rebirthCaseOk || versionResetCaseOk);
   }
 }
 ```
