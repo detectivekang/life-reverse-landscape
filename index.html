@@ -3260,6 +3260,9 @@ async function renderLeaderboardList() {
     let tierName = p.tierName || '';
     if (p.rank === 1) {
       tierIcon = '👑'; tierName = '챔피언';
+    } else if (tierName === '챔피언') {
+      // 챌린저 등급 신설 이전에 저장된 레거시 데이터 방어 처리 (재동기화 전까지 잘못된 왕관이 뜨는 것 방지)
+      tierIcon = '🏆'; tierName = '챌린저';
     }
     return `
     <div class="lb-row${p.uid === currentUser.uid ? ' me' : ''}">
@@ -4208,17 +4211,20 @@ async function cloudLoadGame() {
   try {
     const doc = await db.collection('saves').doc(currentUser.uid).get();
     const cloudData = doc.exists ? doc.data() : null;
-    const isVersionMismatch = cloudData && cloudData.gameVersion !== GAME_VERSION;
+    // 버전 불일치 시 클라우드 세이브를 버리고 초기화하던 로직을 주석 처리 - 이제 버전이 달라도 그대로 불러온다.
+    const isVersionMismatch = false; /* cloudData && cloudData.gameVersion !== GAME_VERSION; */
     if (cloudData && !isVersionMismatch) {
       applySaveData(cloudData, { checkOffline: true });
       refreshAllScreens();
     } else {
+      /*
       if (isVersionMismatch) {
         // 클라우드에 저장된 이전 버전 세이브는 버리고 새로 시작한다. (5천조가 있어도 무시)
         // loadGame()이 이미 로컬 쪽도 같은 기준으로 초기화해뒀으니, 지금 메모리 상의
         // 게임 상태는 이미 기본값이라 그대로 buildSaveData()해서 덮어쓰면 된다.
         showToast('🔄 게임이 크게 업데이트되어 진행 상황이 초기화됐습니다. 새로 시작해주세요!');
       }
+      */
       // 클라우드에 저장본이 없으면 지금 로컬 진행 상황을 처음으로 올려둠.
       // 로그인 전 진행은 서버가 검증할 방법이 없으므로, 혹시 개발자도구 등으로
       // 게이트를 우회해서 totalEarned/money가 1억원을 넘어있더라도, 실제로
@@ -4637,6 +4643,7 @@ function loadGame() {
   }
   try {
     const data = JSON.parse(saved);
+    /* 버전 불일치 시 로컬 세이브를 버리고 초기화하던 로직 주석 처리 - 이제 버전이 달라도 그대로 불러온다.
     if (data.gameVersion !== GAME_VERSION) {
       // 버전이 다르면(또는 옛날 세이브라 이 필드 자체가 없으면) 그 세이브는 무시하고
       // 새 게임으로 시작한다. 다음 저장부터는 새 버전 번호로 저장되니 다시는 초기화되지 않는다.
@@ -4646,6 +4653,7 @@ function loadGame() {
       showToast('🔄 게임이 크게 업데이트되어 진행 상황이 초기화됐습니다. 새로 시작해주세요!');
       return;
     }
+    */
     applySaveData(data, { checkOffline: true });
   } catch(e) {
     console.error('Save load error:', e);
