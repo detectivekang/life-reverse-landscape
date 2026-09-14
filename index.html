@@ -30,7 +30,8 @@
             })
             .then(function (html) {
               sessionStorage.setItem("lrVersionChecked", CURRENT_VERSION);
-              var m = html.match(/CURRENT_VERSION\s*=\s*'(\d+)'/);
+              // 쌍따옴표(")와 홑따옴표(') 모두 대응 가능하도록 정규식 변경
+              var m = html.match(/CURRENT_VERSION\s*=\s*['"](\d+)['"]/);
               if (m && m[1] !== CURRENT_VERSION) {
                 location.href = location.pathname + "?v=" + Date.now();
               }
