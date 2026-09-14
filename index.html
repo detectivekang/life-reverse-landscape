@@ -6989,9 +6989,12 @@
           }
           const idx = el.dataset.idx;
           const job = allJobs[idx];
-          if (job.anim === "gather") spawnGatherItem(el, job.icon);
-          else if (job.anim === "labor") spawnSweat(el);
-          else if (job.anim === "passive") spawnCoinDrop(el);
+          if (job) {
+            // <-- 이 안전장치를 추가
+            if (job.anim === "gather") spawnGatherItem(el, job.icon);
+            else if (job.anim === "labor") spawnSweat(el);
+            else if (job.anim === "passive") spawnCoinDrop(el);
+          }
         });
       }, 1500);
 
