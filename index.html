@@ -20,7 +20,7 @@
       // 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
       // 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
       (function () {
-        var CURRENT_VERSION = "2026082232";
+        var CURRENT_VERSION = "2026091411";
         try {
           if (sessionStorage.getItem("lrVersionChecked") === CURRENT_VERSION)
             return;
@@ -870,6 +870,46 @@
         font-size: 10px;
         animation-name: microFloat;
         animation-duration: 0.7s;
+      }
+      .float-text.crit {
+        font-size: 22px;
+        color: #ff5a3c;
+        text-shadow: 0 0 8px rgba(255, 90, 60, 0.8);
+        animation-name: critFloat;
+        animation-duration: 0.9s;
+      }
+      @keyframes critFloat {
+        0% {
+          opacity: 1;
+          transform: translateY(0) scale(0.6) rotate(-4deg);
+        }
+        30% {
+          transform: translateY(-10px) scale(1.25) rotate(3deg);
+        }
+        100% {
+          opacity: 0;
+          transform: translateY(-46px) scale(1.05) rotate(-2deg);
+        }
+      }
+      @keyframes critScreenFlash {
+        0% {
+          opacity: 0.35;
+        }
+        100% {
+          opacity: 0;
+        }
+      }
+      .crit-screen-flash {
+        position: fixed;
+        inset: 0;
+        background: radial-gradient(
+          circle,
+          rgba(255, 120, 60, 0.5),
+          transparent 70%
+        );
+        pointer-events: none;
+        z-index: 400;
+        animation: critScreenFlash 0.35s ease-out forwards;
       }
 
       .flying-coin {
@@ -2532,8 +2572,7 @@
         </div>
         <span
           id="weatherBadge"
-          style="font-size: 18px; cursor: default; margin-left: 2px"
-          title="오늘의 날씨"
+          style="font-size: 18px; cursor: pointer; margin-left: 2px"
           >☀️</span
         >
         <div class="map-switch" id="mapSwitch" style="display: none">
@@ -2553,13 +2592,17 @@
             ④ 행운의 거리
           </button>
           <button class="map-btn" id="mapBtn4" data-map="map4">⑤ 컬렉션</button>
+          <button
+            class="map-btn"
+            id="mapBtn6"
+            data-map="map6"
+            style="display: none"
+          >
+            ⑥ 공허
+          </button>
         </div>
         <div class="top-actions">
-          <button class="icon-btn" id="bgmToggleBtn" title="배경음악">
-            🎵
-          </button>
           <button class="icon-btn" id="loginBtn" title="로그인">👤</button>
-          <button class="icon-btn" id="achievementBtn" title="업적">🏆</button>
           <button class="icon-btn" id="dailyBtn" title="일일 미션">
             📅<span
               class="badge"
@@ -2577,12 +2620,8 @@
           <button class="icon-btn" id="infiniteUpgradeBtn" title="무한강화">
             💍
           </button>
-          <button class="icon-btn" id="nameColorBtn" title="이름 색상 뽑기">
-            🎨
-          </button>
           <button class="icon-btn" id="prestigeBtn" title="환생">♻️</button>
-          <button class="icon-btn" id="resetBtn" title="초기화">⟳</button>
-          <button class="icon-btn" id="helpBtn">?</button>
+          <button class="icon-btn" id="moreMenuBtn" title="더보기">⋯</button>
         </div>
       </div>
       <div id="seasonEventBanner" style="display: none"></div>
@@ -2746,6 +2785,107 @@
           >
             전 세계에 뻗어나간 사업체들이 자동으로 돈을 법니다.
           </div>
+        </div>
+      </div>
+
+      <div id="part6Screen" style="display: none">
+        <div style="padding: 16px 14px; text-align: center">
+          <div style="font-size: 12px; color: var(--paper-dim)">
+            🌌 공허맵 · 끝없는 웨이브 서바이벌
+          </div>
+          <div style="margin: 6px 0; font-size: 15px">
+            WAVE <b id="voidWaveNum">1</b>
+            <span id="voidBossTag" style="display: none; color: var(--gold)"
+              >👹 미니보스</span
+            >
+          </div>
+          <div
+            style="
+              background: var(--bg-panel);
+              border-radius: 12px;
+              padding: 18px;
+              margin: 10px 0;
+            "
+          >
+            <div
+              id="voidEnemy"
+              style="
+                font-size: 56px;
+                cursor: pointer;
+                user-select: none;
+                touch-action: manipulation;
+              "
+            >
+              👻
+            </div>
+            <div
+              style="
+                height: 10px;
+                background: #3a322a;
+                border-radius: 5px;
+                margin-top: 10px;
+                overflow: hidden;
+              "
+            >
+              <div
+                id="voidEnemyHpFill"
+                style="
+                  height: 100%;
+                  width: 100%;
+                  background: #e05252;
+                  border-radius: 5px;
+                  transition: width 0.12s;
+                "
+              ></div>
+            </div>
+            <div
+              style="font-size: 11px; color: var(--paper-dim); margin-top: 4px"
+              id="voidEnemyHpText"
+            >
+              HP 0/0
+            </div>
+          </div>
+          <div style="font-size: 12px">
+            💎 차원 조각 <b id="voidShardCount">0</b>
+          </div>
+          <button class="start-btn" id="voidShopBtn" style="margin-top: 12px">
+            🛒 차원 상점
+          </button>
+        </div>
+      </div>
+
+      <!-- 공허맵 상점 모달 -->
+      <div class="modal-overlay" id="voidShopModal">
+        <div class="modal-box">
+          <h2>🛒 차원 상점</h2>
+          <p style="font-size: 12px; color: var(--paper-dim); margin-top: -4px">
+            차원 조각으로 공허맵 전용 공격력을 무한히 강화합니다.
+          </p>
+          <div
+            style="
+              margin: 14px 0;
+              text-align: left;
+              background: var(--bg-panel);
+              border-radius: 10px;
+              padding: 12px 14px;
+            "
+          >
+            <div>공격력 레벨 <b id="voidDamageLevel">0</b></div>
+            <div>
+              현재 공격력
+              <b id="voidDamageValue" style="color: var(--gold)">0</b>
+            </div>
+          </div>
+          <button class="start-btn" id="voidUpgradeBtn">
+            강화하기 (<span id="voidUpgradeCost">0</span> 조각)
+          </button>
+          <button
+            class="close-btn"
+            id="voidShopCloseBtn"
+            style="margin-top: 10px"
+          >
+            닫기
+          </button>
         </div>
       </div>
 
@@ -2944,6 +3084,70 @@
         </div>
       </div>
 
+      <div class="modal-overlay" id="moreMenuModal">
+        <div class="modal-box">
+          <h2>⋯ 더보기</h2>
+          <div
+            style="
+              display: flex;
+              flex-direction: column;
+              gap: 8px;
+              margin-top: 10px;
+            "
+          >
+            <button
+              class="close-btn more-menu-item"
+              id="bgmToggleBtn"
+              style="text-align: left"
+            >
+              🎵 배경음악 켜기/끄기
+            </button>
+            <button
+              class="close-btn more-menu-item"
+              id="achievementBtn"
+              style="text-align: left"
+            >
+              🏆 업적
+            </button>
+            <button
+              class="close-btn more-menu-item"
+              id="nameColorBtn"
+              style="text-align: left"
+            >
+              🎨 이름 색상 뽑기
+            </button>
+            <button
+              class="close-btn more-menu-item"
+              id="mansionBtn"
+              style="text-align: left"
+            >
+              🏰 저택 꾸미기
+            </button>
+            <button
+              class="close-btn more-menu-item"
+              id="resetBtn"
+              style="text-align: left"
+            >
+              ⟳ 초기화
+            </button>
+            <button
+              class="close-btn more-menu-item"
+              id="helpBtn"
+              style="text-align: left"
+            >
+              ❓ 도움말
+            </button>
+          </div>
+          <button
+            class="close-btn"
+            id="moreMenuCloseBtn"
+            style="margin-top: 12px"
+          >
+            닫기
+          </button>
+        </div>
+      </div>
+
       <div class="modal-overlay" id="achievementModal">
         <div class="modal-box">
           <h2>🏆 업적</h2>
@@ -3001,7 +3205,17 @@
             <button class="lb-period-tab" data-period="monthly">
               🗓️ 월간 랭킹
             </button>
+            <button class="lb-period-tab" data-period="burn">
+              🔥 소각 랭킹
+            </button>
           </div>
+          <button
+            class="start-btn"
+            id="burnMoneyBtn"
+            style="display: none; margin-top: 10px; background: #c0392b"
+          >
+            🔥 지금 가진 돈 전부 태우기
+          </button>
           <div id="leaderboardList" class="leaderboard-list">
             <p style="font-size: 11px; color: var(--paper-dim)">
               불러오는 중...
@@ -3166,6 +3380,41 @@
       </div>
 
       <!-- 도움말 모달 -->
+      <div class="modal-overlay" id="whatsNewModal">
+        <div class="modal-box tutorial-box">
+          <h2>🆕 새로운 업데이트!</h2>
+          <ul>
+            <li>
+              🎵 맵마다 다른 <b>배경음악</b>이 추가됐어요 (헤더 더보기 메뉴에서
+              켜고 끌 수 있어요)
+            </li>
+            <li>
+              🐇 화면에 가끔 <b>도망다니는 이벤트몹</b>이 나타나요. 빠르게
+              잡으면 큰 보너스!
+            </li>
+            <li>
+              💍 <b>무한강화</b>로 레벨 상한 없이 수입을 계속 강화할 수 있어요
+            </li>
+            <li>
+              🎨 <b>이름 색상 뽑기</b>로 리더보드에서 눈에 띄는 이름을
+              만들어보세요
+            </li>
+            <li>
+              🌦️ 매일 바뀌는 <b>날씨</b>가 수입/크리티컬 확률 등에 영향을 줘요
+              (헤더 날씨 아이콘 탭)
+            </li>
+            <li>
+              🌌 환생 1회 이상 달성하면 완전히 새로운
+              <b>공허맵(웨이브 서바이벌)</b>이 열려요
+            </li>
+            <li>
+              🔥 <b>소각 랭킹</b>과 🏰 <b>저택 꾸미기</b>로 과시욕도 채워보세요
+            </li>
+          </ul>
+          <button class="start-btn" id="whatsNewOkBtn">확인</button>
+        </div>
+      </div>
+
       <div class="modal-overlay" id="tutorialModal">
         <div class="modal-box tutorial-box">
           <h2>인생역전 가이드</h2>
@@ -3180,8 +3429,20 @@
               수 있어요!
             </li>
             <li>
+              가끔 화면에 <b>🐇 잽싸게 도망다니는 손님</b>이 나타나요. 사라지기
+              전에 빠르게 탭하면 큰 보너스를 받을 수 있어요
+            </li>
+            <li>
               화면 오른쪽 아래 <b>🚀 부스터</b> 버튼으로 진행 속도를 극대화할 수
               있습니다
+            </li>
+            <li>
+              상단 <b>📅 일일 미션</b>은 매일 자정마다 새로 갱신돼요. 꼭 챙겨서
+              보상을 받아보세요
+            </li>
+            <li>
+              헤더의 <b>⋯ 더보기</b> 메뉴에서 배경음악, 업적, 이름 색상 뽑기,
+              저택 꾸미기 등을 확인할 수 있어요
             </li>
             <li>진행바를 가득 채우면 다음 신분으로 승급합니다</li>
             <li>
@@ -3315,6 +3576,42 @@
         </div>
       </div>
 
+      <!-- 저택 꾸미기 모달 -->
+      <div class="modal-overlay" id="mansionModal">
+        <div class="modal-box">
+          <h2>🏰 저택 꾸미기</h2>
+          <p style="font-size: 12px; color: var(--paper-dim); margin-top: -4px">
+            순수 과시용입니다. 게임 효과는 없지만, 리더보드에 내 저택 아이콘이
+            표시돼요. 레벨 상한은 없습니다.
+          </p>
+          <div
+            style="
+              margin: 14px 0;
+              text-align: left;
+              background: var(--bg-panel);
+              border-radius: 10px;
+              padding: 12px 14px;
+            "
+          >
+            <div>현재 레벨 <b id="mansionLevel">0</b></div>
+            <div>
+              현재 저택
+              <b id="mansionTierName" style="color: var(--gold)">집 없음</b>
+            </div>
+          </div>
+          <button class="start-btn" id="mansionUpgradeBtn">
+            다음 단계로 (<span id="mansionCost">0원</span>)
+          </button>
+          <button
+            class="close-btn"
+            id="mansionCloseBtn"
+            style="margin-top: 10px"
+          >
+            닫기
+          </button>
+        </div>
+      </div>
+
       <!-- 이름 색상 뽑기 모달 -->
       <div class="modal-overlay" id="nameColorModal">
         <div class="modal-box">
@@ -3378,7 +3675,8 @@
 
       function updateBgmToggleIcon() {
         const btn = document.getElementById("bgmToggleBtn");
-        if (btn) btn.textContent = bgmEnabled ? "🎵" : "🔇";
+        if (btn)
+          btn.textContent = (bgmEnabled ? "🎵" : "🔇") + " 배경음악 켜기/끄기";
       }
 
       function playBgmForMap(map) {
@@ -3465,6 +3763,73 @@
             gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
             osc.start();
             osc.stop(audioCtx.currentTime + 0.4);
+          } else if (type === "crit") {
+            // 크리티컬 클릭 전용: 톡 쏘는 두 번 타격감
+            osc.type = "square";
+            osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(
+              900,
+              audioCtx.currentTime + 0.06,
+            );
+            osc.frequency.setValueAtTime(600, audioCtx.currentTime + 0.08);
+            osc.frequency.exponentialRampToValueAtTime(
+              1200,
+              audioCtx.currentTime + 0.14,
+            );
+            gain.gain.setValueAtTime(0.18, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.2);
+          } else if (type === "catch") {
+            // 이벤트몹 포획 전용: 휙 잡아채는 느낌의 상승음
+            osc.type = "sawtooth";
+            osc.frequency.setValueAtTime(200, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(
+              1000,
+              audioCtx.currentTime + 0.15,
+            );
+            gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(
+              0.01,
+              audioCtx.currentTime + 0.18,
+            );
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.18);
+          } else if (type === "gachaWin") {
+            // 이름색 뽑기 성공 전용: 반짝이는 상승 아르페지오
+            osc.type = "sine";
+            [660, 880, 1100, 1320].forEach((f, i) =>
+              osc.frequency.setValueAtTime(f, audioCtx.currentTime + i * 0.08),
+            );
+            gain.gain.setValueAtTime(0.16, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.4);
+          } else if (type === "waveClear") {
+            // 공허맵 웨이브 클리어 전용: 짧고 묵직한 승리음
+            osc.type = "triangle";
+            osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+            osc.frequency.setValueAtTime(554, audioCtx.currentTime + 0.09);
+            osc.frequency.setValueAtTime(659, audioCtx.currentTime + 0.18);
+            gain.gain.setValueAtTime(0.17, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.3);
+          } else if (type === "burn") {
+            // 소각 전용: 훅 꺼지듯 내려가는 소리
+            osc.type = "sawtooth";
+            osc.frequency.setValueAtTime(700, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(
+              120,
+              audioCtx.currentTime + 0.35,
+            );
+            gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(
+              0.01,
+              audioCtx.currentTime + 0.35,
+            );
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.35);
           }
         } catch (e) {}
       }
@@ -3646,6 +4011,42 @@
       let stallProgress2 = [];
       let employeeLevels2 = [];
       let map5Unlocked = false;
+      // ===== 소각 랭킹 =====
+      let burnedTotal = 0;
+      let burnedMonthly = 0;
+      function burnMoney() {
+        if (money < 1) {
+          showToast("🔥 태울 돈이 없어요!");
+          return;
+        }
+        const amount = money;
+        money = 0;
+        burnedTotal += amount;
+        burnedMonthly += amount;
+        showToast(`🔥 ${formatWon(amount)}원을 화끈하게 태워버렸습니다!`);
+        playSound("burn");
+        render();
+        renderMyRankCard();
+        if (currentUser && db) {
+          db.collection(`leaderboard_burn_monthly_${monthlyPeriodKey}`)
+            .doc(currentUser.uid)
+            .set({
+              name: currentUser.name,
+              updatedAt: Date.now(),
+              amount: toBigStorable(burnedMonthly),
+              nameColor: nameColor ? nameColor.color : null,
+            })
+            .catch(() => {});
+        }
+      }
+
+      // ===== 공허맵(웨이브 서바이벌) 상태 =====
+      let map6Unlocked = false;
+      let voidWave = 1;
+      let voidShards = 0;
+      let voidDamageLevel = 0;
+      let voidEnemyHp = 0;
+      let voidEnemyMaxHp = 0;
       let jobLevels5 = [];
       let stallProgress5 = [];
       let prestigeMult = 1;
@@ -3799,7 +4200,16 @@
       let dailyCasinoPlays = 0;
       let dailyJobBuys = 0;
       let dailyClicks = 0;
-      let dailyMissionsClaimed = { casino: false, jobs: false, clicks: false };
+      let dailyEventMobCaught = 0;
+      let totalEventMobCaught = 0;
+      let dailyVoidWaveCleared = 0;
+      let dailyMissionsClaimed = {
+        casino: false,
+        jobs: false,
+        clicks: false,
+        eventmob: false,
+        void: false,
+      };
       let dailyMissionsCompletedTotal = 0; // 평생 누적 일일미션 완료 수 (업적용, 날짜가 바뀌어도 유지)
       let megaGoldenCountToday = 0;
       const MEGA_GOLDEN_DAILY_LIMIT = 2; // 크게 터지는 황금손님은 하루 최대 2회로 제한
@@ -3814,7 +4224,15 @@
           dailyCasinoPlays = 0;
           dailyJobBuys = 0;
           dailyClicks = 0;
-          dailyMissionsClaimed = { casino: false, jobs: false, clicks: false };
+          dailyEventMobCaught = 0;
+          dailyVoidWaveCleared = 0;
+          dailyMissionsClaimed = {
+            casino: false,
+            jobs: false,
+            clicks: false,
+            eventmob: false,
+            void: false,
+          };
           megaGoldenCountToday = 0;
           renderWeatherBadge();
         }
@@ -3841,6 +4259,21 @@
           target: 50,
           progress: () => dailyClicks,
         },
+        {
+          id: "eventmob",
+          icon: "🐇",
+          name: "도망다니는 이벤트몹 2마리 잡기",
+          target: 2,
+          progress: () => dailyEventMobCaught,
+        },
+        {
+          id: "void",
+          icon: "🌌",
+          name: "공허맵 웨이브 3개 클리어",
+          target: 3,
+          progress: () => dailyVoidWaveCleared,
+          hidden: () => !map6Unlocked,
+        },
       ];
       function getDailyMissionReward() {
         // 플레이어 현재 규모에 맞춰 자연스럽게 스케일되는 보상 (패시브 30초치 vs 클릭 40회치 중 큰 쪽, 최소 2만원)
@@ -3852,9 +4285,9 @@
       }
       function hasUnclaimedDailyMission() {
         checkDailyRollover();
-        return dailyMissions.some(
-          (m) => !dailyMissionsClaimed[m.id] && m.progress() >= m.target,
-        );
+        return dailyMissions
+          .filter((m) => !m.hidden || !m.hidden())
+          .some((m) => !dailyMissionsClaimed[m.id] && m.progress() >= m.target);
       }
 
       // ===== 시즌 이벤트 (명절/연말 한정 - 이탈했던 유저도 "이번엔 뭐 새로 생겼네" 하고 돌아오게) =====
@@ -4431,6 +4864,70 @@
           cond: () => ownedAwakening.length >= awakeningCollectibles.length,
           reward: 0.2,
         },
+        {
+          id: "void_open",
+          name: "틈의 발견",
+          desc: "공허맵 잠금 해제",
+          icon: "🌌",
+          cond: () => map6Unlocked,
+          reward: 0.02,
+        },
+        {
+          id: "void_wave10",
+          name: "공허의 탐험가",
+          desc: "공허맵 웨이브 10 도달",
+          icon: "👻",
+          cond: () => voidWave >= 10,
+          reward: 0.03,
+        },
+        {
+          id: "void_boss5",
+          name: "보스 사냥꾼",
+          desc: "공허맵 미니보스 5회 처치",
+          icon: "👹",
+          cond: () => voidWave > 25,
+          reward: 0.05,
+        },
+        {
+          id: "infinite_lv100",
+          name: "행운의 목걸이 장인",
+          desc: "무한강화 레벨 100 달성",
+          icon: "💍",
+          cond: () => infiniteUpgradeLevel >= 100,
+          reward: 0.03,
+        },
+        {
+          id: "mansion_palace",
+          name: "궁전의 주인",
+          desc: "저택 레벨 20(궁전) 달성",
+          icon: "🏯",
+          cond: () => mansionLevel >= 20,
+          reward: 0.03,
+        },
+        {
+          id: "name_color_red",
+          name: "전설의 빨강",
+          desc: "이름 색상 뽑기에서 빨강 획득",
+          icon: "🔴",
+          cond: () => nameColor && nameColor.rank >= 4,
+          reward: 0.05,
+        },
+        {
+          id: "burn_1m",
+          name: "화끈한 성격",
+          desc: "누적 소각액 100만원 달성",
+          icon: "🔥",
+          cond: () => burnedTotal >= 1e6,
+          reward: 0.01,
+        },
+        {
+          id: "eventmob_50",
+          name: "민첩한 사냥꾼",
+          desc: "도망다니는 이벤트몹 누적 50마리 포획",
+          icon: "🐇",
+          cond: () => totalEventMobCaught >= 50,
+          reward: 0.03,
+        },
       ];
 
       function getAchievementMult() {
@@ -4555,7 +5052,7 @@
             rank: result.rank,
           };
           showToast(`🎉 ${result.name} 이름색을 획득했습니다!`);
-          playSound("levelUp");
+          playSound("gachaWin");
           syncLeaderboard({ forceSync: true });
         } else {
           showToast(
@@ -4587,6 +5084,7 @@
           clickMult: 1,
           casinoMult: 1,
           mobMult: 1,
+          critBonus: 0,
         },
         {
           id: "rain",
@@ -4597,16 +5095,18 @@
           clickMult: 1,
           casinoMult: 1,
           mobMult: 1,
+          critBonus: 0,
         },
         {
           id: "snow",
           icon: "❄️",
           name: "눈",
-          desc: "클릭 수입 +8%",
+          desc: "클릭 수입 +8%, 크리티컬 확률 +10%p",
           incomeMult: 1,
           clickMult: 1.08,
           casinoMult: 1,
           mobMult: 1,
+          critBonus: 0.1,
         },
         {
           id: "bloom",
@@ -4617,6 +5117,7 @@
           clickMult: 1,
           casinoMult: 1,
           mobMult: 1.6,
+          critBonus: 0,
         },
         {
           id: "heatwave",
@@ -4627,8 +5128,12 @@
           clickMult: 1,
           casinoMult: 1.05,
           mobMult: 1,
+          critBonus: 0,
         },
       ];
+      function getWeatherCritBonus() {
+        return getTodayWeather().critBonus || 0;
+      }
       function hashStr(s) {
         let h = 0;
         for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
@@ -4656,7 +5161,148 @@
         if (!el) return;
         const w = getTodayWeather();
         el.textContent = w.icon;
-        el.title = `오늘의 날씨: ${w.name} · ${w.desc}`;
+      }
+
+      // ===== 공허맵 (웨이브 서바이벌) =====
+      const voidEnemyEmojis = ["👻", "🕸️", "🌑", "🦇"];
+      const VOID_BOSS_EVERY = 5;
+      function getVoidDamage() {
+        // 상점 강화 + 본편 클릭 수입의 아주 일부를 살짝 반영해서, 본편이 성장할수록 여기도 약간은 편해지게 한다.
+        return 10 + voidDamageLevel * 5 + Math.floor(getClickValue() * 0.05);
+      }
+      function getVoidUpgradeCost(level) {
+        const lv = level === undefined ? voidDamageLevel : level;
+        return Math.floor(20 * Math.pow(1.22, lv));
+      }
+      function getVoidEnemyMaxHpForWave(wave) {
+        const isBoss = wave % VOID_BOSS_EVERY === 0;
+        const base = 40 * Math.pow(1.18, wave - 1);
+        return Math.floor(isBoss ? base * 4 : base);
+      }
+      function getVoidRewardForWave(wave) {
+        const isBoss = wave % VOID_BOSS_EVERY === 0;
+        const base = 3 + wave;
+        return Math.floor(isBoss ? base * 3 : base);
+      }
+      function startVoidWave(wave) {
+        voidWave = wave;
+        voidEnemyMaxHp = getVoidEnemyMaxHpForWave(wave);
+        voidEnemyHp = voidEnemyMaxHp;
+        renderVoidMap();
+      }
+      function renderVoidMap() {
+        const waveEl = document.getElementById("voidWaveNum");
+        if (!waveEl) return;
+        const isBoss = voidWave % VOID_BOSS_EVERY === 0;
+        waveEl.textContent = voidWave;
+        document.getElementById("voidBossTag").style.display = isBoss
+          ? "inline"
+          : "none";
+        document.getElementById("voidEnemy").textContent = isBoss
+          ? "👹"
+          : voidEnemyEmojis[voidWave % voidEnemyEmojis.length];
+        const pct =
+          voidEnemyMaxHp > 0
+            ? Math.max(0, (voidEnemyHp / voidEnemyMaxHp) * 100)
+            : 0;
+        document.getElementById("voidEnemyHpFill").style.width = pct + "%";
+        document.getElementById("voidEnemyHpText").textContent =
+          `HP ${Math.max(0, Math.ceil(voidEnemyHp)).toLocaleString("ko-KR")}/${voidEnemyMaxHp.toLocaleString("ko-KR")}`;
+        document.getElementById("voidShardCount").textContent =
+          voidShards.toLocaleString("ko-KR");
+      }
+      function renderVoidShop() {
+        const lvEl = document.getElementById("voidDamageLevel");
+        if (!lvEl) return;
+        lvEl.textContent = voidDamageLevel.toLocaleString("ko-KR");
+        document.getElementById("voidDamageValue").textContent =
+          getVoidDamage().toLocaleString("ko-KR");
+        document.getElementById("voidUpgradeCost").textContent =
+          getVoidUpgradeCost().toLocaleString("ko-KR");
+      }
+      function buyVoidUpgrade() {
+        const cost = getVoidUpgradeCost();
+        if (voidShards < cost) {
+          showToast("💎 차원 조각이 부족해요!");
+          return;
+        }
+        voidShards -= cost;
+        voidDamageLevel++;
+        playSound("coin");
+        renderVoidShop();
+        renderVoidMap();
+      }
+      function defeatVoidEnemy() {
+        dailyVoidWaveCleared++;
+        const reward = getVoidRewardForWave(voidWave);
+        voidShards += reward;
+        const wasBoss = voidWave % VOID_BOSS_EVERY === 0;
+        showToast(
+          `${wasBoss ? "👹 미니보스" : "💎 웨이브"} ${voidWave} 클리어! 차원 조각 +${reward}`,
+        );
+        playSound("waveClear");
+        startVoidWave(voidWave + 1);
+      }
+      function damageVoidEnemy(dmg) {
+        if (!map6Unlocked || voidEnemyMaxHp <= 0) return;
+        voidEnemyHp -= dmg;
+        if (voidEnemyHp <= 0) {
+          defeatVoidEnemy();
+        } else {
+          renderVoidMap();
+        }
+      }
+      function voidAutoAttackTick() {
+        // 방치(자동)만 해도 착실히 진행되도록 비중을 크게 올렸다. 수동 클릭은 여전히 그보다
+        // 빠르게 밀어붙일 수 있어서 "손맛"과 "방치형 정체성"을 둘 다 살려둔다.
+        damageVoidEnemy(Math.max(1, Math.floor(getVoidDamage() * 0.7)));
+      }
+
+      // ===== 저택 꾸미기 (순수 과시용 소비처, 레벨 상한 없음) =====
+      // 실질적인 게임 효과는 전혀 없다. 오직 리더보드에 붙는 아이콘/칭호로만 남는,
+      // "돈을 얼마나 지를 수 있나"를 겨루는 콘텐츠.
+      let mansionLevel = 0;
+      const MANSION_BASE_COST = 1e6;
+      const MANSION_RATE = 1.35; // 무한강화보다 훨씬 가파르게 올라 순수 소비처 역할을 하게 함
+      const mansionTiers = [
+        { min: 0, icon: "", name: "집 없음" },
+        { min: 1, icon: "🏠", name: "오두막" },
+        { min: 5, icon: "🏡", name: "저택" },
+        { min: 10, icon: "🏰", name: "성" },
+        { min: 20, icon: "🏯", name: "궁전" },
+        { min: 35, icon: "🛸", name: "차원 저택" },
+      ];
+      function getMansionCost(level) {
+        const lv = level === undefined ? mansionLevel : level;
+        return Math.floor(MANSION_BASE_COST * Math.pow(MANSION_RATE, lv));
+      }
+      function getMansionTier() {
+        let t = mansionTiers[0];
+        for (const tier of mansionTiers) if (mansionLevel >= tier.min) t = tier;
+        return t;
+      }
+      function buyMansionLevel() {
+        const cost = getMansionCost();
+        if (money < cost) {
+          showToast("🏰 돈이 부족해요!");
+          return;
+        }
+        money -= cost;
+        mansionLevel++;
+        playSound("coin");
+        render();
+        renderMansionModal();
+        if (currentUser && db) syncLeaderboard({ forceSync: true });
+      }
+      function renderMansionModal() {
+        const lvEl = document.getElementById("mansionLevel");
+        if (!lvEl) return;
+        const tier = getMansionTier();
+        lvEl.textContent = mansionLevel.toLocaleString("ko-KR");
+        document.getElementById("mansionTierName").textContent =
+          `${tier.icon} ${tier.name}`;
+        document.getElementById("mansionCost").textContent =
+          formatWon(getMansionCost()) + "원";
       }
 
       function checkAchievements() {
@@ -4955,6 +5601,47 @@
         { exp: 12, name: "조" },
         { exp: 8, name: "억" },
       ];
+      // ===== Firestore int64 저장 한도 회피 =====
+      // Firestore는 소수점 없는 JS 숫자를 64비트 정수(int64, 최대 약 922경)로 저장하려고 시도한다.
+      // 이 게임의 재화는 그 이상(1000경, 해 단위)으로 쉽게 넘어가기 때문에, 그대로 저장하면
+      // 문서 저장 자체가 조용히 실패한다. 그 한도를 넘는 정수는 문자열로 바꿔서 저장하고,
+      // 불러올 때 다시 숫자로 변환해서 이 문제를 피한다.
+      // 문자열은 40자리로 0-패딩한 순수 10진수(지수표기 아님)로 만든다 — 그래야 리더보드의
+      // orderBy('amount') 정렬이 문자열끼리도 자릿수 기준으로 올바르게 비교된다.
+      const FIRESTORE_INT64_SAFE_LIMIT = 9e15; // 여유를 크게 둔 안전선 (실제 한도는 약 922경)
+      const BIG_STORABLE_PAD_WIDTH = 40;
+      function toBigStorable(n) {
+        if (typeof n !== "number" || !isFinite(n)) return n;
+        if (Number.isInteger(n) && Math.abs(n) > FIRESTORE_INT64_SAFE_LIMIT) {
+          const digits = BigInt(n).toString(); // 지수표기 없이 정확한 10진수 문자열로 변환
+          return "BN:" + digits.padStart(BIG_STORABLE_PAD_WIDTH, "0");
+        }
+        return n;
+      }
+      function fromBigStorable(n) {
+        if (typeof n === "string")
+          return n.startsWith("BN:") ? Number(n.slice(3)) : Number(n) || 0;
+        return typeof n === "number" ? n : 0;
+      }
+      // Firestore에 보낼 페이로드 중, 한도를 넘을 수 있는 큰 재화 필드들만 골라 문자열로 바꾼다.
+      const BIG_NUMBER_FIELDS = [
+        "money",
+        "totalEarned",
+        "casinoTotalWagered",
+        "casinoTotalWinnings",
+        "weeklyWinnings",
+        "monthlyWinnings",
+        "burnedTotal",
+        "burnedMonthly",
+      ];
+      function sanitizeBigNumbersForFirestore(obj) {
+        const out = { ...obj };
+        BIG_NUMBER_FIELDS.forEach((key) => {
+          if (key in out) out[key] = toBigStorable(out[key]);
+        });
+        return out;
+      }
+
       function formatWon(n) {
         n = Math.floor(n);
         for (const u of WON_UNITS) {
@@ -5177,6 +5864,7 @@
       });
 
       let isBrandNewPlayer = false;
+      let seenFeatureUpdateSep2026 = false;
       const MASCOT_LINES = {
         tutorialDone: [
           "좋아, 이제 시작이야! 나만 믿고 따라와~",
@@ -5239,6 +5927,33 @@
         f.style.top = rect.top - appRect.top + "px";
         document.getElementById("app").appendChild(f);
         setTimeout(() => f.remove(), 800);
+      }
+
+      // ===== 클릭 크리티컬 =====
+      const CLICK_CRIT_CHANCE = 0.12; // 12% 확률
+      const CLICK_CRIT_MULT = 5;
+      function rollClickCrit(baseValue) {
+        const isCrit =
+          Math.random() < CLICK_CRIT_CHANCE + getWeatherCritBonus();
+        return {
+          value: isCrit ? Math.floor(baseValue * CLICK_CRIT_MULT) : baseValue,
+          isCrit,
+        };
+      }
+      function spawnCritFloatText(el, amount) {
+        const rect = el.getBoundingClientRect();
+        const appRect = document.getElementById("app").getBoundingClientRect();
+        const f = document.createElement("div");
+        f.className = "float-text crit";
+        f.textContent = "💥 CRIT! +" + formatWon(amount) + "원";
+        f.style.left = rect.left - appRect.left + rect.width / 2 - 40 + "px";
+        f.style.top = rect.top - appRect.top - 6 + "px";
+        document.getElementById("app").appendChild(f);
+        setTimeout(() => f.remove(), 900);
+        const flash = document.createElement("div");
+        flash.className = "crit-screen-flash";
+        document.body.appendChild(flash);
+        setTimeout(() => flash.remove(), 360);
       }
 
       function spawnHeart(el) {
@@ -5814,6 +6529,31 @@
       document.getElementById("helpBtn").addEventListener("click", () => {
         document.getElementById("tutorialModal").classList.add("show");
       });
+      document.getElementById("whatsNewOkBtn").addEventListener("click", () => {
+        document.getElementById("whatsNewModal").classList.remove("show");
+        saveGame();
+      });
+      document.getElementById("moreMenuBtn").addEventListener("click", () => {
+        document.getElementById("moreMenuModal").classList.add("show");
+      });
+      document.getElementById("weatherBadge").addEventListener("click", () => {
+        const w = getTodayWeather();
+        showToast(`${w.icon} 오늘의 날씨: ${w.name} · ${w.desc}`);
+      });
+      document
+        .getElementById("moreMenuCloseBtn")
+        .addEventListener("click", () => {
+          document.getElementById("moreMenuModal").classList.remove("show");
+        });
+      // 더보기 메뉴 안의 항목을 고르면, 그 항목의 원래 기능은 그대로 실행되면서
+      // 더보기 메뉴 자체는 자연스럽게 먼저 닫히게 한다.
+      document
+        .querySelectorAll("#moreMenuModal .more-menu-item")
+        .forEach((btn) => {
+          btn.addEventListener("click", () => {
+            document.getElementById("moreMenuModal").classList.remove("show");
+          });
+        });
       document.getElementById("boostFabBtn").addEventListener("click", () => {
         document.getElementById("boosterModal").classList.add("show");
       });
@@ -5869,6 +6609,53 @@
         .addEventListener("click", () => {
           initAudio();
           rollNameColorGacha();
+        });
+
+      document.getElementById("mansionBtn").addEventListener("click", () => {
+        renderMansionModal();
+        document.getElementById("mansionModal").classList.add("show");
+      });
+      document
+        .getElementById("mansionCloseBtn")
+        .addEventListener("click", () => {
+          document.getElementById("mansionModal").classList.remove("show");
+        });
+      document
+        .getElementById("mansionUpgradeBtn")
+        .addEventListener("click", () => {
+          initAudio();
+          buyMansionLevel();
+        });
+
+      document.getElementById("voidEnemy").addEventListener("click", (e) => {
+        initAudio();
+        const dmg = getVoidDamage();
+        damageVoidEnemy(dmg);
+        const f = document.createElement("div");
+        f.className = "float-text";
+        f.textContent = "-" + dmg.toLocaleString("ko-KR");
+        f.style.position = "fixed";
+        const rect = e.target.getBoundingClientRect();
+        f.style.left = rect.left + rect.width / 2 - 20 + "px";
+        f.style.top = rect.top + "px";
+        document.body.appendChild(f);
+        setTimeout(() => f.remove(), 800);
+        playSound("click");
+      });
+      document.getElementById("voidShopBtn").addEventListener("click", () => {
+        renderVoidShop();
+        document.getElementById("voidShopModal").classList.add("show");
+      });
+      document
+        .getElementById("voidShopCloseBtn")
+        .addEventListener("click", () => {
+          document.getElementById("voidShopModal").classList.remove("show");
+        });
+      document
+        .getElementById("voidUpgradeBtn")
+        .addEventListener("click", () => {
+          initAudio();
+          buyVoidUpgrade();
         });
 
       // 초기화 버튼 이벤트
@@ -6022,6 +6809,8 @@
           if (caught) return;
           caught = true;
           initAudio();
+          dailyEventMobCaught++;
+          totalEventMobCaught++;
           const perSecond = passiveTotalLabel();
           const seconds = 15 + Math.random() * 25; // 15~40초치 자동수입
           const bonus = Math.max(
@@ -6033,7 +6822,7 @@
           showToast(
             `🌟 ${eventMobLines[Math.floor(Math.random() * eventMobLines.length)]}`,
           );
-          playSound("levelUp");
+          playSound("catch");
           // 잡힌 자리에 골드 링 이펙트
           const rect = mob.getBoundingClientRect();
           const ring = document.createElement("div");
@@ -6215,11 +7004,17 @@
       document.getElementById("tapBtn").addEventListener("click", function () {
         initAudio();
         registerTap();
-        const val = getClickValue() * comboMult;
+        const base = getClickValue() * comboMult;
+        const { value: val, isCrit } = rollClickCrit(base);
         addMoney(val);
-        spawnFloatText(this, val);
+        if (isCrit) {
+          spawnCritFloatText(this, val);
+          playSound("crit");
+        } else {
+          spawnFloatText(this, val);
+          playSound("click");
+        }
         tapFeedbackCombo(this);
-        playSound("click");
         render();
       });
 
@@ -6260,6 +7055,7 @@
           updateDailyBadge();
           renderSeasonEventBanner();
         }
+        if (isSecondTick && map6Unlocked) voidAutoAttackTick();
 
         allJobs.forEach((job, idx) => {
           if (job.stageIdx > stageIndex || jobLevels[idx] === 0) return;
@@ -6470,6 +7266,8 @@
           map === "map4" ? "flex" : "none";
         document.getElementById("part5Screen").style.display =
           map === "map5" ? "flex" : "none";
+        document.getElementById("part6Screen").style.display =
+          map === "map6" ? "block" : "none";
         document
           .getElementById("mapBtn1")
           .classList.toggle("active", map === "map1");
@@ -6485,6 +7283,9 @@
         document
           .getElementById("mapBtn5")
           .classList.toggle("active", map === "map5");
+        document
+          .getElementById("mapBtn6")
+          .classList.toggle("active", map === "map6");
         playBgmForMap(map);
         render();
       }
@@ -6761,6 +7562,18 @@
         const finalGain = challengeSucceeded ? gain * 2 : gain;
         prestigePoints += finalGain;
         rebirthCount++;
+        if (!map6Unlocked && rebirthCount >= 1) {
+          map6Unlocked = true;
+          document.getElementById("mapBtn6").style.display = "inline-flex";
+          startVoidWave(1);
+          setTimeout(
+            () =>
+              showToast(
+                "🌌 새로운 공간의 틈이 열렸습니다! 상단 ⑥ 공허 버튼을 확인해보세요.",
+              ),
+            1200,
+          );
+        }
         if (
           challengeSucceeded &&
           !unlockedAchievements.includes("challenge_no_casino")
@@ -6931,6 +7744,7 @@
         const list = document.getElementById("dailyList");
         if (!list) return;
         list.innerHTML = dailyMissions
+          .filter((m) => !m.hidden || !m.hidden())
           .map((m) => {
             const progress = Math.min(m.progress(), m.target);
             const pct = Math.round((progress / m.target) * 100);
@@ -7108,31 +7922,69 @@
       // 주간/월간 점수는 초기화돼도 등급(챔피언/다이아몬드 등)은 절대 안 내려가 보이는
       // 문제가 있었다. 이제 탭에 맞는 기간 금액으로 등급을 다시 계산한다.
       function renderMyRankCard() {
+        const card = document.getElementById("myRankCard");
+        const periodForRank = currentLeaderboardPeriod;
+        if (currentLeaderboardPeriod === "burn") {
+          card.innerHTML = `
+      <span class="my-rank-icon">🔥</span>
+      <div style="flex:1;">
+        <div class="my-rank-name">소각왕 도전 <span style="font-size:10px; color:var(--paper-dim); font-weight:normal;">(이번 달 기준)</span></div>
+        <div class="my-rank-sub">이번 달 소각 ${formatWon(burnedMonthly)}원 · 평생 누적 소각 ${formatWon(burnedTotal)}원</div>
+        <div class="my-rank-sub" id="myRankPosition" style="color:var(--gold);">내 순위 불러오는 중...</div>
+      </div>
+    `;
+          renderMyRankPosition(periodForRank);
+          return;
+        }
         const isWeekly = currentLeaderboardPeriod === "weekly";
         const periodAmount = isWeekly ? weeklyWinnings : monthlyWinnings;
         const periodLabel = isWeekly ? "이번 주" : "이번 달";
         const tier = getRankTierFor(periodAmount);
         const idx = rankTiers.indexOf(tier);
         const nt = idx < rankTiers.length - 1 ? rankTiers[idx + 1] : null;
-        const card = document.getElementById("myRankCard");
         card.innerHTML = `
     <span class="my-rank-icon">${tier.icon}</span>
     <div style="flex:1;">
       <div class="my-rank-name">${tier.name} <span style="font-size:10px; color:var(--paper-dim); font-weight:normal;">(${periodLabel} 기준)</span></div>
       <div class="my-rank-sub">${periodLabel} ${formatWon(periodAmount)}원${nt ? ` · 다음 등급(${nt.icon} ${nt.name})까지 ${formatWon(nt.threshold - periodAmount)}원` : " · 최고 등급 달성!"}</div>
       <div class="my-rank-sub">🏆 평생 누적 ${formatWon(casinoTotalWinnings)}원 · 📅 이번 주 ${formatWon(weeklyWinnings)}원 · 🗓️ 이번 달 ${formatWon(monthlyWinnings)}원</div>
+      <div class="my-rank-sub" id="myRankPosition" style="color:var(--gold); font-weight:bold;">내 순위 불러오는 중...</div>
       ${nt ? `<div class="my-rank-track"><div class="my-rank-fill" style="width:${Math.min(100, ((periodAmount - tier.threshold) / (nt.threshold - tier.threshold)) * 100)}%"></div></div>` : ""}
     </div>
   `;
+        renderMyRankPosition(periodForRank);
+      }
+      async function renderMyRankPosition(period) {
+        const el = document.getElementById("myRankPosition");
+        if (!el || !currentUser) {
+          if (el) el.textContent = "로그인하면 전체 순위를 볼 수 있어요.";
+          return;
+        }
+        const info = await fetchMyRankInfo(period);
+        const el2 = document.getElementById("myRankPosition"); // 조회하는 동안 모달이 바뀌었을 수 있어 다시 확인
+        if (!el2) return;
+        if (!info || info.rank === null) {
+          el2.textContent = "아직 순위 기록이 없어요. 먼저 기록을 남겨보세요!";
+        } else {
+          el2.textContent = `📍 전체 ${info.total.toLocaleString("ko-KR")}명 중 ${info.rank.toLocaleString("ko-KR")}위`;
+        }
       }
       document.getElementById("rankLoginBtn").addEventListener("click", () => {
         document.getElementById("loginModal").classList.add("show");
+      });
+      document.getElementById("burnMoneyBtn").addEventListener("click", () => {
+        initAudio();
+        burnMoney();
       });
 
       async function renderLeaderboardList() {
         const lbEl = document.getElementById("leaderboardList");
         const periodLabel =
-          currentLeaderboardPeriod === "weekly" ? "주간" : "월간";
+          currentLeaderboardPeriod === "weekly"
+            ? "주간"
+            : currentLeaderboardPeriod === "monthly"
+              ? "월간"
+              : "소각";
         if (!currentUser) {
           lbEl.innerHTML = `<p style="font-size:11px; color:var(--paper-dim);">구글 로그인을 하면 다른 플레이어들과의 ${periodLabel} 랭킹을 볼 수 있어요.</p>`;
           return;
@@ -7141,6 +7993,22 @@
         const list = await fetchLeaderboard(currentLeaderboardPeriod);
         if (list.length === 0) {
           lbEl.innerHTML = `<p style="font-size:11px; color:var(--paper-dim);">아직 ${periodLabel} 랭킹 데이터가 없어요. 첫 번째로 딴 돈을 기록해보세요!</p>`;
+          return;
+        }
+        if (currentLeaderboardPeriod === "burn") {
+          lbEl.innerHTML = list
+            .map(
+              (p) => `
+      <div class="lb-row${p.uid === currentUser.uid ? " me" : ""}">
+        <span class="lb-rank">${p.rank}</span>
+        <span class="lb-name"${p.nameColor ? ` style="color:${p.nameColor};font-weight:bold;"` : ""}>${p.mansionIcon ? p.mansionIcon + " " : ""}${p.name}</span>
+        <span class="lb-tier">🔥 ${formatWon(p.amount || 0)}원 소각</span>
+      </div>
+    `,
+            )
+            .join("");
+          if (!list.some((p) => p.uid === currentUser.uid))
+            appendMyRankRowIfOutsideTop(lbEl, "burn", true);
           return;
         }
         lbEl.innerHTML = list
@@ -7160,12 +8028,38 @@
             return `
     <div class="lb-row${p.uid === currentUser.uid ? " me" : ""}">
       <span class="lb-rank">${p.rank}</span>
-      <span class="lb-name"${p.nameColor ? ` style="color:${p.nameColor};font-weight:bold;"` : ""}>${p.name}</span>
+      <span class="lb-name"${p.nameColor ? ` style="color:${p.nameColor};font-weight:bold;"` : ""}>${p.mansionIcon ? p.mansionIcon + " " : ""}${p.name}</span>
       <span class="lb-tier">${tierIcon} ${tierName} · ${formatWon(p.amount || 0)}원</span>
     </div>
   `;
           })
           .join("");
+        if (!list.some((p) => p.uid === currentUser.uid))
+          appendMyRankRowIfOutsideTop(lbEl, currentLeaderboardPeriod, false);
+      }
+
+      // 상위 10명 목록 밖에 있을 때, 목록 맨 아래에 구분선과 함께 "나"의 실제 순위를 이어서 보여준다.
+      async function appendMyRankRowIfOutsideTop(lbEl, period, isBurn) {
+        const info = await fetchMyRankInfo(period);
+        if (!info || info.rank === null || info.rank <= 10) return;
+        // 조회하는 동안 사용자가 다른 탭으로 넘어갔을 수 있으니 그 사이 탭이 바뀌었으면 그리지 않는다.
+        if (currentLeaderboardPeriod !== period) return;
+        const divider = document.createElement("div");
+        divider.style.cssText =
+          "text-align:center; font-size:10px; color:var(--paper-dim); margin:4px 0;";
+        divider.textContent = "⋯";
+        const myAmount = isBurn
+          ? burnedMonthly
+          : period === "weekly"
+            ? weeklyWinnings
+            : monthlyWinnings;
+        const row = document.createElement("div");
+        row.className = "lb-row me";
+        row.innerHTML = isBurn
+          ? `<span class="lb-rank">${info.rank}</span><span class="lb-name">${currentUser.name} (나)</span><span class="lb-tier">🔥 ${formatWon(myAmount)}원 소각</span>`
+          : `<span class="lb-rank">${info.rank}</span><span class="lb-name">${currentUser.name} (나)</span><span class="lb-tier">${formatWon(myAmount)}원</span>`;
+        lbEl.appendChild(divider);
+        lbEl.appendChild(row);
       }
 
       document.querySelectorAll(".lb-period-tab").forEach((btn) => {
@@ -7174,6 +8068,8 @@
           document
             .querySelectorAll(".lb-period-tab")
             .forEach((b) => b.classList.toggle("active", b === btn));
+          document.getElementById("burnMoneyBtn").style.display =
+            currentLeaderboardPeriod === "burn" ? "block" : "none";
           renderMyRankCard();
           renderLeaderboardList();
         });
@@ -7433,7 +8329,7 @@
               : `👑 황금 손님을 잡았습니다! +${formatWon(bonus)}원`,
           );
           if (isMega) setTimeout(() => mascotSay(MASCOT_LINES.megaGolden), 400);
-          playSound("levelUp");
+          playSound("catch");
           g.remove();
           saveGame();
         });
@@ -7758,6 +8654,7 @@
         if (monthlyPeriodKey !== mk) {
           monthlyPeriodKey = mk;
           monthlyWinnings = 0;
+          burnedMonthly = 0;
         }
       }
 
@@ -8226,24 +9123,36 @@
       function busk() {
         initAudio();
         registerTap();
-        const val = getClickValue() * comboMult;
+        const base = getClickValue() * comboMult;
+        const { value: val, isCrit } = rollClickCrit(base);
         addMoney(val);
         const btn = document.getElementById("buskBtn");
-        spawnFloatText(btn, val);
+        if (isCrit) {
+          spawnCritFloatText(btn, val);
+          playSound("crit");
+        } else {
+          spawnFloatText(btn, val);
+          playSound("click");
+        }
         tapFeedbackCombo(btn);
-        playSound("click");
       }
       document.getElementById("buskBtn").addEventListener("click", busk);
 
       function busk5() {
         initAudio();
         registerTap();
-        const val = getClickValue() * comboMult;
+        const base = getClickValue() * comboMult;
+        const { value: val, isCrit } = rollClickCrit(base);
         addMoney(val);
         const btn = document.getElementById("busk5Btn");
-        spawnFloatText(btn, val);
+        if (isCrit) {
+          spawnCritFloatText(btn, val);
+          playSound("crit");
+        } else {
+          spawnFloatText(btn, val);
+          playSound("click");
+        }
         tapFeedbackCombo(btn);
-        playSound("click");
       }
       document.getElementById("busk5Btn").addEventListener("click", busk5);
 
@@ -8386,7 +9295,7 @@
           // Firestore 보안 규칙에서 "직전 저장 대비 경과 시간 × 최대 증가 속도"를
           // 검증할 때 이 값을 기준으로 삼는다 (클라이언트가 보낸 시간은 신뢰하지 않음).
           const payload = {
-            ...dataObj,
+            ...sanitizeBigNumbersForFirestore(dataObj),
             serverSavedAt: firebase.firestore.FieldValue.serverTimestamp(),
           };
           await db.collection("saves").doc(currentUser.uid).set(payload);
@@ -8406,6 +9315,16 @@
           if (cloudData && !isVersionMismatch) {
             applySaveData(cloudData, { checkOffline: true });
             refreshAllScreens();
+            if (!seenFeatureUpdateSep2026) {
+              seenFeatureUpdateSep2026 = true;
+              setTimeout(
+                () =>
+                  document
+                    .getElementById("whatsNewModal")
+                    .classList.add("show"),
+                900,
+              );
+            }
           } else {
             /*
       if (isVersionMismatch) {
@@ -8550,6 +9469,7 @@
           const name = currentUser.name;
           const updatedAt = Date.now();
           const nameColorHex = nameColor ? nameColor.color : null;
+          const mansionIcon = getMansionTier().icon;
           await db
             .collection("leaderboard")
             .doc(currentUser.uid)
@@ -8558,8 +9478,9 @@
               updatedAt,
               tierName: overallTier.name,
               tierIcon: overallTier.icon,
-              amount: casinoTotalWinnings,
+              amount: toBigStorable(casinoTotalWinnings),
               nameColor: nameColorHex,
+              mansionIcon,
             });
           await db
             .collection(`leaderboard_weekly_${weeklyPeriodKey}`)
@@ -8569,8 +9490,9 @@
               updatedAt,
               tierName: weeklyTier.name,
               tierIcon: weeklyTier.icon,
-              amount: weeklyWinnings,
+              amount: toBigStorable(weeklyWinnings),
               nameColor: nameColorHex,
+              mansionIcon,
             });
           await db
             .collection(`leaderboard_monthly_${monthlyPeriodKey}`)
@@ -8580,36 +9502,65 @@
               updatedAt,
               tierName: monthlyTier.name,
               tierIcon: monthlyTier.icon,
-              amount: monthlyWinnings,
+              amount: toBigStorable(monthlyWinnings),
               nameColor: nameColorHex,
+              mansionIcon,
             });
         } catch (e) {
           console.error("랭킹보드 동기화 실패:", e);
         }
       }
 
+      function getLeaderboardCollectionName(period) {
+        if (period === "weekly") return `leaderboard_weekly_${weeklyPeriodKey}`;
+        if (period === "monthly")
+          return `leaderboard_monthly_${monthlyPeriodKey}`;
+        if (period === "burn")
+          return `leaderboard_burn_monthly_${monthlyPeriodKey}`;
+        return "leaderboard";
+      }
       async function fetchLeaderboard(period) {
         if (!db) return [];
         try {
           checkPeriodRollover();
-          let colName = "leaderboard";
-          if (period === "weekly")
-            colName = `leaderboard_weekly_${weeklyPeriodKey}`;
-          else if (period === "monthly")
-            colName = `leaderboard_monthly_${monthlyPeriodKey}`;
+          const colName = getLeaderboardCollectionName(period);
           const snap = await db
             .collection(colName)
             .orderBy("amount", "desc")
             .limit(10)
             .get();
-          return snap.docs.map((d, i) => ({
-            rank: i + 1,
-            uid: d.id,
-            ...d.data(),
-          }));
+          return snap.docs.map((d, i) => {
+            const raw = d.data();
+            return {
+              rank: i + 1,
+              uid: d.id,
+              ...raw,
+              amount: fromBigStorable(raw.amount),
+            };
+          });
         } catch (e) {
           console.error("랭킹보드 조회 실패:", e);
           return [];
+        }
+      }
+
+      // 상위 10명 밖이어도 "나는 전체 몇 명 중 몇 위인지"를 보여주기 위한 조회.
+      // 참가자가 아주 많아지면 비용이 커질 수 있는 방식(전체를 정렬해서 내 위치를 센다)이라,
+      // 유저 수가 크게 늘어나면 서버 집계(count) 쿼리 등으로 바꾸는 게 좋다.
+      async function fetchMyRankInfo(period) {
+        if (!currentUser || !db) return null;
+        try {
+          checkPeriodRollover();
+          const colName = getLeaderboardCollectionName(period);
+          const snap = await db
+            .collection(colName)
+            .orderBy("amount", "desc")
+            .get();
+          const idx = snap.docs.findIndex((d) => d.id === currentUser.uid);
+          return { rank: idx === -1 ? null : idx + 1, total: snap.docs.length };
+        } catch (e) {
+          console.error("내 순위 조회 실패:", e);
+          return null;
         }
       }
 
@@ -8815,6 +9766,9 @@
           dailyCasinoPlays,
           dailyJobBuys,
           dailyClicks,
+          dailyEventMobCaught,
+          dailyVoidWaveCleared,
+          totalEventMobCaught,
           dailyMissionsClaimed,
           megaGoldenCountToday,
           claimedSeasonRewards,
@@ -8834,6 +9788,16 @@
           discoveryNudges,
           infiniteUpgradeLevel,
           nameColor,
+          map6Unlocked,
+          voidWave,
+          voidShards,
+          voidDamageLevel,
+          voidEnemyHp,
+          voidEnemyMaxHp,
+          burnedTotal,
+          burnedMonthly,
+          mansionLevel,
+          seenFeatureUpdateSep2026,
           lastSaveTime: Date.now(),
         };
       }
@@ -8868,12 +9832,24 @@
 
       function applySaveData(data, opts) {
         opts = opts || {};
-        money = data.money || 0;
-        totalEarned = data.totalEarned || 0;
+        money = fromBigStorable(data.money) || 0;
+        totalEarned = fromBigStorable(data.totalEarned) || 0;
         stageIndex = data.stageIndex || 0;
         baseClickValue = data.baseClickValue || 1;
         infiniteUpgradeLevel = data.infiniteUpgradeLevel || 0;
         nameColor = data.nameColor || null;
+        map6Unlocked = data.map6Unlocked || false;
+        voidWave = data.voidWave || 1;
+        voidShards = data.voidShards || 0;
+        voidDamageLevel = data.voidDamageLevel || 0;
+        voidEnemyMaxHp = data.voidEnemyMaxHp || 0;
+        voidEnemyHp =
+          data.voidEnemyHp !== undefined ? data.voidEnemyHp : voidEnemyMaxHp;
+        if (map6Unlocked && voidEnemyMaxHp <= 0) startVoidWave(1);
+        burnedTotal = fromBigStorable(data.burnedTotal) || 0;
+        burnedMonthly = fromBigStorable(data.burnedMonthly) || 0;
+        mansionLevel = data.mansionLevel || 0;
+        seenFeatureUpdateSep2026 = data.seenFeatureUpdateSep2026 || false;
         clickUpgradeLevel = data.clickUpgradeLevel || [0, 0, 0, 0];
         jobLevels = data.jobLevels || new Array(allJobs.length).fill(0);
         map2Unlocked = data.map2Unlocked || false;
@@ -8897,10 +9873,15 @@
         dailyCasinoPlays = data.dailyCasinoPlays || 0;
         dailyJobBuys = data.dailyJobBuys || 0;
         dailyClicks = data.dailyClicks || 0;
+        dailyEventMobCaught = data.dailyEventMobCaught || 0;
+        totalEventMobCaught = data.totalEventMobCaught || 0;
+        dailyVoidWaveCleared = data.dailyVoidWaveCleared || 0;
         dailyMissionsClaimed = data.dailyMissionsClaimed || {
           casino: false,
           jobs: false,
           clicks: false,
+          eventmob: false,
+          void: false,
         };
         megaGoldenCountToday = data.megaGoldenCountToday || 0;
         claimedSeasonRewards = data.claimedSeasonRewards || [];
@@ -8940,12 +9921,12 @@
         unlockedAchievements = data.unlockedAchievements || [];
         rebirthCount = data.rebirthCount || 0;
         casinoPlaysCount = data.casinoPlaysCount || 0;
-        casinoTotalWagered = data.casinoTotalWagered || 0;
+        casinoTotalWagered = fromBigStorable(data.casinoTotalWagered) || 0;
         casinoWinCount = data.casinoWinCount || 0;
-        casinoTotalWinnings = data.casinoTotalWinnings || 0;
-        weeklyWinnings = data.weeklyWinnings || 0;
+        casinoTotalWinnings = fromBigStorable(data.casinoTotalWinnings) || 0;
+        weeklyWinnings = fromBigStorable(data.weeklyWinnings) || 0;
         weeklyPeriodKey = data.weeklyPeriodKey || "";
-        monthlyWinnings = data.monthlyWinnings || 0;
+        monthlyWinnings = fromBigStorable(data.monthlyWinnings) || 0;
         monthlyPeriodKey = data.monthlyPeriodKey || "";
         checkPeriodRollover();
         lastSaveTime = data.lastSaveTime || Date.now();
@@ -9020,6 +10001,14 @@
     }
     */
           applySaveData(data, { checkOffline: true });
+          if (!seenFeatureUpdateSep2026) {
+            seenFeatureUpdateSep2026 = true;
+            setTimeout(
+              () =>
+                document.getElementById("whatsNewModal").classList.add("show"),
+              900,
+            );
+          }
         } catch (e) {
           console.error("Save load error:", e);
         }
@@ -9036,6 +10025,10 @@
         if (map5Unlocked) {
           document.getElementById("mapBtn5").style.display = "inline-flex";
           renderStalls5();
+        }
+        if (map6Unlocked) {
+          document.getElementById("mapBtn6").style.display = "inline-flex";
+          renderVoidMap();
         }
         updateChallengeUI();
         switchMap(currentMap);
@@ -9066,6 +10059,10 @@
       if (map5Unlocked) {
         document.getElementById("mapBtn5").style.display = "inline-flex";
         renderStalls5();
+      }
+      if (map6Unlocked) {
+        document.getElementById("mapBtn6").style.display = "inline-flex";
+        renderVoidMap();
       }
       switchMap(currentMap);
     </script>
