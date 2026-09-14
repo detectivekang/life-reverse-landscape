@@ -1909,6 +1909,10 @@ function rollNameColorGacha() {
     nameColor = { name: result.name, color: result.color, rank: result.rank };
     showToast(`🎉 ${result.name} 이름색을 획득했습니다!`);
     playSound('gachaWin');
+    // 리더보드 문서만 즉시 동기화하고 정작 "내 세이브"는 다음 10초 자동저장 때까지
+    // 기다렸었음 - 그 사이에 새로고침하면 뽑은 색이 사라지는 문제가 있었음.
+    // 그래서 내 세이브도 여기서 바로(클라우드까지) 강제 저장한다.
+    saveGame({ forceCloud: true });
     syncLeaderboard({ forceSync: true });
   } else {
     showToast(`🎨 ${result.name}이(가) 나왔지만, 이미 더 희귀한 색을 갖고 있어요!`);
@@ -2065,6 +2069,9 @@ function buyMansionLevel() {
   playSound('coin');
   render();
   renderMansionModal();
+  // nameColor 뽑기와 같은 이유: 리더보드만 즉시 동기화하면 내 세이브(mansionLevel)는
+  // 다음 자동저장 때까지 기다려야 해서, 사자마자 새로고침하면 구매한 게 사라졌음.
+  saveGame({ forceCloud: true });
   if (currentUser && db) syncLeaderboard({ forceSync: true });
 }
 function renderMansionModal() {
@@ -5209,11 +5216,18 @@ async function fetchLeaderboard(period) {
   try {
     checkPeriodRollover();
     const colName = getLeaderboardCollectionName(period);
-    const snap = await db.collection(colName).orderBy('amount', 'desc').limit(10).get();
-    return snap.docs.map((d, i) => {
+    // Firestore의 orderBy('amount')는 필드 타입이 섞여 있으면(예전 버전에서 잘못 저장된
+    // 문서, 형식이 다른 BN: 문자열 등) 값 크기가 아니라 "타입" 기준으로도 갈려서 순서가
+    // 뒤틀릴 수 있다. 그래서 넉넉히 더 받아온 뒤(limit 10 대신 40) fromBigStorable로
+    // 전부 실제 숫자로 변환해서 우리가 직접 다시 정렬한다 - 예전 오염된 문서가 섞여
+    // 있어도 화면에 보이는 순위는 항상 실제 금액 크기 기준으로 정확하게 나온다.
+    const snap = await db.collection(colName).orderBy('amount', 'desc').limit(40).get();
+    const decoded = snap.docs.map((d) => {
       const raw = d.data();
-      return { rank: i + 1, uid: d.id, ...raw, amount: fromBigStorable(raw.amount) };
+      return { uid: d.id, ...raw, amount: fromBigStorable(raw.amount) };
     });
+    decoded.sort((a, b) => b.amount - a.amount);
+    return decoded.slice(0, 10).map((entry, i) => ({ rank: i + 1, ...entry }));
   } catch (e) {
     console.error('랭킹보드 조회 실패:', e);
     return [];
@@ -5229,8 +5243,12 @@ async function fetchMyRankInfo(period) {
     checkPeriodRollover();
     const colName = getLeaderboardCollectionName(period);
     const snap = await db.collection(colName).orderBy('amount', 'desc').get();
-    const idx = snap.docs.findIndex(d => d.id === currentUser.uid);
-    return { rank: idx === -1 ? null : idx + 1, total: snap.docs.length };
+    // fetchLeaderboard와 마찬가지로 타입이 섞인 문서 때문에 Firestore 정렬 순서를
+    // 그대로 믿지 않고, 실제 금액(fromBigStorable)으로 다시 정렬한 뒤 내 순위를 찾는다.
+    const decoded = snap.docs.map((d) => ({ uid: d.id, amount: fromBigStorable(d.data().amount) }));
+    decoded.sort((a, b) => b.amount - a.amount);
+    const idx = decoded.findIndex((d) => d.uid === currentUser.uid);
+    return { rank: idx === -1 ? null : idx + 1, total: decoded.length };
   } catch (e) {
     console.error('내 순위 조회 실패:', e);
     return null;
