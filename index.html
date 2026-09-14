@@ -9584,11 +9584,11 @@
       // 지금 이 정적 호스팅 구조에선 안 되고, 대신 브라우저/기기가 떠 있는 동안(백그라운드
       // 포함) 예약한 시간에 알림을 띄우는 것까진 서비스워커로 가능하다. 완벽한 보장은
       // 아니지만, 탭을 완전히 종료하지 않는 대다수 상황에선 잘 동작한다.
-      if ("serviceWorker" in navigator) {
-        navigator.serviceWorker
-          .register("./sw.js")
-          .catch((e) => console.warn("서비스워커 등록 실패:", e));
-      }
+      // if ("serviceWorker" in navigator) {
+      //   navigator.serviceWorker
+      //     .register("./sw.js")
+      //     .catch((e) => console.warn("서비스워커 등록 실패:", e));
+      // }
 
       // ===== 홈 화면에 추가(PWA 설치) 유도 배너 =====
       // 처음 들어오자마자 권유하면 이탈률만 올라가니, 어느 정도 놀고 나서(2분 뒤) 자연스럽게
