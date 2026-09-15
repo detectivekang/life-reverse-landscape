@@ -14,7 +14,7 @@
 // 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
 // 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
 (function() {
-  var CURRENT_VERSION = '2026082233';
+  var CURRENT_VERSION = '2026091621';
   try {
     if (sessionStorage.getItem('lrVersionChecked') === CURRENT_VERSION) return;
     fetch(location.pathname + '?_cb=' + Date.now(), { cache: 'no-store' })
@@ -5076,10 +5076,23 @@ async function cloudLoadGame() {
       // 0으로 정상적으로 리셋된 상태), totalEarned 크기 비교 없이 무조건 로컬이
       // 앞선 것으로 본다. 그렇지 않으면 아직 클라우드에 반영되지 않은 예전(환생 전)
       // 저장이 방금 리셋한 진행 상황을 덮어써버린다.
+      // 이름 색상 뽑기/저택 꾸미기는 money만 쓰고 totalEarned은 전혀 늘리지 않는
+      // 소비이기 때문에, totalEarned 1.5배 성장 조건만으로는 "방금 산 것"을 절대
+      // 인식하지 못해서 강제 클라우드 저장이 끝나기 전에 새로고침하면 옛 클라우드
+      // 값(색 없음/저택 낮은 레벨)에 덮어써지는 문제가 있었다. 그래서 저택 레벨이나
+      // 이름 색상 등급이 클라우드보다 이미 앞서 있는 경우도 "로컬이 앞섰다"로 인정한다.
+      const cloudMansionLevel = cloudData.mansionLevel || 0;
+      const cloudNameColorRank = cloudData.nameColor
+        ? (nameColorTiers.find(t => t.color === cloudData.nameColor) || {}).rank || 0
+        : 0;
       const localIsAhead = cloudRebirth < rebirthCount || (
         cloudRebirth <= rebirthCount
         && lastSaveTime > cloudLastSave + 5000
-        && fromBigStorable(totalEarned) > cloudTotalEarned * 1.5
+        && (
+          fromBigStorable(totalEarned) > cloudTotalEarned * 1.5
+          || mansionLevel > cloudMansionLevel
+          || getNameColorRank() > cloudNameColorRank
+        )
       );
 
       if (localIsAhead) {
@@ -5441,7 +5454,7 @@ function saveGame(opts) {
       // rebirthCount가 이번 저장에서 늘었다면 "방금 환생해서 totalEarned가 0으로
       // 리셋된 것"이 정상 상황이므로, 이땐 totalEarned가 작아졌다고 뒤처진 탭으로
       // 오인해 예전 저장을 덮어쓰면 안 된다.
-      if (existingRebirth <= data.rebirthCount && existingTotal > data.totalEarned + 1) {
+      if (existingRebirth >= data.rebirthCount && existingTotal > data.totalEarned + 1) {
         applySaveData(existing, { checkOffline: false });
         refreshAllScreens();
         return;
