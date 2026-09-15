@@ -5066,9 +5066,15 @@ async function cloudLoadGame() {
       const cloudLastSave = cloudData.lastSaveTime || 0;
       const cloudTotalEarned = fromBigStorable(cloudData.totalEarned);
       const cloudRebirth = cloudData.rebirthCount || 0;
-      const localIsAhead = cloudRebirth <= rebirthCount
+      // 로컬이 클라우드보다 환생을 더 많이 했다면(=방금 환생해서 totalEarned가
+      // 0으로 정상적으로 리셋된 상태), totalEarned 크기 비교 없이 무조건 로컬이
+      // 앞선 것으로 본다. 그렇지 않으면 아직 클라우드에 반영되지 않은 예전(환생 전)
+      // 저장이 방금 리셋한 진행 상황을 덮어써버린다.
+      const localIsAhead = cloudRebirth < rebirthCount || (
+        cloudRebirth <= rebirthCount
         && lastSaveTime > cloudLastSave + 5000
-        && fromBigStorable(totalEarned) > cloudTotalEarned * 1.5;
+        && fromBigStorable(totalEarned) > cloudTotalEarned * 1.5
+      );
 
       if (localIsAhead) {
         console.warn('클라우드 저장본이 로컬보다 뒤처져 있어 무시하고 로컬 진행을 다시 업로드합니다.');
@@ -5425,7 +5431,11 @@ function saveGame(opts) {
     if (existingRaw) {
       const existing = JSON.parse(existingRaw);
       const existingTotal = Number(existing.totalEarned) || 0;
-      if (existingTotal > data.totalEarned + 1) {
+      const existingRebirth = Number(existing.rebirthCount) || 0;
+      // rebirthCount가 이번 저장에서 늘었다면 "방금 환생해서 totalEarned가 0으로
+      // 리셋된 것"이 정상 상황이므로, 이땐 totalEarned가 작아졌다고 뒤처진 탭으로
+      // 오인해 예전 저장을 덮어쓰면 안 된다.
+      if (existingRebirth <= data.rebirthCount && existingTotal > data.totalEarned + 1) {
         applySaveData(existing, { checkOffline: false });
         refreshAllScreens();
         return;
@@ -5465,7 +5475,12 @@ window.addEventListener('storage', (e) => {
   try {
     const incoming = JSON.parse(e.newValue);
     const incomingTotal = Number(incoming.totalEarned) || 0;
-    if (incomingTotal > totalEarned + 1) {
+    const incomingRebirth = Number(incoming.rebirthCount) || 0;
+    // 다른 탭에서 방금 환생해서 totalEarned가 0으로 리셋된 경우도 정상적으로
+    // 반영되어야 하므로, rebirthCount가 늘어난 저장은 무조건 최신으로 취급하고
+    // (반대로 이 탭이 이미 더 많이 환생한 상태라면 rebirthCount가 낮은 예전
+    // totalEarned로 되돌리지 않는다).
+    if (incomingRebirth > rebirthCount || (incomingRebirth >= rebirthCount && incomingTotal > totalEarned + 1)) {
       applySaveData(incoming, { checkOffline: false });
       refreshAllScreens();
     }
