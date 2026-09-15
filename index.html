@@ -14,7 +14,7 @@
 // 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
 // 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
 (function() {
-  var CURRENT_VERSION = '2026082211';
+  var CURRENT_VERSION = '2026082223';
   try {
     if (sessionStorage.getItem('lrVersionChecked') === CURRENT_VERSION) return;
     fetch(location.pathname + '?_cb=' + Date.now(), { cache: 'no-store' })
@@ -3346,17 +3346,23 @@ let tickCount = 0;
 setInterval(() => {
   // 카지노/랜덤이벤트처럼 addMoney()를 거치지 않고 money를 직접 바꾸는 경로도 있어서,
   // 여기서 0.1초마다 한 번 더 확인해 게이트에 구멍이 안 생기게 한다.
-  if (!currentUser && (totalEarned >= LOGIN_REQUIRED_THRESHOLD || money >= LOGIN_REQUIRED_THRESHOLD)) {
+  const gated = !currentUser && (totalEarned >= LOGIN_REQUIRED_THRESHOLD || money >= LOGIN_REQUIRED_THRESHOLD);
+  if (gated) {
     showLoginGate();
-    return;
+    // ⚠️ 예전엔 여기서 return 해버려서, 게이트가 한 번 뜨면(비로그인 + 1억원 초과)
+    // 이 세션이 끝날 때까지 이 루프 자체가 다시는 안 돌았음. 그 말은 곧:
+    //  - 10틱마다 도는 자동저장(tickCount % 100 === 0)도 다시는 안 돎
+    //  - render()도 다시는 안 불림 (화면이 그 시점 상태로 완전히 멈춤)
+    // "돈을 더 못 벌게" 막는 것과 "저장/화면 갱신이 아예 멈추는 것"은 다른 문제라서,
+    // 수익만 막고 나머지는 계속 돌게 아래에서 계속 진행한다.
   }
   tickCount++;
   const isSecondTick = tickCount % 10 === 0;
   if (isSecondTick) { checkDailyRollover(); updateDailyBadge(); renderSeasonEventBanner(); }
-  if (isSecondTick && map6Unlocked) voidAutoAttackTick();
+  if (isSecondTick && map6Unlocked && !gated) voidAutoAttackTick();
 
   allJobs.forEach((job, idx) => {
-    if (job.stageIdx > stageIndex || jobLevels[idx] === 0) return;
+    if (job.stageIdx > stageIndex || jobLevels[idx] === 0 || gated) return;
     const cycleSeconds = Math.max(1.5, 5 - jobLevels[idx] * 0.15);
     const fillRatePerTick = (1 / cycleSeconds) * 0.1 * getSpeedMult();
     stallProgress[idx] += fillRatePerTick;
@@ -3386,7 +3392,7 @@ setInterval(() => {
 
   if (map2Unlocked) {
     map2Jobs.forEach((job, idx) => {
-      if (jobLevels2[idx] === 0) return;
+      if (jobLevels2[idx] === 0 || gated) return;
       const cycleSeconds = Math.max(1.2, 6 - employeeLevels2[idx] * 0.2);
       const fillRatePerTick = (1 / cycleSeconds) * 0.1 * getSpeedMult();
       stallProgress2[idx] += fillRatePerTick;
@@ -3421,7 +3427,7 @@ setInterval(() => {
 
   if (map5Unlocked) {
     map5Jobs.forEach((job, idx) => {
-      if (jobLevels5[idx] === 0) return;
+      if (jobLevels5[idx] === 0 || gated) return;
       const cycleSeconds = Math.max(1.5, 5 - jobLevels5[idx] * 0.15);
       const fillRatePerTick = (1 / cycleSeconds) * 0.1 * getSpeedMult();
       stallProgress5[idx] += fillRatePerTick;
@@ -5407,6 +5413,28 @@ const CLOUD_SAVE_MIN_INTERVAL = 30000; // 클라우드 저장은 최소 30초 �
 function saveGame(opts) {
   const forceCloud = opts && opts.forceCloud;
   const data = buildSaveData();
+
+  // 탭을 여러 개 켜놓으면(예: 예전에 켜놓고 잊어버린 탭 + 지금 쓰는 탭) 각자 따로
+  // 자동저장을 돌리다가, 진행상황이 뒤처진 탭이 나중에 저장하면서 앞선 탭의 저장을
+  // 그냥 덮어써버리는 문제가 있었다 (이름 색상/직업 레벨이 갑자기 예전 상태로
+  // "초기화"된 것처럼 보이는 원인). totalEarned는 무조건 오르기만 하는 값이라, 이걸
+  // 기준으로 "이 탭이 뒤처져 있는지"를 판단해서 뒤처져 있으면 저장 대신 최신 데이터를
+  // 이 탭에 반영한다.
+  try {
+    const existingRaw = localStorage.getItem('lifeReverseSave');
+    if (existingRaw) {
+      const existing = JSON.parse(existingRaw);
+      const existingTotal = Number(existing.totalEarned) || 0;
+      if (existingTotal > data.totalEarned + 1) {
+        applySaveData(existing, { checkOffline: false });
+        refreshAllScreens();
+        return;
+      }
+    }
+  } catch (e) {
+    console.error('저장 전 최신 데이터 확인 실패:', e);
+  }
+
   localStorage.setItem('lifeReverseSave', JSON.stringify(data)); // 로컬 저장은 항상 즉시 (비용 없음)
   if (currentUser && db) {
     const now = Date.now();
@@ -5428,6 +5456,23 @@ document.addEventListener('visibilitychange', () => {
 });
 window.addEventListener('pagehide', saveOnSessionEnd);
 window.addEventListener('beforeunload', saveOnSessionEnd);
+
+// 다른 탭에서 저장이 일어나면(예: 이 게임을 여러 탭으로 켜놨을 때) 그 탭이 더
+// 앞서있다는 뜻이니, 이 탭도 그 최신 상태를 바로 반영한다. 이렇게 하면 이 탭이
+// 다음에 자동저장할 때 뒤처진 상태로 덮어쓸 일도 애초에 줄어든다.
+window.addEventListener('storage', (e) => {
+  if (e.key !== 'lifeReverseSave' || !e.newValue) return;
+  try {
+    const incoming = JSON.parse(e.newValue);
+    const incomingTotal = Number(incoming.totalEarned) || 0;
+    if (incomingTotal > totalEarned + 1) {
+      applySaveData(incoming, { checkOffline: false });
+      refreshAllScreens();
+    }
+  } catch (err) {
+    console.error('다른 탭의 저장 반영 실패:', err);
+  }
+});
 
 function applySaveData(data, opts) {
   opts = opts || {};
@@ -5548,6 +5593,12 @@ function applySaveData(data, opts) {
   checkLoginStreak();
   checkSeasonEventLoginBonus();
   setTimeout(() => mascotSay(MASCOT_LINES.loginGreeting), 1000);
+
+  // 방금 복원한(+오프라인 보상까지 반영된) 상태를 즉시 한 번 더 저장해둔다.
+  // 예전엔 다음 자동저장(10틱=1초 후, 또는 로그인 게이트에 걸리면 그마저도 영영 안 돎)까지
+  // 기다렸는데, 그 사이에 새로고침되면 방금 정상적으로 복원된 상태 자체가 저장 안 된
+  // 채로 날아갈 수 있었다.
+  saveGame();
 }
 
 function loadGame() {
