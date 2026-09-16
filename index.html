@@ -14,7 +14,7 @@
 // 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
 // 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
 (function() {
-  var CURRENT_VERSION = '2026091621';
+  var CURRENT_VERSION = '2026091602';
   try {
     if (sessionStorage.getItem('lrVersionChecked') === CURRENT_VERSION) return;
     fetch(location.pathname + '?_cb=' + Date.now(), { cache: 'no-store' })
@@ -2045,12 +2045,14 @@ let mansionLevel = 0;
 const MANSION_BASE_COST = 1e6;
 const MANSION_RATE = 1.35; // 무한강화보다 훨씬 가파르게 올라 순수 소비처 역할을 하게 함
 const mansionTiers = [
-  { min: 0,  icon: '',   name: '집 없음' },
-  { min: 1,  icon: '🏠', name: '오두막' },
-  { min: 5,  icon: '🏡', name: '저택' },
-  { min: 10, icon: '🏰', name: '성' },
-  { min: 20, icon: '🏯', name: '궁전' },
-  { min: 35, icon: '🛸', name: '차원 저택' }
+  { min: 0,   icon: '',   name: '집 없음' },
+  { min: 3,   icon: '🏠', name: '오두막' },
+  { min: 12,  icon: '🏡', name: '저택' },
+  { min: 30,  icon: '🏘️', name: '대저택' },
+  { min: 60,  icon: '🏰', name: '성' },
+  { min: 100, icon: '🏯', name: '궁전' },
+  { min: 150, icon: '🛸', name: '차원 저택' },
+  { min: 250, icon: '🌌', name: '우주 제국' }
 ];
 function getMansionCost(level) {
   const lv = level === undefined ? mansionLevel : level;
