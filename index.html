@@ -14,7 +14,7 @@
 // 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
 // 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
 (function() {
-  var CURRENT_VERSION = '2026082233';
+  var CURRENT_VERSION = '2026091604';
   try {
     if (sessionStorage.getItem('lrVersionChecked') === CURRENT_VERSION) return;
     fetch(location.pathname + '?_cb=' + Date.now(), { cache: 'no-store' })
@@ -914,7 +914,20 @@
         <div style="font-size:11px; color:var(--paper-dim); margin-top:4px;" id="voidEnemyHpText">HP 0/0</div>
       </div>
       <div style="font-size:12px;">💎 차원 조각 <b id="voidShardCount">0</b></div>
-      <button class="start-btn" id="voidShopBtn" style="margin-top:12px;">🛒 차원 상점</button>
+      <div style="display:flex; gap:8px; justify-content:center; margin-top:12px;">
+        <button class="start-btn" id="voidShopBtn">🛒 차원 상점</button>
+        <button class="start-btn" id="voidRelicBtn" style="background:var(--bg-panel); color:var(--gold); border:1px solid var(--gold);">🏺 유물 도감 (<span id="voidRelicCount">0/8</span>)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 공허 유물 도감 모달 -->
+  <div class="modal-overlay" id="voidRelicModal">
+    <div class="modal-box">
+      <h2>🏺 유물 도감</h2>
+      <p style="font-size:12px; color:var(--paper-dim); margin-top:-4px;">웨이브를 깨다 보면 가끔 유물이 드랍돼요. 보스전에서 더 잘 나오고, 이미 가진 유물이 또 나오면 차원 조각으로 바뀌어요.</p>
+      <div id="voidRelicGrid" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; margin:14px 0;"></div>
+      <button class="close-btn" id="voidRelicCloseBtn">닫기</button>
     </div>
   </div>
 
@@ -1023,6 +1036,7 @@
         <button class="close-btn more-menu-item" id="achievementBtn" style="text-align:left;">🏆 업적</button>
         <button class="close-btn more-menu-item" id="nameColorBtn" style="text-align:left;">🎨 이름 색상 뽑기</button>
         <button class="close-btn more-menu-item" id="mansionBtn" style="text-align:left;">🏰 저택 꾸미기</button>
+        <button class="close-btn more-menu-item" id="swordBtn" style="text-align:left;">⚔️ 검 강화</button>
         <button class="close-btn more-menu-item" id="resetBtn" style="text-align:left;">⟳ 초기화</button>
         <button class="close-btn more-menu-item" id="helpBtn" style="text-align:left;">❓ 도움말</button>
       </div>
@@ -1213,6 +1227,23 @@
     </div>
   </div>
 
+  <!-- 검 강화 모달 -->
+  <div class="modal-overlay" id="swordModal">
+    <div class="modal-box">
+      <h2>⚔️ 검 강화</h2>
+      <p style="font-size:12px; color:var(--paper-dim); margin-top:-4px;">평범한 나뭇가지를 강화해서 전설의 무기로 키워보세요. 최대 +20강까지 가능하지만, 레벨이 오를수록 성공 확률은 낮아지고 실패하면 검이 파괴될 수도 있어요.</p>
+      <div style="margin:14px 0; text-align:center; background:var(--bg-panel); border-radius:10px; padding:16px 14px;">
+        <div id="swordIcon" style="font-size:48px;">❔</div>
+        <div id="swordName" style="margin-top:6px; font-size:15px; color:var(--gold); font-weight:bold;">검이 없어요</div>
+        <div style="font-size:11px; color:var(--paper-dim); margin-top:8px;">최고 기록 +<span id="swordBestLevel">0</span>강 · 파괴된 검 <span id="swordBreakCount">0</span>자루</div>
+      </div>
+      <button class="start-btn" id="swordEnhanceBtn" style="display:none;">⚒️ 강화하기</button>
+      <button class="start-btn" id="swordSellBtn" style="margin-top:8px; display:none;">💰 판매하기</button>
+      <button class="start-btn" id="swordCraftBtn" style="margin-top:8px; background:var(--bg-panel); color:var(--gold); border:1px solid var(--gold);">🗡️ 새 검 만들기</button>
+      <button class="close-btn" id="swordCloseBtn" style="margin-top:10px;">닫기</button>
+    </div>
+  </div>
+
   <!-- 이름 색상 뽑기 모달 -->
   <div class="modal-overlay" id="nameColorModal">
     <div class="modal-box">
@@ -1364,6 +1395,22 @@ function playSound(type) {
       gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
       gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.35);
       osc.start(); osc.stop(audioCtx.currentTime + 0.35);
+    } else if (type === 'swordFail') {
+      // 검 강화 실패(레벨 유지) 전용: 힘 빠지는 짧은 하강음
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(180, audioCtx.currentTime + 0.2);
+      gain.gain.setValueAtTime(0.13, audioCtx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+      osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+    } else if (type === 'swordBreak') {
+      // 검 파괴 전용: 거친 노이즈성 굉음
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(200, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.5);
+      gain.gain.setValueAtTime(0.22, audioCtx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+      osc.start(); osc.stop(audioCtx.currentTime + 0.5);
     }
   } catch (e) {}
 }
@@ -1458,6 +1505,7 @@ let voidShards = 0;
 let voidDamageLevel = 0;
 let voidEnemyHp = 0;
 let voidEnemyMaxHp = 0;
+let voidRelics = {}; // { relicId: 1 } - 보유한 공허 유물 목록 (도감)
 let jobLevels5 = [];
 let stallProgress5 = [];
 let prestigeMult = 1;
@@ -1964,7 +2012,7 @@ const voidEnemyEmojis = ['👻', '🕸️', '🌑', '🦇'];
 const VOID_BOSS_EVERY = 5;
 function getVoidDamage() {
   // 상점 강화 + 본편 클릭 수입의 아주 일부를 살짝 반영해서, 본편이 성장할수록 여기도 약간은 편해지게 한다.
-  return 10 + voidDamageLevel * 5 + Math.floor(getClickValue() * 0.05);
+  return Math.floor((10 + voidDamageLevel * 5 + Math.floor(getClickValue() * 0.05)) * getVoidRelicDamageMult());
 }
 function getVoidUpgradeCost(level) {
   const lv = level === undefined ? voidDamageLevel : level;
@@ -1986,6 +2034,68 @@ function startVoidWave(wave) {
   voidEnemyHp = voidEnemyMaxHp;
   renderVoidMap();
 }
+
+// ===== 공허 유물(도감형 수집 요소) =====
+// 웨이브를 깨다 보면 가끔 유물이 드랍되고, 모을수록 영구 배율이 붙는다.
+// type: 'click'(클릭 수입) / 'income'(초당 수입) / 'voidDmg'(공허 공격력) /
+//       'shard'(차원 조각 획득량) / 'all'(위 3개 - click/income/voidDmg - 전부)
+const VOID_RELIC_POOL = [
+  { id: 'coin',    icon: '🪙', name: '낡은 동전',        rarity: 'common',    type: 'click',   value: 0.03, desc: '클릭 수입 +3%' },
+  { id: 'gear',    icon: '⚙️', name: '녹슨 톱니바퀴',     rarity: 'common',    type: 'income',  value: 0.03, desc: '초당 수입 +3%' },
+  { id: 'shell',   icon: '🐚', name: '속삭이는 조개껍질', rarity: 'common',    type: 'shard',   value: 0.10, desc: '차원 조각 획득 +10%' },
+  { id: 'feather', icon: '🪶', name: '검은 깃털',        rarity: 'rare',      type: 'voidDmg', value: 0.08, desc: '공허 공격력 +8%' },
+  { id: 'mirror',  icon: '🪞', name: '유령의 손거울',     rarity: 'rare',      type: 'click',   value: 0.06, desc: '클릭 수입 +6%' },
+  { id: 'lantern', icon: '🏮', name: '길 잃은 등불',      rarity: 'rare',      type: 'income',  value: 0.06, desc: '초당 수입 +6%' },
+  { id: 'heart',   icon: '🖤', name: '심연의 심장',       rarity: 'epic',      type: 'voidDmg', value: 0.15, desc: '공허 공격력 +15%' },
+  { id: 'crown',   icon: '👑', name: '공허의 왕관',       rarity: 'legendary', type: 'all',     value: 0.10, desc: '클릭·초당 수입·공허 공격력 모두 +10%' }
+];
+const VOID_RELIC_DUP_SHARDS = { common: 10, rare: 25, epic: 60, legendary: 150 };
+const VOID_RELIC_RARITY_LABEL = { common: '일반', rare: '레어', epic: '에픽', legendary: '전설' };
+
+function getVoidRelicBonus(type) {
+  let bonus = 0;
+  for (const id in voidRelics) {
+    if (!voidRelics[id]) continue;
+    const r = VOID_RELIC_POOL.find(x => x.id === id);
+    if (r && (r.type === type || r.type === 'all')) bonus += r.value;
+  }
+  return bonus;
+}
+function getVoidRelicClickMult()  { return 1 + getVoidRelicBonus('click'); }
+function getVoidRelicIncomeMult() { return 1 + getVoidRelicBonus('income'); }
+function getVoidRelicDamageMult() { return 1 + getVoidRelicBonus('voidDmg'); }
+function getVoidRelicShardMult()  { return 1 + getVoidRelicBonus('shard'); }
+
+// 웨이브 클리어 시 유물 드랍을 굴린다. 보스는 확률도 높고 희귀 등급도 나올 수 있다.
+function rollVoidRelicDrop(wasBoss) {
+  const dropChance = wasBoss ? 0.30 : 0.04;
+  if (Math.random() >= dropChance) return null;
+  let pool;
+  if (wasBoss) {
+    const roll = Math.random() * 100;
+    const rarity = roll < 5 ? 'legendary' : roll < 20 ? 'epic' : roll < 50 ? 'rare' : 'common';
+    pool = VOID_RELIC_POOL.filter(r => r.rarity === rarity);
+  } else {
+    pool = VOID_RELIC_POOL.filter(r => r.rarity === 'common' || r.rarity === 'rare');
+  }
+  if (!pool.length) return null;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+function renderVoidRelicPanel() {
+  const countEl = document.getElementById('voidRelicCount');
+  if (countEl) countEl.textContent = `${Object.keys(voidRelics).length}/${VOID_RELIC_POOL.length}`;
+  const grid = document.getElementById('voidRelicGrid');
+  if (!grid) return;
+  grid.innerHTML = VOID_RELIC_POOL.map(r => {
+    const owned = !!voidRelics[r.id];
+    return `<div style="background:var(--bg-panel); border-radius:10px; padding:10px 6px; text-align:center; opacity:${owned ? '1' : '0.4'};">
+      <div style="font-size:28px;">${owned ? r.icon : '❔'}</div>
+      <div style="font-size:11px; margin-top:4px; color:${owned ? 'var(--gold)' : 'var(--paper-dim)'};">${owned ? r.name : '???'}</div>
+      <div style="font-size:9.5px; color:var(--paper-dim); margin-top:2px;">${VOID_RELIC_RARITY_LABEL[r.rarity]}</div>
+      ${owned ? `<div style="font-size:9.5px; color:var(--paper-dim); margin-top:2px;">${r.desc}</div>` : ''}
+    </div>`;
+  }).join('');
+}
 function renderVoidMap() {
   const waveEl = document.getElementById('voidWaveNum');
   if (!waveEl) return;
@@ -1997,6 +2107,7 @@ function renderVoidMap() {
   document.getElementById('voidEnemyHpFill').style.width = pct + '%';
   document.getElementById('voidEnemyHpText').textContent = `HP ${Math.max(0, Math.ceil(voidEnemyHp)).toLocaleString('ko-KR')}/${voidEnemyMaxHp.toLocaleString('ko-KR')}`;
   document.getElementById('voidShardCount').textContent = voidShards.toLocaleString('ko-KR');
+  renderVoidRelicPanel();
 }
 function renderVoidShop() {
   const lvEl = document.getElementById('voidDamageLevel');
@@ -2016,10 +2127,23 @@ function buyVoidUpgrade() {
 }
 function defeatVoidEnemy() {
   dailyVoidWaveCleared++;
-  const reward = getVoidRewardForWave(voidWave);
-  voidShards += reward;
   const wasBoss = voidWave % VOID_BOSS_EVERY === 0;
-  showToast(`${wasBoss ? '👹 미니보스' : '💎 웨이브'} ${voidWave} 클리어! 차원 조각 +${reward}`);
+  const reward = Math.floor(getVoidRewardForWave(voidWave) * getVoidRelicShardMult());
+  voidShards += reward;
+  let toastMsg = `${wasBoss ? '👹 미니보스' : '💎 웨이브'} ${voidWave} 클리어! 차원 조각 +${reward}`;
+  const dropped = rollVoidRelicDrop(wasBoss);
+  if (dropped) {
+    if (voidRelics[dropped.id]) {
+      const dupBonus = VOID_RELIC_DUP_SHARDS[dropped.rarity] || 10;
+      voidShards += dupBonus;
+      toastMsg += ` (중복 유물 → 조각 +${dupBonus})`;
+    } else {
+      voidRelics[dropped.id] = 1;
+      renderVoidRelicPanel();
+      mascotSay([`오! ${dropped.icon} '${dropped.name}'을(를) 주웠어요!`, `${dropped.icon} 처음 보는 유물이에요, '${dropped.name}'!`]);
+    }
+  }
+  showToast(toastMsg);
   playSound('waveClear');
   startVoidWave(voidWave + 1);
 }
@@ -2038,6 +2162,138 @@ function voidAutoAttackTick() {
   damageVoidEnemy(Math.max(1, Math.floor(getVoidDamage() * 0.7)));
 }
 
+// ===== 검 강화 (고정 스토리라인 + 최대 +20강, 갈수록 확률이 박해지고 파괴 위험도 커지는 미니게임) =====
+// 재질 랜덤 뽑기는 제거하고, 대신 +0~+20강 전 구간에 고유한 이름/공격력/강화비용/확률을
+// 하나씩 정해둔 고정 테이블을 사용한다. index 0은 강화 전 기본 상태.
+const SWORD_MAX_LEVEL = 20;
+const SWORD_STAGES = [
+  { name: '썩은 나뭇가지', atk: 10 },
+  { name: '금 간 썩은 나뭇가지', atk: 22560, cost: 20000000, success: 100, maintain: 99, destroy: 1 },
+  { name: '때가 꼬질꼬질한 나뭇가지', atk: 90110, cost: 40000000, success: 95, maintain: 2, destroy: 3 },
+  { name: '테이프 붙인 나뭇가지', atk: 202660, cost: 80000000, success: 90, maintain: 5, destroy: 5 },
+  { name: '녹슬고 곰팡이 핀 나뭇가지', atk: 360210, cost: 160000000, success: 85, maintain: 8, destroy: 7 },
+  { name: '나름 뾰족한 몽둥이', atk: 562760, cost: 320000000, success: 80, maintain: 11, destroy: 9 },
+  { name: '단단히 다듬어진 몽둥이', atk: 810310, cost: 640000000, success: 75, maintain: 14, destroy: 11 },
+  { name: '강철을 덧댄 몽둥이', atk: 1102860, cost: 1280000000, success: 70, maintain: 17, destroy: 13 },
+  { name: '피맛을 본 몽둥이', atk: 1440410, cost: 2560000000, success: 65, maintain: 20, destroy: 15 },
+  { name: '베테랑 용병의 몽둥이', atk: 1822960, cost: 5120000000, success: 60, maintain: 23, destroy: 17 },
+  { name: '칠흑의 피바람 검', atk: 2250510, cost: 10240000000, success: 55, maintain: 26, destroy: 19 },
+  { name: '심연의 마귀 검', atk: 2723060, cost: 20480000000, success: 50, maintain: 29, destroy: 21 },
+  { name: '광기의 처형자 검', atk: 3240610, cost: 40960000000, success: 45, maintain: 32, destroy: 23 },
+  { name: '지옥불을 머금은 검', atk: 3803160, cost: 81920000000, success: 40, maintain: 35, destroy: 25 },
+  { name: '영혼을 파멸하는 검', atk: 4410710, cost: 163840000000, success: 35, maintain: 38, destroy: 27 },
+  { name: '발키리의 승리 검', atk: 5063260, cost: 327680000000, success: 30, maintain: 41, destroy: 29 },
+  { name: '제우스의 뇌전 검', atk: 5760810, cost: 655360000000, success: 25, maintain: 44, destroy: 31 },
+  { name: '포세이돈의 서리 파도 검', atk: 6503360, cost: 1310720000000, success: 20, maintain: 47, destroy: 33 },
+  { name: '크로노스의 시공 베기 검', atk: 7290910, cost: 2621440000000, success: 15, maintain: 50, destroy: 35 },
+  { name: '종말의 카오스 아포칼립스 검', atk: 8123460, cost: 5242880000000, success: 10, maintain: 53, destroy: 37 },
+  { name: '창세의 전지전능한 데미우르고스 검', atk: 9001010, cost: 10485760000000, success: 5, maintain: 56, destroy: 39 }
+];
+// 강화 구간별 아이콘 (레벨이 오를수록 더 화려해짐)
+const SWORD_LEVEL_TIERS = [
+  { max: 2,  icon: '🪵' },
+  { max: 5,  icon: '🏏'},
+  { max: 8,  icon: '🗡️' },
+  { max: 10,  icon: '⚔️' },
+  { max: 12,  icon: '🔥⚔️' },
+  { max: 14, icon: '💀⚔️' },
+  { max: 16, icon: '⚡⚔️' },
+  { max: 17, icon: '✨⚔️' },
+  { max: 18, icon: '✨⚔️✨' },
+  { max: 19, icon: '🌟⚔️🌟' },
+  { max: 20, icon: '👑⚔️👑' }
+];
+
+let swordOwned = false; // 검을 보유 중인지 (예전 재질 랜덤 방식은 제거하고 단일 무기 라인으로 변경)
+let swordLevel = 0;
+let swordBestLevel = 0;   // 지금까지 도달한 최고 강화 레벨 (기록용)
+let swordBreakCount = 0;  // 지금까지 파괴로 잃은 검 개수 (기록용)
+
+function getSwordTierIcon(level) { return (SWORD_LEVEL_TIERS.find(t => level <= t.max) || SWORD_LEVEL_TIERS[SWORD_LEVEL_TIERS.length - 1]).icon; }
+// 판매가는 "직전 강화에 들어간 비용의 2배"로 책정해, 강화를 거듭할수록 팔 때 이득도 커지게 한다.
+function getSwordSellValue(level) {
+  if (level <= 0) return 5000;
+  return Math.floor(SWORD_STAGES[level].cost * 2);
+}
+function getSwordDisplayName() {
+  if (!swordOwned) return '검 없음';
+  return `+${swordLevel} ${SWORD_STAGES[swordLevel].name}`;
+}
+function getSwordIcon() {
+  if (!swordOwned) return '❔';
+  return getSwordTierIcon(swordLevel);
+}
+function craftNewSword() {
+  swordOwned = true;
+  swordLevel = 0;
+  renderSwordPanel();
+  playSound('coin');
+  showToast(`${getSwordTierIcon(0)} 새 검 등장: ${getSwordDisplayName()}!`);
+}
+function enhanceSword() {
+  if (!swordOwned) { showToast('⚔️ 먼저 검을 만들어주세요!'); return; }
+  if (swordLevel >= SWORD_MAX_LEVEL) { showToast('⚔️ 이미 최고 강화 단계예요! 판매해서 시세를 확인해보세요.'); return; }
+  const nextStage = SWORD_STAGES[swordLevel + 1];
+  const cost = nextStage.cost;
+  if (money < cost) { showToast(`💰 강화 비용이 부족해요! (필요: ${formatWon(cost)}원)`); return; }
+  money -= cost;
+  const roll = Math.random() * 100;
+  if (roll < nextStage.success) {
+    swordLevel++;
+    swordBestLevel = Math.max(swordBestLevel, swordLevel);
+    playSound('levelUp');
+    spawnConfettiBurst();
+    if (swordLevel === SWORD_MAX_LEVEL) {
+      mascotSay([`🌟 드디어 +${SWORD_MAX_LEVEL}강 완성이에요! 어서 팔아서 확인해보세요!`]);
+    } else if (swordLevel === 15 || swordLevel === 10) {
+      mascotSay([`⚔️ +${swordLevel}강 성공! 슬슬 위험해지니 조심하세요!`]);
+    } else {
+      showToast(`✨ 강화 성공! ${getSwordDisplayName()}`);
+    }
+  } else if (roll < nextStage.success + nextStage.maintain) {
+    playSound('swordFail');
+    showToast(`💦 강화 실패... (레벨 유지, 비용만 소모)`);
+  } else {
+    swordBreakCount++;
+    playSound('swordBreak');
+    mascotSay([`💥 검이 산산조각났어요... +${swordLevel}강까지 갔었는데 아쉬워요.`, `💥 콰장창! 검이 부서졌어요. 다시 도전해봐요!`]);
+    swordOwned = false;
+    swordLevel = 0;
+  }
+  renderSwordPanel();
+}
+function sellSword() {
+  if (!swordOwned) { showToast('⚔️ 팔 검이 없어요!'); return; }
+  const value = getSwordSellValue(swordLevel);
+  addMoney(value);
+  showToast(`💰 ${getSwordDisplayName()} 판매! +${formatWon(value)}원`);
+  playSound('coin');
+  swordOwned = false;
+  swordLevel = 0;
+  renderSwordPanel();
+}
+function renderSwordPanel() {
+  const iconEl = document.getElementById('swordIcon');
+  if (!iconEl) return;
+  iconEl.textContent = getSwordIcon();
+  document.getElementById('swordName').textContent = swordOwned ? getSwordDisplayName() : '검이 없어요';
+  document.getElementById('swordBestLevel').textContent = swordBestLevel;
+  document.getElementById('swordBreakCount').textContent = swordBreakCount;
+  const enhanceBtn = document.getElementById('swordEnhanceBtn');
+  const sellBtn = document.getElementById('swordSellBtn');
+  const craftBtn = document.getElementById('swordCraftBtn');
+  if (swordOwned && swordLevel < SWORD_MAX_LEVEL) {
+    const nextStage = SWORD_STAGES[swordLevel + 1];
+    enhanceBtn.style.display = '';
+    enhanceBtn.textContent = `⚒️ 강화하기 (${formatWon(nextStage.cost)}원 · 성공률 ${nextStage.success}%)`;
+  } else {
+    enhanceBtn.style.display = 'none';
+  }
+  sellBtn.style.display = swordOwned ? '' : 'none';
+  if (swordOwned) sellBtn.textContent = `💰 판매하기 (${formatWon(getSwordSellValue(swordLevel))}원)`;
+  craftBtn.textContent = swordOwned ? '🔄 다시 만들기 (지금 검은 사라져요)' : '🗡️ 새 검 만들기';
+}
+
 // ===== 저택 꾸미기 (순수 과시용 소비처, 레벨 상한 없음) =====
 // 실질적인 게임 효과는 전혀 없다. 오직 리더보드에 붙는 아이콘/칭호로만 남는,
 // "돈을 얼마나 지를 수 있나"를 겨루는 콘텐츠.
@@ -2045,12 +2301,14 @@ let mansionLevel = 0;
 const MANSION_BASE_COST = 1e6;
 const MANSION_RATE = 1.35; // 무한강화보다 훨씬 가파르게 올라 순수 소비처 역할을 하게 함
 const mansionTiers = [
-  { min: 0,  icon: '',   name: '집 없음' },
-  { min: 1,  icon: '🏠', name: '오두막' },
-  { min: 5,  icon: '🏡', name: '저택' },
-  { min: 10, icon: '🏰', name: '성' },
-  { min: 20, icon: '🏯', name: '궁전' },
-  { min: 35, icon: '🛸', name: '차원 저택' }
+  { min: 0,   icon: '',   name: '집 없음' },
+  { min: 3,   icon: '🏠', name: '오두막' },
+  { min: 12,  icon: '🏡', name: '저택' },
+  { min: 30,  icon: '🏘️', name: '대저택' },
+  { min: 60,  icon: '🏰', name: '성' },
+  { min: 100, icon: '🏯', name: '궁전' },
+  { min: 150, icon: '🛸', name: '차원 저택' },
+  { min: 250, icon: '🌌', name: '우주 제국' }
 ];
 function getMansionCost(level) {
   const lv = level === undefined ? mansionLevel : level;
@@ -2303,7 +2561,7 @@ const GLOBAL_INCOME_THROTTLE = 0.25;
 function getClickValue() {
   let flatVal = baseClickValue;
   for (let s = 0; s < stages.length; s++) flatVal += clickUpgradeLevel[s] * stages[s].clickUpgrade.add;
-  flatVal *= getClickMult() * clickTalentMult * getCasinoShopClickMult() * getCollectionMult() * getAwakeningMult() * getAchievementMult() * getInfiniteUpgradeMult() * getWeatherClickMult() * GLOBAL_INCOME_THROTTLE;
+  flatVal *= getClickMult() * clickTalentMult * getCasinoShopClickMult() * getCollectionMult() * getAwakeningMult() * getAchievementMult() * getInfiniteUpgradeMult() * getWeatherClickMult() * getVoidRelicClickMult() * GLOBAL_INCOME_THROTTLE;
   // 상가/월드비즈니스 단계로 진출하면 클릭 업그레이드가 더 이상 없어서 클릭 수익이
   // 초반 수준(900원대)에 계속 고정돼 보이는 문제가 있었음. 그래서 클릭 수익에
   // "현재 초당 자동수입의 일정 비율"을 함께 더해서, 사업 규모가 커질수록 클릭 수익도
@@ -2320,7 +2578,7 @@ function passiveTotalLabel() {
   allJobs.forEach((j, i) => { if (jobLevels[i] > 0) total += j.baseIncome * jobLevels[i]; });
   map2Jobs.forEach((j, i) => { if (jobLevels2[i] > 0) total += j.baseIncome * jobLevels2[i]; });
   map5Jobs.forEach((j, i) => { if (jobLevels5[i] > 0) total += j.baseIncome * jobLevels5[i]; });
-  return total * getIncomeMult() * prestigeMult * getCasinoShopProductionMult() * getCollectionMult() * getAwakeningMult() * getAchievementMult() * getInfiniteUpgradeMult() * getWeatherIncomeMult() * GLOBAL_INCOME_THROTTLE;
+  return total * getIncomeMult() * prestigeMult * getCasinoShopProductionMult() * getCollectionMult() * getAwakeningMult() * getAchievementMult() * getInfiniteUpgradeMult() * getWeatherIncomeMult() * getVoidRelicIncomeMult() * GLOBAL_INCOME_THROTTLE;
 }
 
 // 조작 방지용 진행 게이트: 로그인 안 한 상태에서 1억원을 넘기면 더 이상 못 벌게 막고
@@ -3006,6 +3264,17 @@ document.getElementById('mansionCloseBtn').addEventListener('click', () => {
 });
 document.getElementById('mansionUpgradeBtn').addEventListener('click', () => { initAudio(); buyMansionLevel(); });
 
+document.getElementById('swordBtn').addEventListener('click', () => {
+  renderSwordPanel();
+  document.getElementById('swordModal').classList.add('show');
+});
+document.getElementById('swordCloseBtn').addEventListener('click', () => {
+  document.getElementById('swordModal').classList.remove('show');
+});
+document.getElementById('swordEnhanceBtn').addEventListener('click', () => { initAudio(); enhanceSword(); });
+document.getElementById('swordSellBtn').addEventListener('click', () => { initAudio(); sellSword(); });
+document.getElementById('swordCraftBtn').addEventListener('click', () => { initAudio(); craftNewSword(); });
+
 document.getElementById('voidEnemy').addEventListener('click', (e) => {
   initAudio();
   const dmg = getVoidDamage();
@@ -3029,6 +3298,13 @@ document.getElementById('voidShopCloseBtn').addEventListener('click', () => {
   document.getElementById('voidShopModal').classList.remove('show');
 });
 document.getElementById('voidUpgradeBtn').addEventListener('click', () => { initAudio(); buyVoidUpgrade(); });
+document.getElementById('voidRelicBtn').addEventListener('click', () => {
+  renderVoidRelicPanel();
+  document.getElementById('voidRelicModal').classList.add('show');
+});
+document.getElementById('voidRelicCloseBtn').addEventListener('click', () => {
+  document.getElementById('voidRelicModal').classList.remove('show');
+});
 
 // 초기화 버튼 이벤트
 document.getElementById('resetBtn').addEventListener('click', () => {
@@ -5076,10 +5352,23 @@ async function cloudLoadGame() {
       // 0으로 정상적으로 리셋된 상태), totalEarned 크기 비교 없이 무조건 로컬이
       // 앞선 것으로 본다. 그렇지 않으면 아직 클라우드에 반영되지 않은 예전(환생 전)
       // 저장이 방금 리셋한 진행 상황을 덮어써버린다.
+      // 이름 색상 뽑기/저택 꾸미기는 money만 쓰고 totalEarned은 전혀 늘리지 않는
+      // 소비이기 때문에, totalEarned 1.5배 성장 조건만으로는 "방금 산 것"을 절대
+      // 인식하지 못해서 강제 클라우드 저장이 끝나기 전에 새로고침하면 옛 클라우드
+      // 값(색 없음/저택 낮은 레벨)에 덮어써지는 문제가 있었다. 그래서 저택 레벨이나
+      // 이름 색상 등급이 클라우드보다 이미 앞서 있는 경우도 "로컬이 앞섰다"로 인정한다.
+      const cloudMansionLevel = cloudData.mansionLevel || 0;
+      const cloudNameColorRank = cloudData.nameColor
+        ? (nameColorTiers.find(t => t.color === cloudData.nameColor) || {}).rank || 0
+        : 0;
       const localIsAhead = cloudRebirth < rebirthCount || (
         cloudRebirth <= rebirthCount
         && lastSaveTime > cloudLastSave + 5000
-        && fromBigStorable(totalEarned) > cloudTotalEarned * 1.5
+        && (
+          fromBigStorable(totalEarned) > cloudTotalEarned * 1.5
+          || mansionLevel > cloudMansionLevel
+          || getNameColorRank() > cloudNameColorRank
+        )
       );
 
       if (localIsAhead) {
@@ -5413,8 +5702,9 @@ function buildSaveData() {
     seasonEventLoginClaimedKey, casinoGamesUnlocked,
     discoveryNudges,
     infiniteUpgradeLevel, nameColor,
-    map6Unlocked, voidWave, voidShards, voidDamageLevel, voidEnemyHp, voidEnemyMaxHp,
+    map6Unlocked, voidWave, voidShards, voidDamageLevel, voidEnemyHp, voidEnemyMaxHp, voidRelics,
     burnedTotal, burnedMonthly, mansionLevel, seenFeatureUpdateSep2026,
+    swordOwned, swordLevel, swordBestLevel, swordBreakCount,
     lastSaveTime: Date.now()
   };
 }
@@ -5441,7 +5731,7 @@ function saveGame(opts) {
       // rebirthCount가 이번 저장에서 늘었다면 "방금 환생해서 totalEarned가 0으로
       // 리셋된 것"이 정상 상황이므로, 이땐 totalEarned가 작아졌다고 뒤처진 탭으로
       // 오인해 예전 저장을 덮어쓰면 안 된다.
-      if (existingRebirth <= data.rebirthCount && existingTotal > data.totalEarned + 1) {
+      if (existingRebirth >= data.rebirthCount && existingTotal > data.totalEarned + 1) {
         applySaveData(existing, { checkOffline: false });
         refreshAllScreens();
         return;
@@ -5509,10 +5799,17 @@ function applySaveData(data, opts) {
   voidDamageLevel = data.voidDamageLevel || 0;
   voidEnemyMaxHp = data.voidEnemyMaxHp || 0;
   voidEnemyHp = (data.voidEnemyHp !== undefined ? data.voidEnemyHp : voidEnemyMaxHp);
+  voidRelics = data.voidRelics || {};
   if (map6Unlocked && voidEnemyMaxHp <= 0) startVoidWave(1);
   burnedTotal = fromBigStorable(data.burnedTotal) || 0;
   burnedMonthly = fromBigStorable(data.burnedMonthly) || 0;
   mansionLevel = data.mansionLevel || 0;
+  // 예전 저장은 swordMaterial(재질 문자열)을 썼고, 새 저장은 swordOwned(불리언)을 쓴다.
+  // 예전 저장을 불러올 때도 검을 잃어버리지 않도록 둘 다 확인한다.
+  swordOwned = (data.swordOwned !== undefined) ? data.swordOwned : !!data.swordMaterial;
+  swordLevel = data.swordLevel || 0;
+  swordBestLevel = data.swordBestLevel || 0;
+  swordBreakCount = data.swordBreakCount || 0;
   seenFeatureUpdateSep2026 = data.seenFeatureUpdateSep2026 || false;
   clickUpgradeLevel = data.clickUpgradeLevel || [0,0,0,0];
   jobLevels = data.jobLevels || new Array(allJobs.length).fill(0);
