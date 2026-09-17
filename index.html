@@ -14,7 +14,7 @@
 // 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
 // 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
 (function() {
-  var CURRENT_VERSION = '2026091703';
+  var CURRENT_VERSION = '2026091801';
   try {
     if (sessionStorage.getItem('lrVersionChecked') === CURRENT_VERSION) return;
     fetch(location.pathname + '?_cb=' + Date.now(), { cache: 'no-store' })
@@ -2823,6 +2823,13 @@ let isBrandNewPlayer = false;
 // 간주해 배지를 띄우고, 기존 유저가 접속하면 자동으로 한 번 띄워준다.
 const patchNotes = [
   {
+    version: '2026091801',
+    date: '2026-09-18',
+    items: [
+      '⚔️ 검배틀 랭킹 표기 수정: "N승"으로 잘못 표시되던 것을 "N점"(승점)으로 정정했어요'
+    ]
+  },
+  {
     version: '2026091703',
     date: '2026-09-17',
     items: [
@@ -4649,7 +4656,7 @@ async function renderLeaderboardList() {
       <div class="lb-row${p.uid === currentUser.uid ? ' me' : ''}">
         <span class="lb-rank">${p.rank}</span>
         <span class="lb-name"${p.nameColor ? ` style="color:${p.nameColor};font-weight:bold;"` : ''}>${p.mansionIcon ? p.mansionIcon + ' ' : ''}${p.name}</span>
-        <span class="lb-tier">⚔️ ${(p.amount || 0).toLocaleString('ko-KR')}승</span>
+        <span class="lb-tier">⚔️ ${(p.amount || 0).toLocaleString('ko-KR')}점</span>
       </div>
     `).join('');
     if (!list.some(p => p.uid === currentUser.uid)) appendMyRankRowIfOutsideTop(lbEl, 'sword', false);
@@ -4702,7 +4709,7 @@ async function appendMyRankRowIfOutsideTop(lbEl, period, isBurn) {
   if (isBurn) {
     row.innerHTML = `<span class="lb-rank">${info.rank}</span><span class="lb-name">${currentUser.name} (나)</span><span class="lb-tier">🔥 ${formatWon(burnedMonthly)}원 소각</span>`;
   } else if (period === 'sword') {
-    row.innerHTML = `<span class="lb-rank">${info.rank}</span><span class="lb-name">${currentUser.name} (나)</span><span class="lb-tier">⚔️ ${swordBattleWins.toLocaleString('ko-KR')}승</span>`;
+    row.innerHTML = `<span class="lb-rank">${info.rank}</span><span class="lb-name">${currentUser.name} (나)</span><span class="lb-tier">⚔️ ${swordBattleWins.toLocaleString('ko-KR')}점</span>`;
   } else if (period === 'swordmonthly') {
     row.innerHTML = `<span class="lb-rank">${info.rank}</span><span class="lb-name">${currentUser.name} (나)</span><span class="lb-tier">🗡️ +${swordMonthlyBestLevel}강</span>`;
   } else {
