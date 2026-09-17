@@ -2726,7 +2726,7 @@ const LOGIN_REQUIRED_THRESHOLD = 100000000; // 1억원
 let progressGateActive = false;
 
 function addMoney(amount) {
-  if (!currentUser && totalEarned >= LOGIN_REQUIRED_THRESHOLD) {
+  if (authStateResolved && !currentUser && totalEarned >= LOGIN_REQUIRED_THRESHOLD) {
     showLoginGate();
     return;
   }
@@ -2734,7 +2734,7 @@ function addMoney(amount) {
   totalEarned += amount;
   checkStageAdvance();
   flashMoney();
-  if (!currentUser && totalEarned >= LOGIN_REQUIRED_THRESHOLD) {
+  if (authStateResolved && !currentUser && totalEarned >= LOGIN_REQUIRED_THRESHOLD) {
     showLoginGate();
   }
 }
@@ -4572,11 +4572,14 @@ function renderMyRankCard() {
     return;
   }
   if (currentLeaderboardPeriod === 'swordmonthly') {
+    const bestName = SWORD_STAGES[swordMonthlyBestLevel] ? SWORD_STAGES[swordMonthlyBestLevel].name : '';
+    const currentText = getSwordDisplayName();
     card.innerHTML = `
       <span class="my-rank-icon">🗡️</span>
       <div style="flex:1;">
         <div class="my-rank-name">검 랭킹 <span style="font-size:10px; color:var(--paper-dim); font-weight:normal;">(이번 달 최고 강화 레벨 기준)</span></div>
-        <div class="my-rank-sub">이번 달 최고 +${swordMonthlyBestLevel}강 · 매달 초기화 · 1~3위 보상 지급</div>
+        <div class="my-rank-sub">이번 달 최고 +${swordMonthlyBestLevel}강 ${bestName} · 매달 초기화 · 1~3위 보상 지급</div>
+        <div class="my-rank-sub">현재 보유 중: ${currentText}</div>
         <div class="my-rank-sub" id="myRankPosition" style="color:var(--gold);">내 순위 불러오는 중...</div>
       </div>
     `;
@@ -4656,13 +4659,17 @@ async function renderLeaderboardList() {
     return;
   }
   if (currentLeaderboardPeriod === 'swordmonthly') {
-    lbEl.innerHTML = list.map(p => `
+    lbEl.innerHTML = list.map(p => {
+      const lv = p.amount || 0;
+      const swordName = SWORD_STAGES[lv] ? SWORD_STAGES[lv].name : '';
+      return `
       <div class="lb-row${p.uid === currentUser.uid ? ' me' : ''}">
         <span class="lb-rank">${p.rank}</span>
         <span class="lb-name"${p.nameColor ? ` style="color:${p.nameColor};font-weight:bold;"` : ''}>${p.mansionIcon ? p.mansionIcon + ' ' : ''}${p.name}</span>
-        <span class="lb-tier">🗡️ +${p.amount || 0}강</span>
+        <span class="lb-tier">🗡️ +${lv}강 ${swordName}</span>
       </div>
-    `).join('');
+    `;
+    }).join('');
     if (!list.some(p => p.uid === currentUser.uid)) appendMyRankRowIfOutsideTop(lbEl, 'swordmonthly', false);
     return;
   }
@@ -5629,6 +5636,13 @@ const pendingReferralCode = new URLSearchParams(location.search).get('ref');
 const REFERRAL_REWARD_COINS = 30;
 let auth = null, db = null;
 let currentUser = null; // { uid, provider: 'google', name }
+// Firebase 인증은 비동기라, 페이지를 막 열었을 때는 실제로 로그인되어 있는 유저라도
+// currentUser가 잠깐 null인 상태를 거친다. 이 틈에 addMoney()의 로그인 게이트 체크가
+// "로그인 안 한 사람이 1억원 넘게 갖고 있다"로 잘못 오인해서, 방치 보상(offlineEarn)이
+// 화면엔 "받았다"고 뜨는데 실제로는 지급이 막혀버리는 버그가 있었다.
+// onAuthStateChanged가 최초로 한 번이라도 응답을 주기 전까지는 게이트 판정을
+// 보류해서, 이 레이스 컨디션을 없앤다.
+let authStateResolved = false;
 let customNickname = localStorage.getItem('lifeReverseNickname') || '';
 
 function initFirebase() {
@@ -5642,6 +5656,7 @@ function initFirebase() {
     db = firebase.firestore();
     authInited = true;
     auth.onAuthStateChanged(user => {
+      authStateResolved = true;
       if (user) {
         currentUser = { uid: user.uid, provider: 'google', name: customNickname || user.displayName || '구글 사용자' };
         onLoginSuccess();
@@ -5680,6 +5695,9 @@ function onLoginSuccess() {
   document.getElementById('loginModal').classList.remove('show');
   showToast(`👤 ${currentUser.name}님 환영합니다! 클라우드 저장이 활성화됐어요.`);
   cloudLoadGame();
+  // 로그인되기 전(currentUser가 아직 null이던 순간)에 검 강화/배틀 등으로 발생한
+  // 랭킹 반영 요청이 밀려 있으면, 로그인이 확정된 지금 바로 흘려보낸다.
+  if (leaderboardSyncPending) syncLeaderboard({ forceSync: true });
 }
 
 function updateLoginUI() {
@@ -5873,7 +5891,15 @@ const LEADERBOARD_SYNC_MIN_INTERVAL = 60000; // 최소 60초 간격
 let leaderboardSyncPending = false;
 
 async function syncLeaderboard(opts) {
-  if (!currentUser || !db) return;
+  if (!db) return;
+  if (!currentUser) {
+    // 로그인 전(혹은 Firebase 인증이 아직 응답하기 전)에 검 강화/배틀 등으로 호출되면
+    // 지금은 쓸 방법이 없으니, "나중에 로그인되면 꼭 반영해야 할 변경사항이 있다"만
+    // 표시해두고 끝낸다. onLoginSuccess()에서 로그인되는 순간 이 값을 확인해서
+    // 바로 flush하므로, 이 사이에 있었던 변경도 사라지지 않고 반영된다.
+    leaderboardSyncPending = true;
+    return;
+  }
   const forceSync = opts && opts.forceSync;
   const now = Date.now();
   if (!forceSync && now - lastLeaderboardSyncTime < LEADERBOARD_SYNC_MIN_INTERVAL) {
