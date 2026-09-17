@@ -14,7 +14,7 @@
 // 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
 // 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
 (function() {
-  var CURRENT_VERSION = '2026091602';
+  var CURRENT_VERSION = '2026091703';
   try {
     if (sessionStorage.getItem('lrVersionChecked') === CURRENT_VERSION) return;
     fetch(location.pathname + '?_cb=' + Date.now(), { cache: 'no-store' })
@@ -547,6 +547,31 @@
   @keyframes judgingPulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 0.85; } }
   .trainee-card.judging { animation: judgingPulse 0.6s ease-in-out infinite; pointer-events: none; }
   .confetti { position: absolute; font-size: 16px; z-index: 120; pointer-events: none; animation-name: confettiFall; animation-timing-function: ease-in; }
+
+  /* 검 강화 16강 이상 연출 (흔들림 + 20강 배너) */
+  @keyframes swordShakeKf {
+    0%, 100% { transform: translate(0, 0); }
+    10% { transform: translate(-6px, -3px); } 20% { transform: translate(6px, 3px); }
+    30% { transform: translate(-6px, 3px); } 40% { transform: translate(6px, -3px); }
+    50% { transform: translate(-4px, 2px); } 60% { transform: translate(4px, -2px); }
+    70% { transform: translate(-3px, 1px); } 80% { transform: translate(3px, -1px); }
+    90% { transform: translate(-1px, 1px); }
+  }
+  .sword-shake { animation: swordShakeKf 0.5s ease-in-out; }
+  @keyframes swordMaxBannerKf {
+    0% { transform: translate(-50%, -50%) scale(0.3) rotate(-8deg); opacity: 0; }
+    15% { transform: translate(-50%, -50%) scale(1.15) rotate(3deg); opacity: 1; }
+    25% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 1; }
+    85% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(1.3) rotate(0deg); opacity: 0; }
+  }
+  .sword-max-banner {
+    position: absolute; left: 50%; top: 40%; z-index: 200; pointer-events: none;
+    font-size: 22px; font-weight: 900; text-align: center; color: var(--gold);
+    text-shadow: 0 0 12px rgba(255,215,0,0.9), 0 0 24px rgba(255,140,0,0.7);
+    animation: swordMaxBannerKf 2.6s ease-out forwards;
+    white-space: nowrap;
+  }
   @keyframes confettiFall { 0% { transform: translateY(0) rotate(0deg); opacity: 1; } 100% { transform: translateY(220px) rotate(360deg); opacity: 0; } }
 
   .idol-stage {
@@ -784,7 +809,8 @@
       <button class="icon-btn" id="talentBtn" title="특성">🌳<span class="badge" id="talentPointBadge" style="display:none;"></span></button>
       <button class="icon-btn" id="infiniteUpgradeBtn" title="무한강화">💍</button>
       <button class="icon-btn" id="prestigeBtn" title="환생">♻️</button>
-      <button class="icon-btn" id="moreMenuBtn" title="더보기">⋯</button>
+      <button class="icon-btn" id="swordBtn" title="검">⚔️</button>
+      <button class="icon-btn" id="moreMenuBtn" title="더보기">⋯<span class="badge" id="noticePointBadge" style="display:none;"></span></button>
     </div>
   </div>
   <div id="seasonEventBanner" style="display:none;"></div>
@@ -1032,11 +1058,11 @@
     <div class="modal-box">
       <h2>⋯ 더보기</h2>
       <div style="display:flex; flex-direction:column; gap:8px; margin-top:10px;">
+        <button class="close-btn more-menu-item" id="noticeBtn" style="text-align:left;">📢 공지사항</button>
         <button class="close-btn more-menu-item" id="bgmToggleBtn" style="text-align:left;">🎵 배경음악 켜기/끄기</button>
         <button class="close-btn more-menu-item" id="achievementBtn" style="text-align:left;">🏆 업적</button>
         <button class="close-btn more-menu-item" id="nameColorBtn" style="text-align:left;">🎨 이름 색상 뽑기</button>
         <button class="close-btn more-menu-item" id="mansionBtn" style="text-align:left;">🏰 저택 꾸미기</button>
-        <button class="close-btn more-menu-item" id="swordBtn" style="text-align:left;">⚔️ 검 강화</button>
         <button class="close-btn more-menu-item" id="resetBtn" style="text-align:left;">⟳ 초기화</button>
         <button class="close-btn more-menu-item" id="helpBtn" style="text-align:left;">❓ 도움말</button>
       </div>
@@ -1067,6 +1093,8 @@
         <button class="lb-period-tab active" data-period="weekly">📅 주간 랭킹</button>
         <button class="lb-period-tab" data-period="monthly">🗓️ 월간 랭킹</button>
         <button class="lb-period-tab" data-period="burn">🔥 소각 랭킹</button>
+        <button class="lb-period-tab" data-period="sword">⚔️ 검배틀 랭킹</button>
+        <button class="lb-period-tab" data-period="swordmonthly">🗡️ 검 랭킹</button>
       </div>
       <button class="start-btn" id="burnMoneyBtn" style="display:none; margin-top:10px; background:#c0392b;">🔥 지금 가진 돈 전부 태우기</button>
       <div id="leaderboardList" class="leaderboard-list">
@@ -1122,20 +1150,13 @@
     </div>
   </div>
 
-  <!-- 도움말 모달 -->
-  <div class="modal-overlay" id="whatsNewModal">
+  <!-- 공지사항(패치노트) 모달 -->
+  <div class="modal-overlay" id="noticeModal">
     <div class="modal-box tutorial-box">
-      <h2>🆕 새로운 업데이트!</h2>
-      <ul>
-        <li>🎵 맵마다 다른 <b>배경음악</b>이 추가됐어요 (헤더 더보기 메뉴에서 켜고 끌 수 있어요)</li>
-        <li>🐇 화면에 가끔 <b>도망다니는 이벤트몹</b>이 나타나요. 빠르게 잡으면 큰 보너스!</li>
-        <li>💍 <b>무한강화</b>로 레벨 상한 없이 수입을 계속 강화할 수 있어요</li>
-        <li>🎨 <b>이름 색상 뽑기</b>로 리더보드에서 눈에 띄는 이름을 만들어보세요</li>
-        <li>🌦️ 매일 바뀌는 <b>날씨</b>가 수입/크리티컬 확률 등에 영향을 줘요 (헤더 날씨 아이콘 탭)</li>
-        <li>🌌 환생 1회 이상 달성하면 완전히 새로운 <b>공허맵(웨이브 서바이벌)</b>이 열려요</li>
-        <li>🔥 <b>소각 랭킹</b>과 🏰 <b>저택 꾸미기</b>로 과시욕도 채워보세요</li>
-      </ul>
-      <button class="start-btn" id="whatsNewOkBtn">확인</button>
+      <h2>📢 공지사항</h2>
+      <p style="font-size:11px; color:var(--paper-dim); margin:-4px 0 10px;">업데이트할 때마다 바뀐 내용을 정리해서 여기에 올려둘게요.</p>
+      <div id="noticeList" style="text-align:left; max-height:55vh; overflow-y:auto;"></div>
+      <button class="start-btn" id="noticeCloseBtn" style="margin-top:12px;">확인</button>
     </div>
   </div>
 
@@ -1231,16 +1252,34 @@
   <div class="modal-overlay" id="swordModal">
     <div class="modal-box">
       <h2>⚔️ 검 강화</h2>
-      <p style="font-size:12px; color:var(--paper-dim); margin-top:-4px;">평범한 나뭇가지를 강화해서 전설의 무기로 키워보세요. 최대 +20강까지 가능하지만, 레벨이 오를수록 성공 확률은 낮아지고 실패하면 검이 파괴될 수도 있어요.</p>
+      <p style="font-size:12px; color:var(--paper-dim); margin-top:-4px;">평범한 나뭇가지를 강화해서 전설의 무기로 키워보세요. 최대 +20강까지 가능하지만, 레벨이 오를수록 성공 확률은 낮아지고 실패하면 검이 파괴될 수도 있어요. (되돌리기 능력을 보유하고 있으면 파괴가 자동으로 막혀요) 검 랭킹은 매달 초기화돼요.</p>
       <div style="margin:14px 0; text-align:center; background:var(--bg-panel); border-radius:10px; padding:16px 14px;">
         <div id="swordIcon" style="font-size:48px;">❔</div>
         <div id="swordName" style="margin-top:6px; font-size:15px; color:var(--gold); font-weight:bold;">검이 없어요</div>
         <div style="font-size:11px; color:var(--paper-dim); margin-top:8px;">최고 기록 +<span id="swordBestLevel">0</span>강 · 파괴된 검 <span id="swordBreakCount">0</span>자루</div>
+        <div style="font-size:11px; color:var(--paper-dim); margin-top:4px;">이번 달 최고 +<span id="swordMonthlyBestLevel">0</span>강 · 🛡️ 되돌리기 <span id="swordReviveChargesText" style="color:var(--gold);">0</span>회 보유</div>
       </div>
       <button class="start-btn" id="swordEnhanceBtn" style="display:none;">⚒️ 강화하기</button>
-      <button class="start-btn" id="swordSellBtn" style="margin-top:8px; display:none;">💰 판매하기</button>
-      <button class="start-btn" id="swordCraftBtn" style="margin-top:8px; background:var(--bg-panel); color:var(--gold); border:1px solid var(--gold);">🗡️ 새 검 만들기</button>
+      <button class="start-btn" id="openSwordBattleBtn" style="margin-top:8px; background:var(--bg-panel); color:var(--gold); border:1px solid var(--gold);">🤺 검 배틀하기</button>
+      <button class="close-btn" id="swordRankBtn" style="margin-top:8px;">🏅 검 랭킹 보기 (월간)</button>
+      <button class="start-btn" id="swordCraftBtn" style="margin-top:8px; display:none; background:var(--bg-panel); color:var(--gold); border:1px solid var(--gold);">🗡️ 새 검 만들기</button>
       <button class="close-btn" id="swordCloseBtn" style="margin-top:10px;">닫기</button>
+    </div>
+  </div>
+
+  <!-- 검 배틀 모달 -->
+  <div class="modal-overlay" id="swordBattleModal">
+    <div class="modal-box">
+      <h2>🤺 검 배틀</h2>
+      <p style="font-size:12px; color:var(--paper-dim); margin-top:-4px;">내 검의 강화 레벨로 무작위 상대와 대결해요. 레벨 차이가 클수록 승률도 크게 갈리고, 레벨이 같으면 50:50이에요. 하루 <b id="swordBattleDailyLimitText">10</b>번까지 도전할 수 있어요.</p>
+      <div style="margin:14px 0; text-align:center; background:var(--bg-panel); border-radius:10px; padding:16px 14px;">
+        <div style="font-size:12px; color:var(--paper-dim);">내 검: <b id="swordBattleMyName" style="color:var(--gold);">검이 없어요</b></div>
+        <div style="font-size:12px; color:var(--paper-dim); margin-top:4px;">오늘 남은 횟수 <b id="swordBattleRemaining" style="color:var(--gold);">10</b>회 · 누적 승점 <b id="swordBattleWinsText" style="color:var(--gold);">0</b>점</div>
+        <div id="swordBattleResult" style="margin-top:12px; font-size:13px; min-height:20px;"></div>
+      </div>
+      <button class="start-btn" id="swordBattleStartBtn">⚔️ 배틀 시작</button>
+      <button class="close-btn" id="swordBattleRankBtn" style="margin-top:8px;">🏅 검배틀 랭킹 보기</button>
+      <button class="close-btn" id="swordBattleCloseBtn" style="margin-top:8px;">닫기</button>
     </div>
   </div>
 
@@ -1632,6 +1671,7 @@ function checkDailyRollover() {
     dailyVoidWaveCleared = 0;
     dailyMissionsClaimed = { casino: false, jobs: false, clicks: false, eventmob: false, void: false };
     megaGoldenCountToday = 0;
+    swordBattleCountToday = 0;
     renderWeatherBadge();
   }
 }
@@ -1931,10 +1971,10 @@ function renderInfiniteUpgradeModal() {
 // 다음 뽑기에서 도로 사라지는 허무함이 없게 한다.
 const NAME_COLOR_GACHA_COST = 1e16; // 1경원
 const nameColorTiers = [
-  { name: '빨강', color: '#ff3b3b', rate: 0.00001, rank: 4 },  // 0.001%
-  { name: '녹색', color: '#2ecc71', rate: 0.0001,  rank: 3 },  // 0.01%
-  { name: '노랑', color: '#ffd700', rate: 0.0005,  rank: 2 },  // 0.05%
-  { name: '파랑', color: '#4da6ff', rate: 0.30,    rank: 1 }   // 30%
+  { name: '빨강', color: '#ff3b3b', rate: 0.00002, rank: 4 },  // 0.002% (기존의 2배)
+  { name: '녹색', color: '#2ecc71', rate: 0.0002,  rank: 3 },  // 0.02% (기존의 2배)
+  { name: '노랑', color: '#ffd700', rate: 0.001,   rank: 2 },  // 0.1% (기존의 2배)
+  { name: '파랑', color: '#4da6ff', rate: 0.30,    rank: 1 }   // 30% (변경 없음)
 ];
 let nameColor = null; // { name, color, rank } 또는 null(기본, 무색)
 function getNameColorRank() { return nameColor ? nameColor.rank : 0; }
@@ -1942,11 +1982,14 @@ function getNameColorRank() { return nameColor ? nameColor.rank : 0; }
 function rollNameColorGacha() {
   if (money < NAME_COLOR_GACHA_COST) { showToast('🎨 1경원이 필요해요!'); return; }
   money -= NAME_COLOR_GACHA_COST;
+  checkPeriodRollover();
+  // 검 랭킹 보상으로 받은 부스트가 이번 달에 유효하면 파랑을 제외한 확률에 배수를 곱해준다.
+  const boostMult = (swordColorBoostMonthKey && swordColorBoostMonthKey === monthlyPeriodKey) ? swordColorBoostMult : 1;
   const roll = Math.random();
   let cumulative = 0;
   let result = null; // null = 꽝(기본, 무색)
   for (const tier of nameColorTiers) {
-    cumulative += tier.rate;
+    cumulative += (tier.name === '파랑' ? tier.rate : tier.rate * boostMult);
     if (roll < cumulative) { result = tier; break; }
   }
   render();
@@ -2167,28 +2210,105 @@ function voidAutoAttackTick() {
 // 하나씩 정해둔 고정 테이블을 사용한다. index 0은 강화 전 기본 상태.
 const SWORD_MAX_LEVEL = 20;
 const SWORD_STAGES = [
-  { name: '썩은 나뭇가지', atk: 10 },
-  { name: '금 간 썩은 나뭇가지', atk: 22560, cost: 20000000, success: 100, maintain: 99, destroy: 1 },
-  { name: '때가 꼬질꼬질한 나뭇가지', atk: 90110, cost: 40000000, success: 95, maintain: 2, destroy: 3 },
-  { name: '테이프 붙인 나뭇가지', atk: 202660, cost: 80000000, success: 90, maintain: 5, destroy: 5 },
-  { name: '녹슬고 곰팡이 핀 나뭇가지', atk: 360210, cost: 160000000, success: 85, maintain: 8, destroy: 7 },
-  { name: '나름 뾰족한 몽둥이', atk: 562760, cost: 320000000, success: 80, maintain: 11, destroy: 9 },
-  { name: '단단히 다듬어진 몽둥이', atk: 810310, cost: 640000000, success: 75, maintain: 14, destroy: 11 },
-  { name: '강철을 덧댄 몽둥이', atk: 1102860, cost: 1280000000, success: 70, maintain: 17, destroy: 13 },
-  { name: '피맛을 본 몽둥이', atk: 1440410, cost: 2560000000, success: 65, maintain: 20, destroy: 15 },
-  { name: '베테랑 용병의 몽둥이', atk: 1822960, cost: 5120000000, success: 60, maintain: 23, destroy: 17 },
-  { name: '칠흑의 피바람 검', atk: 2250510, cost: 10240000000, success: 55, maintain: 26, destroy: 19 },
-  { name: '심연의 마귀 검', atk: 2723060, cost: 20480000000, success: 50, maintain: 29, destroy: 21 },
-  { name: '광기의 처형자 검', atk: 3240610, cost: 40960000000, success: 45, maintain: 32, destroy: 23 },
-  { name: '지옥불을 머금은 검', atk: 3803160, cost: 81920000000, success: 40, maintain: 35, destroy: 25 },
-  { name: '영혼을 파멸하는 검', atk: 4410710, cost: 163840000000, success: 35, maintain: 38, destroy: 27 },
-  { name: '발키리의 승리 검', atk: 5063260, cost: 327680000000, success: 30, maintain: 41, destroy: 29 },
-  { name: '제우스의 뇌전 검', atk: 5760810, cost: 655360000000, success: 25, maintain: 44, destroy: 31 },
-  { name: '포세이돈의 서리 파도 검', atk: 6503360, cost: 1310720000000, success: 20, maintain: 47, destroy: 33 },
-  { name: '크로노스의 시공 베기 검', atk: 7290910, cost: 2621440000000, success: 15, maintain: 50, destroy: 35 },
-  { name: '종말의 카오스 아포칼립스 검', atk: 8123460, cost: 5242880000000, success: 10, maintain: 53, destroy: 37 },
-  { name: '창세의 전지전능한 데미우르고스 검', atk: 9001010, cost: 10485760000000, success: 5, maintain: 56, destroy: 39 }
+  { name: '썩은 나뭇가지' },
+  { name: '금 간 썩은 나뭇가지', cost: 20000000, success: 100, maintain: 99, destroy: 1 },
+  { name: '때가 꼬질꼬질한 나뭇가지', cost: 40000000, success: 95, maintain: 2, destroy: 3 },
+  { name: '테이프 붙인 나뭇가지', cost: 80000000, success: 90, maintain: 5, destroy: 5 },
+  { name: '녹슬고 곰팡이 핀 나뭇가지', cost: 160000000, success: 85, maintain: 8, destroy: 7 },
+  { name: '나름 뾰족한 몽둥이', cost: 320000000, success: 80, maintain: 11, destroy: 9 },
+  { name: '단단히 다듬어진 몽둥이', cost: 640000000, success: 75, maintain: 14, destroy: 11 },
+  { name: '강철을 덧댄 몽둥이', cost: 1280000000, success: 70, maintain: 17, destroy: 13 },
+  { name: '피맛을 본 몽둥이', cost: 2560000000, success: 65, maintain: 20, destroy: 15 },
+  { name: '베테랑 용병의 몽둥이', cost: 5120000000, success: 60, maintain: 23, destroy: 17 },
+  { name: '칠흑의 피바람 검', cost: 10240000000, success: 55, maintain: 26, destroy: 19 },
+  { name: '심연의 마귀 검', cost: 20480000000, success: 50, maintain: 29, destroy: 21 },
+  { name: '광기의 처형자 검', cost: 40960000000, success: 45, maintain: 32, destroy: 23 },
+  { name: '지옥불을 머금은 검', cost: 81920000000, success: 40, maintain: 35, destroy: 25 },
+  { name: '영혼을 파멸하는 검', cost: 163840000000, success: 35, maintain: 38, destroy: 27 },
+  { name: '발키리의 승리 검', cost: 327680000000, success: 30, maintain: 41, destroy: 29 },
+  { name: '제우스의 뇌전 검', cost: 655360000000, success: 25, maintain: 44, destroy: 31 },
+  { name: '포세이돈의 서리 파도 검', cost: 1310720000000, success: 20, maintain: 47, destroy: 33 },
+  { name: '크로노스의 시공 베기 검', cost: 2621440000000, success: 15, maintain: 50, destroy: 35 },
+  { name: '종말의 카오스 아포칼립스 검', cost: 5242880000000, success: 10, maintain: 53, destroy: 37 },
+  { name: '창세의 전지전능한 데미우르고스 검', cost: 10485760000000, success: 5, maintain: 56, destroy: 39 }
 ];
+
+// ===== 검 배틀 (강화 레벨만으로 승패를 가르는 미니게임) =====
+// 왼쪽(나)-위(상대) 레벨 차이 1당 승률이 5%p씩 갈리고, 레벨이 같으면 50:50.
+// (레벨 차이 10 이상이면 승률 0%로 고정)
+const SWORD_BATTLE_DAILY_LIMIT = 10;
+let swordBattleWins = 0;       // 누적 승점 (검배틀 랭킹 기준)
+let swordBattleCountToday = 0; // 오늘 사용한 배틀 횟수
+// ===== 검 랭킹(월간, 강화 레벨 기준) =====
+// 매달 초기화되는 카지노 월간 랭킹과 같은 주기(monthlyPeriodKey)를 그대로 재사용한다.
+// 한 달 동안 도달한 "최고 강화 레벨"로 순위를 매기고, 달이 바뀌면 검이 초기화되면서
+// 지난달 상위 3명에게 보상(되돌리기 능력 + 이름색 확률 부스트)을 지급한다.
+let swordMonthlyBestLevel = 0;   // 이번 달 동안 도달한 최고 강화 레벨(검이 부서져도 유지)
+let swordReviveCharges = 0;      // 검 파괴를 막아주는 "되돌리기" 능력 보유 횟수
+let swordColorBoostMonthKey = ''; // 이름색 확률 부스트가 적용되는 달(monthlyPeriodKey)
+let swordColorBoostMult = 1;      // 파랑을 제외한 이름색 확률에 곱해지는 배수
+let claimedSwordSeasonRewards = []; // 이미 보상을 지급한 검 랭킹 시즌(월) 목록 (중복 지급 방지)
+function getSwordBattleWinChance(myLevel, oppLevel) {
+  return Math.max(0, Math.min(100, 50 - 5 * Math.abs(myLevel - oppLevel)));
+}
+// 로그인 상태면 실제로 검을 보유한 다른 유저 중 무작위로 상대를 고르고,
+// 그런 상대가 없으면(초반, 미로그인 등) 가상의 상대를 대신 만들어낸다.
+const SWORD_BATTLE_FALLBACK_NAMES = ['떠돌이 검객', '수련생 무사', '그림자 검사', '방랑하는 낭인', '이름 없는 도전자', '왕국의 기사', '숲 속의 사냥꾼', '거리의 무명검사'];
+async function findSwordBattleOpponent() {
+  if (currentUser && db) {
+    try {
+      const snap = await db.collection('leaderboard_sword').orderBy('updatedAt', 'desc').limit(50).get();
+      const candidates = snap.docs
+        .filter(d => d.id !== currentUser.uid && typeof d.data().swordLevel === 'number' && d.data().swordLevel >= 0)
+        .map(d => ({ name: d.data().name || '이름 없는 검객', level: d.data().swordLevel }));
+      if (candidates.length > 0) return candidates[Math.floor(Math.random() * candidates.length)];
+    } catch (e) {
+      console.error('검배틀 상대 조회 실패:', e);
+    }
+  }
+  const name = SWORD_BATTLE_FALLBACK_NAMES[Math.floor(Math.random() * SWORD_BATTLE_FALLBACK_NAMES.length)];
+  const level = Math.floor(Math.random() * (SWORD_MAX_LEVEL + 1));
+  return { name, level };
+}
+async function startSwordBattle() {
+  initAudio();
+  checkDailyRollover();
+  const resultEl = document.getElementById('swordBattleResult');
+  if (!swordOwned) { showToast('⚔️ 먼저 검을 만들어주세요!'); return; }
+  if (swordBattleCountToday >= SWORD_BATTLE_DAILY_LIMIT) { showToast(`⚔️ 오늘 배틀 횟수를 다 썼어요! (하루 ${SWORD_BATTLE_DAILY_LIMIT}회, 내일 다시 도전하세요)`); return; }
+  const startBtn = document.getElementById('swordBattleStartBtn');
+  if (startBtn) startBtn.disabled = true;
+  if (resultEl) resultEl.textContent = '⚔️ 상대를 찾는 중...';
+  const opponent = await findSwordBattleOpponent();
+  swordBattleCountToday++;
+  const winChance = getSwordBattleWinChance(swordLevel, opponent.level);
+  const won = Math.random() * 100 < winChance;
+  const oppName = `+${opponent.level} ${SWORD_STAGES[opponent.level].name}`;
+  if (won) {
+    swordBattleWins++;
+    playSound('levelUp');
+    spawnConfettiBurst();
+    if (resultEl) resultEl.innerHTML = `<div style="color:var(--gold); font-weight:bold;">🎉 ${opponent.name}(${oppName})님을 이겼습니다! (승률 ${Math.round(winChance)}%)</div>`;
+    showToast(`🎉 검 배틀 승리! 승점 +1`);
+    syncLeaderboard();
+  } else {
+    playSound('swordFail');
+    if (resultEl) resultEl.innerHTML = `<div style="color:var(--danger);">😢 ${opponent.name}(${oppName})님에게 졌습니다... (승률 ${Math.round(winChance)}%)</div>`;
+    showToast(`😢 검 배틀 패배...`);
+  }
+  renderSwordBattlePanel();
+  if (startBtn) startBtn.disabled = false;
+}
+function renderSwordBattlePanel() {
+  const myNameEl = document.getElementById('swordBattleMyName');
+  if (!myNameEl) return;
+  document.getElementById('swordBattleDailyLimitText').textContent = SWORD_BATTLE_DAILY_LIMIT;
+  myNameEl.textContent = swordOwned ? getSwordDisplayName() : '검이 없어요';
+  document.getElementById('swordBattleRemaining').textContent = Math.max(0, SWORD_BATTLE_DAILY_LIMIT - swordBattleCountToday);
+  document.getElementById('swordBattleWinsText').textContent = swordBattleWins.toLocaleString('ko-KR');
+  const startBtn = document.getElementById('swordBattleStartBtn');
+  if (startBtn) startBtn.textContent = swordBattleCountToday >= SWORD_BATTLE_DAILY_LIMIT ? '⚔️ 오늘 횟수 소진' : '⚔️ 배틀 시작';
+}
 // 강화 구간별 아이콘 (레벨이 오를수록 더 화려해짐)
 const SWORD_LEVEL_TIERS = [
   { max: 2,  icon: '🪵' },
@@ -2210,11 +2330,6 @@ let swordBestLevel = 0;   // 지금까지 도달한 최고 강화 레벨 (기록
 let swordBreakCount = 0;  // 지금까지 파괴로 잃은 검 개수 (기록용)
 
 function getSwordTierIcon(level) { return (SWORD_LEVEL_TIERS.find(t => level <= t.max) || SWORD_LEVEL_TIERS[SWORD_LEVEL_TIERS.length - 1]).icon; }
-// 판매가는 "직전 강화에 들어간 비용의 2배"로 책정해, 강화를 거듭할수록 팔 때 이득도 커지게 한다.
-function getSwordSellValue(level) {
-  if (level <= 0) return 5000;
-  return Math.floor(SWORD_STAGES[level].cost * 2);
-}
 function getSwordDisplayName() {
   if (!swordOwned) return '검 없음';
   return `+${swordLevel} ${SWORD_STAGES[swordLevel].name}`;
@@ -2232,7 +2347,7 @@ function craftNewSword() {
 }
 function enhanceSword() {
   if (!swordOwned) { showToast('⚔️ 먼저 검을 만들어주세요!'); return; }
-  if (swordLevel >= SWORD_MAX_LEVEL) { showToast('⚔️ 이미 최고 강화 단계예요! 판매해서 시세를 확인해보세요.'); return; }
+  if (swordLevel >= SWORD_MAX_LEVEL) { showToast('⚔️ 이미 최고 강화 단계예요! 검 배틀로 실력을 뽐내보세요!'); return; }
   const nextStage = SWORD_STAGES[swordLevel + 1];
   const cost = nextStage.cost;
   if (money < cost) { showToast(`💰 강화 비용이 부족해요! (필요: ${formatWon(cost)}원)`); return; }
@@ -2241,10 +2356,19 @@ function enhanceSword() {
   if (roll < nextStage.success) {
     swordLevel++;
     swordBestLevel = Math.max(swordBestLevel, swordLevel);
+    swordMonthlyBestLevel = Math.max(swordMonthlyBestLevel, swordLevel);
     playSound('levelUp');
-    spawnConfettiBurst();
+    celebrateSwordEnhance(swordLevel);
     if (swordLevel === SWORD_MAX_LEVEL) {
-      mascotSay([`🌟 드디어 +${SWORD_MAX_LEVEL}강 완성이에요! 어서 팔아서 확인해보세요!`]);
+      mascotSay(['🏆🏆🏆 미쳤다!! 드디어 전설의 +20강이 완성됐어!! 이 달 검 랭킹 1등은 따놓은 당상이야!! 🏆🏆🏆']);
+    } else if (swordLevel === 19) {
+      mascotSay(['👑 +19강?! 진짜 미쳤는데?! 한 방만 더 가면 전설이야!!']);
+    } else if (swordLevel === 18) {
+      mascotSay(['🔥🔥 +18강 성공! 실화냐?! 완전 미쳤다 진짜!!']);
+    } else if (swordLevel === 17) {
+      mascotSay(['🔥 +17강 성공!! 이거 실화야?! 대박이다!!']);
+    } else if (swordLevel === 16) {
+      mascotSay(['⚡ +16강 성공! 오오 여기서부터가 진짜지!']);
     } else if (swordLevel === 15 || swordLevel === 10) {
       mascotSay([`⚔️ +${swordLevel}강 성공! 슬슬 위험해지니 조심하세요!`]);
     } else {
@@ -2254,22 +2378,19 @@ function enhanceSword() {
     playSound('swordFail');
     showToast(`💦 강화 실패... (레벨 유지, 비용만 소모)`);
   } else {
-    swordBreakCount++;
-    playSound('swordBreak');
-    mascotSay([`💥 검이 산산조각났어요... +${swordLevel}강까지 갔었는데 아쉬워요.`, `💥 콰장창! 검이 부서졌어요. 다시 도전해봐요!`]);
-    swordOwned = false;
-    swordLevel = 0;
+    if (swordReviveCharges > 0) {
+      swordReviveCharges--;
+      playSound('coin');
+      mascotSay([`🛡️ 검 랭킹 보상으로 받은 되돌리기 능력이 파괴를 막아냈어요! (남은 횟수 ${swordReviveCharges}회)`]);
+      showToast(`🛡️ 파괴 직전 되돌리기 능력 발동! 검이 무사해요. (남은 횟수 ${swordReviveCharges}회)`);
+    } else {
+      swordBreakCount++;
+      playSound('swordBreak');
+      mascotSay([`💥 검이 산산조각났어요... +${swordLevel}강까지 갔었는데 아쉬워요.`, `💥 콰장창! 검이 부서졌어요. 다시 도전해봐요!`]);
+      swordOwned = false;
+      swordLevel = 0;
+    }
   }
-  renderSwordPanel();
-}
-function sellSword() {
-  if (!swordOwned) { showToast('⚔️ 팔 검이 없어요!'); return; }
-  const value = getSwordSellValue(swordLevel);
-  addMoney(value);
-  showToast(`💰 ${getSwordDisplayName()} 판매! +${formatWon(value)}원`);
-  playSound('coin');
-  swordOwned = false;
-  swordLevel = 0;
   renderSwordPanel();
 }
 function renderSwordPanel() {
@@ -2279,8 +2400,9 @@ function renderSwordPanel() {
   document.getElementById('swordName').textContent = swordOwned ? getSwordDisplayName() : '검이 없어요';
   document.getElementById('swordBestLevel').textContent = swordBestLevel;
   document.getElementById('swordBreakCount').textContent = swordBreakCount;
+  document.getElementById('swordMonthlyBestLevel').textContent = swordMonthlyBestLevel;
+  document.getElementById('swordReviveChargesText').textContent = swordReviveCharges;
   const enhanceBtn = document.getElementById('swordEnhanceBtn');
-  const sellBtn = document.getElementById('swordSellBtn');
   const craftBtn = document.getElementById('swordCraftBtn');
   if (swordOwned && swordLevel < SWORD_MAX_LEVEL) {
     const nextStage = SWORD_STAGES[swordLevel + 1];
@@ -2289,9 +2411,9 @@ function renderSwordPanel() {
   } else {
     enhanceBtn.style.display = 'none';
   }
-  sellBtn.style.display = swordOwned ? '' : 'none';
-  if (swordOwned) sellBtn.textContent = `💰 판매하기 (${formatWon(getSwordSellValue(swordLevel))}원)`;
-  craftBtn.textContent = swordOwned ? '🔄 다시 만들기 (지금 검은 사라져요)' : '🗡️ 새 검 만들기';
+  // 검이 파괴되었거나(또는 아직 만들지 않아) 없을 때만 새로 만들기 버튼을 보여준다.
+  craftBtn.style.display = swordOwned ? 'none' : '';
+  renderSwordBattlePanel();
 }
 
 // ===== 저택 꾸미기 (순수 과시용 소비처, 레벨 상한 없음) =====
@@ -2678,7 +2800,94 @@ document.getElementById('mascotBubble').addEventListener('click', () => {
 });
 
 let isBrandNewPlayer = false;
-let seenFeatureUpdateSep2026 = false;
+
+// ===== 공지사항(패치노트) =====
+// 게임을 수정할 때마다 이 배열 맨 앞에 새 항목을 추가하고, 파일 맨 위 CURRENT_VERSION도
+// 함께 올려준다. lastSeenPatchVersion이 patchNotes[0].version과 다르면 "안 읽은 공지"로
+// 간주해 배지를 띄우고, 기존 유저가 접속하면 자동으로 한 번 띄워준다.
+const patchNotes = [
+  {
+    version: '2026091703',
+    date: '2026-09-17',
+    items: [
+      '🗡️ <b>검 랭킹(월간)</b> 신규 추가! 이번 달 최고 강화 레벨로 순위를 겨루고, 매달 초기화돼요',
+      '🏆 매달 초기화 직전 검 랭킹 1~3위에게 보상 지급: 🛡️ <b>되돌리기 능력</b>(검 파괴를 막아줘요) 1등 3회·2등 2회·3등 1회',
+      '🎨 검 랭킹 1~3위 추가 보상: 이번 달 한정 이름색 확률(파랑 제외) 1등 2배·2등 1.5배·3등 1.3배',
+      '✨ 검 강화 +16강부터 성공 연출이 점점 화려해지고, +20강 달성 시 대형 배너와 함께 아주 크게 터뜨려요',
+      '📢 신규 유저는 튜토리얼 종료 후 게임 소개(장점)를 공지사항으로 자동으로 볼 수 있어요'
+    ]
+  },
+  {
+    version: '2026091702',
+    date: '2026-09-17',
+    items: [
+      '🎨 이름 색상 뽑기 확률 상향: 빨강·녹색·노랑 확률이 기존의 2배로 올랐어요 (파랑은 그대로)'
+    ]
+  },
+  {
+    version: '2026091701',
+    date: '2026-09-17',
+    items: [
+      '⚔️ <b>검 배틀</b> 신규 추가! 강화한 검으로 무작위 상대와 대결해요 (하루 10회 · 승리 시 승점 획득)',
+      '🏅 미니게임 랭크 모달에 <b>검배틀 랭킹</b> 탭 추가',
+      '⚔️ 검 관련 버튼을 "더보기" 메뉴 밖 헤더로 이동',
+      '💰 검 판매 기능 제거, 검이 파괴됐을 때만 "새 검 만들기" 버튼이 보이도록 변경',
+      '검 강화 단계별 공격력 수치 제거(전투는 강화 레벨로만 승부가 갈려요)',
+      '📢 지금 보고 있는 이 공지사항 기능도 새로 추가됐어요!'
+    ]
+  },
+  {
+    version: '2026091602',
+    date: '2026-09-16',
+    items: [
+      '🎵 맵마다 다른 배경음악 추가 (헤더 더보기 메뉴에서 켜고 끌 수 있어요)',
+      '🐇 화면에 가끔 도망다니는 이벤트몹이 나타나요. 빠르게 잡으면 큰 보너스!',
+      '💍 무한강화로 레벨 상한 없이 수입을 계속 강화할 수 있어요',
+      '🎨 이름 색상 뽑기로 리더보드에서 눈에 띄는 이름을 만들어보세요',
+      '🌦️ 매일 바뀌는 날씨가 수입/크리티컬 확률 등에 영향을 줘요',
+      '🌌 환생 1회 이상 달성하면 완전히 새로운 공허맵(웨이브 서바이벌)이 열려요',
+      '🔥 소각 랭킹과 🏰 저택 꾸미기로 과시욕도 채워보세요'
+    ]
+  },
+  {
+    version: '2026090100',
+    date: '2026-09-01',
+    items: [
+      '🎉 <b>인생역전</b>에 오신 걸 환영해요! 이 게임은 이런 재미가 있어요:',
+      '📈 알바 → 직장인 → 사업가까지, 클릭 한 번마다 자산이 눈덩이처럼 불어나요',
+      '🗺️ 상가 거리부터 월드 비즈니스 거리까지, 맵을 넓혀가며 새로운 목표가 계속 생겨요',
+      '♻️ 환생으로 처음부터 훨씬 빠르게 다시 시작하며 최종 목표에 도전할 수 있어요',
+      '🎰 카지노, 검 강화 같은 미니게임으로 짜릿한 한 방도 노려보세요',
+      '🏅 구글 로그인하면 다른 플레이어들과 주간/월간 랭킹으로 경쟁할 수 있어요',
+      '☁️ 구글 로그인 시 진행 상황이 자동으로 클라우드에 저장돼요'
+    ]
+  }
+];
+let lastSeenPatchVersion = ''; // 마지막으로 공지사항을 확인한 시점의 버전
+function hasUnseenNotice() { return patchNotes.length > 0 && lastSeenPatchVersion !== patchNotes[0].version; }
+function updateNoticeBadge() {
+  const badge = document.getElementById('noticePointBadge');
+  if (badge) badge.style.display = hasUnseenNotice() ? 'inline-block' : 'none';
+}
+function renderNoticeList() {
+  const el = document.getElementById('noticeList');
+  if (!el) return;
+  el.innerHTML = patchNotes.map(n => `
+    <div style="margin-bottom:14px; padding-bottom:10px; border-bottom:1px solid #3a332a;">
+      <div style="font-size:12px; color:var(--gold); font-weight:bold; margin-bottom:4px;">${n.date} · v${n.version}</div>
+      <ul style="margin:0; padding-left:18px;">
+        ${n.items.map(i => `<li style="margin-bottom:4px; font-size:12.5px;">${i}</li>`).join('')}
+      </ul>
+    </div>
+  `).join('');
+}
+function openNoticeModal() {
+  renderNoticeList();
+  document.getElementById('noticeModal').classList.add('show');
+  lastSeenPatchVersion = patchNotes[0].version;
+  updateNoticeBadge();
+  saveGame();
+}
 const MASCOT_LINES = {
   tutorialDone: ['좋아, 이제 시작이야! 나만 믿고 따라와~', '오늘부터 인생역전이다! 열심히 벌어보자!'],
   stageUp: [
@@ -3202,14 +3411,19 @@ document.getElementById('startBtn').addEventListener('click', () => {
   if (isBrandNewPlayer) {
     isBrandNewPlayer = false;
     setTimeout(() => mascotSay(MASCOT_LINES.tutorialDone), 400);
+    // 신규 유저에게는 이 게임이 어떤 재미가 있는지 공지사항(장점 소개)을 한 번 보여준다.
+    setTimeout(openNoticeModal, 1400);
   }
 });
 document.getElementById('helpBtn').addEventListener('click', () => {
   document.getElementById('tutorialModal').classList.add('show');
 });
-document.getElementById('whatsNewOkBtn').addEventListener('click', () => {
-  document.getElementById('whatsNewModal').classList.remove('show');
-  saveGame();
+document.getElementById('noticeBtn').addEventListener('click', () => {
+  document.getElementById('moreMenuModal').classList.remove('show');
+  openNoticeModal();
+});
+document.getElementById('noticeCloseBtn').addEventListener('click', () => {
+  document.getElementById('noticeModal').classList.remove('show');
 });
 document.getElementById('moreMenuBtn').addEventListener('click', () => {
   document.getElementById('moreMenuModal').classList.add('show');
@@ -3272,8 +3486,39 @@ document.getElementById('swordCloseBtn').addEventListener('click', () => {
   document.getElementById('swordModal').classList.remove('show');
 });
 document.getElementById('swordEnhanceBtn').addEventListener('click', () => { initAudio(); enhanceSword(); });
-document.getElementById('swordSellBtn').addEventListener('click', () => { initAudio(); sellSword(); });
 document.getElementById('swordCraftBtn').addEventListener('click', () => { initAudio(); craftNewSword(); });
+document.getElementById('openSwordBattleBtn').addEventListener('click', () => {
+  initAudio();
+  if (!swordOwned) { showToast('⚔️ 먼저 검을 만들어주세요!'); return; }
+  document.getElementById('swordModal').classList.remove('show');
+  renderSwordBattlePanel();
+  document.getElementById('swordBattleResult').textContent = '';
+  document.getElementById('swordBattleModal').classList.add('show');
+});
+document.getElementById('swordBattleCloseBtn').addEventListener('click', () => {
+  document.getElementById('swordBattleModal').classList.remove('show');
+});
+document.getElementById('swordBattleStartBtn').addEventListener('click', startSwordBattle);
+document.getElementById('swordBattleRankBtn').addEventListener('click', () => {
+  document.getElementById('swordBattleModal').classList.remove('show');
+  currentLeaderboardPeriod = 'sword';
+  document.querySelectorAll('.lb-period-tab').forEach(b => b.classList.toggle('active', b.dataset.period === 'sword'));
+  document.getElementById('burnMoneyBtn').style.display = 'none';
+  document.getElementById('rankModal').classList.add('show');
+  if (leaderboardSyncPending) syncLeaderboard({ forceSync: true });
+  renderRankModal();
+  startLeaderboardAutoRefresh();
+});
+document.getElementById('swordRankBtn').addEventListener('click', () => {
+  document.getElementById('swordModal').classList.remove('show');
+  currentLeaderboardPeriod = 'swordmonthly';
+  document.querySelectorAll('.lb-period-tab').forEach(b => b.classList.toggle('active', b.dataset.period === 'swordmonthly'));
+  document.getElementById('burnMoneyBtn').style.display = 'none';
+  document.getElementById('rankModal').classList.add('show');
+  if (leaderboardSyncPending) syncLeaderboard({ forceSync: true });
+  renderRankModal();
+  startLeaderboardAutoRefresh();
+});
 
 document.getElementById('voidEnemy').addEventListener('click', (e) => {
   initAudio();
@@ -4298,6 +4543,30 @@ function renderMyRankCard() {
     renderMyRankPosition(periodForRank);
     return;
   }
+  if (currentLeaderboardPeriod === 'sword') {
+    card.innerHTML = `
+      <span class="my-rank-icon">⚔️</span>
+      <div style="flex:1;">
+        <div class="my-rank-name">검배틀 승점 <span style="font-size:10px; color:var(--paper-dim); font-weight:normal;">(누적 기준)</span></div>
+        <div class="my-rank-sub">누적 승점 ${swordBattleWins.toLocaleString('ko-KR')}점 · 오늘 남은 횟수 ${Math.max(0, SWORD_BATTLE_DAILY_LIMIT - swordBattleCountToday)}회</div>
+        <div class="my-rank-sub" id="myRankPosition" style="color:var(--gold);">내 순위 불러오는 중...</div>
+      </div>
+    `;
+    renderMyRankPosition(periodForRank);
+    return;
+  }
+  if (currentLeaderboardPeriod === 'swordmonthly') {
+    card.innerHTML = `
+      <span class="my-rank-icon">🗡️</span>
+      <div style="flex:1;">
+        <div class="my-rank-name">검 랭킹 <span style="font-size:10px; color:var(--paper-dim); font-weight:normal;">(이번 달 최고 강화 레벨 기준)</span></div>
+        <div class="my-rank-sub">이번 달 최고 +${swordMonthlyBestLevel}강 · 매달 초기화 · 1~3위 보상 지급</div>
+        <div class="my-rank-sub" id="myRankPosition" style="color:var(--gold);">내 순위 불러오는 중...</div>
+      </div>
+    `;
+    renderMyRankPosition(periodForRank);
+    return;
+  }
   const isWeekly = currentLeaderboardPeriod === 'weekly';
   const periodAmount = isWeekly ? weeklyWinnings : monthlyWinnings;
   const periodLabel = isWeekly ? '이번 주' : '이번 달';
@@ -4335,7 +4604,8 @@ document.getElementById('burnMoneyBtn').addEventListener('click', () => { initAu
 
 async function renderLeaderboardList() {
   const lbEl = document.getElementById('leaderboardList');
-  const periodLabel = currentLeaderboardPeriod === 'weekly' ? '주간' : currentLeaderboardPeriod === 'monthly' ? '월간' : '소각';
+  const periodLabels = { weekly: '주간', monthly: '월간', burn: '소각', sword: '검배틀', swordmonthly: '검(월간)' };
+  const periodLabel = periodLabels[currentLeaderboardPeriod] || '';
   if (!currentUser) {
     lbEl.innerHTML = `<p style="font-size:11px; color:var(--paper-dim);">구글 로그인을 하면 다른 플레이어들과의 ${periodLabel} 랭킹을 볼 수 있어요.</p>`;
     return;
@@ -4343,7 +4613,8 @@ async function renderLeaderboardList() {
   lbEl.innerHTML = `<p style="font-size:11px; color:var(--paper-dim);">불러오는 중...</p>`;
   const list = await fetchLeaderboard(currentLeaderboardPeriod);
   if (list.length === 0) {
-    lbEl.innerHTML = `<p style="font-size:11px; color:var(--paper-dim);">아직 ${periodLabel} 랭킹 데이터가 없어요. 첫 번째로 딴 돈을 기록해보세요!</p>`;
+    const firstMsg = currentLeaderboardPeriod === 'sword' ? '첫 번째로 검배틀 승점을 기록해보세요!' : currentLeaderboardPeriod === 'swordmonthly' ? '첫 번째로 검을 강화해보세요!' : '첫 번째로 딴 돈을 기록해보세요!';
+    lbEl.innerHTML = `<p style="font-size:11px; color:var(--paper-dim);">아직 ${periodLabel} 랭킹 데이터가 없어요. ${firstMsg}</p>`;
     return;
   }
   if (currentLeaderboardPeriod === 'burn') {
@@ -4355,6 +4626,28 @@ async function renderLeaderboardList() {
       </div>
     `).join('');
     if (!list.some(p => p.uid === currentUser.uid)) appendMyRankRowIfOutsideTop(lbEl, 'burn', true);
+    return;
+  }
+  if (currentLeaderboardPeriod === 'sword') {
+    lbEl.innerHTML = list.map(p => `
+      <div class="lb-row${p.uid === currentUser.uid ? ' me' : ''}">
+        <span class="lb-rank">${p.rank}</span>
+        <span class="lb-name"${p.nameColor ? ` style="color:${p.nameColor};font-weight:bold;"` : ''}>${p.mansionIcon ? p.mansionIcon + ' ' : ''}${p.name}</span>
+        <span class="lb-tier">⚔️ ${(p.amount || 0).toLocaleString('ko-KR')}승</span>
+      </div>
+    `).join('');
+    if (!list.some(p => p.uid === currentUser.uid)) appendMyRankRowIfOutsideTop(lbEl, 'sword', false);
+    return;
+  }
+  if (currentLeaderboardPeriod === 'swordmonthly') {
+    lbEl.innerHTML = list.map(p => `
+      <div class="lb-row${p.uid === currentUser.uid ? ' me' : ''}">
+        <span class="lb-rank">${p.rank}</span>
+        <span class="lb-name"${p.nameColor ? ` style="color:${p.nameColor};font-weight:bold;"` : ''}>${p.mansionIcon ? p.mansionIcon + ' ' : ''}${p.name}</span>
+        <span class="lb-tier">🗡️ +${p.amount || 0}강</span>
+      </div>
+    `).join('');
+    if (!list.some(p => p.uid === currentUser.uid)) appendMyRankRowIfOutsideTop(lbEl, 'swordmonthly', false);
     return;
   }
   lbEl.innerHTML = list.map(p => {
@@ -4388,12 +4681,18 @@ async function appendMyRankRowIfOutsideTop(lbEl, period, isBurn) {
   const divider = document.createElement('div');
   divider.style.cssText = 'text-align:center; font-size:10px; color:var(--paper-dim); margin:4px 0;';
   divider.textContent = '⋯';
-  const myAmount = isBurn ? burnedMonthly : (period === 'weekly' ? weeklyWinnings : monthlyWinnings);
   const row = document.createElement('div');
   row.className = 'lb-row me';
-  row.innerHTML = isBurn
-    ? `<span class="lb-rank">${info.rank}</span><span class="lb-name">${currentUser.name} (나)</span><span class="lb-tier">🔥 ${formatWon(myAmount)}원 소각</span>`
-    : `<span class="lb-rank">${info.rank}</span><span class="lb-name">${currentUser.name} (나)</span><span class="lb-tier">${formatWon(myAmount)}원</span>`;
+  if (isBurn) {
+    row.innerHTML = `<span class="lb-rank">${info.rank}</span><span class="lb-name">${currentUser.name} (나)</span><span class="lb-tier">🔥 ${formatWon(burnedMonthly)}원 소각</span>`;
+  } else if (period === 'sword') {
+    row.innerHTML = `<span class="lb-rank">${info.rank}</span><span class="lb-name">${currentUser.name} (나)</span><span class="lb-tier">⚔️ ${swordBattleWins.toLocaleString('ko-KR')}승</span>`;
+  } else if (period === 'swordmonthly') {
+    row.innerHTML = `<span class="lb-rank">${info.rank}</span><span class="lb-name">${currentUser.name} (나)</span><span class="lb-tier">🗡️ +${swordMonthlyBestLevel}강</span>`;
+  } else {
+    const myAmount = period === 'weekly' ? weeklyWinnings : monthlyWinnings;
+    row.innerHTML = `<span class="lb-rank">${info.rank}</span><span class="lb-name">${currentUser.name} (나)</span><span class="lb-tier">${formatWon(myAmount)}원</span>`;
+  }
   lbEl.appendChild(divider);
   lbEl.appendChild(row);
 }
@@ -4848,7 +5147,45 @@ function checkPeriodRollover() {
     weeklyWinnings = 0;
   }
   const mk = getMonthKey(new Date());
-  if (monthlyPeriodKey !== mk) { monthlyPeriodKey = mk; monthlyWinnings = 0; burnedMonthly = 0; }
+  if (monthlyPeriodKey !== mk) {
+    const prevMk = monthlyPeriodKey;
+    monthlyPeriodKey = mk;
+    monthlyWinnings = 0;
+    burnedMonthly = 0;
+    if (prevMk) {
+      // 지난달 검 랭킹 상위 3명 보상 확인(비동기) 후, 새 시즌을 위해 검을 초기화한다.
+      checkSwordSeasonReward(prevMk);
+      swordOwned = false;
+      swordLevel = 0;
+      swordMonthlyBestLevel = 0;
+      renderSwordPanel();
+    }
+  }
+}
+
+// 검 랭킹(월간, 강화 레벨 기준) 시즌 종료 시 상위 3명에게 보상 지급:
+// 검 파괴를 막아주는 "되돌리기" 능력 횟수 + 이번 달 한정 이름색 확률(파랑 제외) 부스트.
+async function checkSwordSeasonReward(prevKey) {
+  if (!currentUser || !db) return;
+  if (claimedSwordSeasonRewards.includes(prevKey)) return;
+  try {
+    const snap = await db.collection(`leaderboard_sword_monthly_${prevKey}`).orderBy('amount', 'desc').limit(3).get();
+    const ids = snap.docs.map(d => d.id);
+    const rank = ids.indexOf(currentUser.uid);
+    claimedSwordSeasonRewards.push(prevKey);
+    if (rank === -1) return;
+    const reviveByRank = [3, 2, 1];        // 1위/2위/3위 되돌리기 능력 보상
+    const colorBoostByRank = [2, 1.5, 1.3]; // 1위/2위/3위 이름색 확률 배수(파랑 제외, 이번 달 한정)
+    swordReviveCharges += reviveByRank[rank];
+    swordColorBoostMonthKey = monthlyPeriodKey;
+    swordColorBoostMult = colorBoostByRank[rank];
+    renderSwordPanel();
+    showToast(`🏆 지난달 검 랭킹 ${rank + 1}위 보상! 되돌리기 ${reviveByRank[rank]}회 + 이번 달 이름색 확률 ${colorBoostByRank[rank]}배!`);
+    mascotSay([`🏆 지난달 검 랭킹 ${rank + 1}위 보상이 도착했어! 되돌리기 ${reviveByRank[rank]}회랑 이름색 확률 ${colorBoostByRank[rank]}배 챙겨가~`]);
+    saveGame({ forceCloud: true });
+  } catch (e) {
+    console.error('검 랭킹 시즌 보상 확인 실패:', e);
+  }
 }
 
 // 시즌(주간) 종료 시 상위 3명에게 특성 포인트 보너스 지급.
@@ -5168,11 +5505,12 @@ document.querySelectorAll('.casino-tab').forEach(btn => {
 });
 updateCasinoTabLocks();
 
-function spawnConfettiBurst() {
+function spawnConfettiBurst(count, icons) {
+  count = count || 16;
+  icons = icons || ['🎉', '🎊', '✨', '⭐'];
   const app = document.getElementById('app');
   const rect = app.getBoundingClientRect();
-  const icons = ['🎉', '🎊', '✨', '⭐'];
-  for (let i = 0; i < 16; i++) {
+  for (let i = 0; i < count; i++) {
     const c = document.createElement('span');
     c.className = 'confetti';
     c.textContent = icons[Math.floor(Math.random() * icons.length)];
@@ -5183,6 +5521,46 @@ function spawnConfettiBurst() {
     app.appendChild(c);
     setTimeout(() => c.remove(), 1900);
   }
+}
+function showSwordMaxBanner() {
+  const app = document.getElementById('app');
+  const banner = document.createElement('div');
+  banner.className = 'sword-max-banner';
+  banner.innerHTML = `👑 +${SWORD_MAX_LEVEL}강 달성! 👑<br>전설의 무기 완성!!`;
+  app.appendChild(banner);
+  setTimeout(() => banner.remove(), 2700);
+}
+// 16강부터 강화 성공 연출이 점점 과해지고, 최고 강화(+20강)에는 아주 크게 터뜨린다.
+function celebrateSwordEnhance(level) {
+  const app = document.getElementById('app');
+  if (level < 16) {
+    spawnConfettiBurst();
+    return;
+  }
+  if (level < SWORD_MAX_LEVEL) {
+    const step = level - 15; // +16강=1 ~ +19강=4
+    const bursts = step;
+    const perBurst = 16 + step * 12;
+    for (let i = 0; i < bursts; i++) {
+      setTimeout(() => spawnConfettiBurst(perBurst, ['🎉', '🎊', '✨', '⭐', '💫']), i * 220);
+    }
+    if (step >= 3) setTimeout(() => playSound('levelUp'), 180);
+    app.classList.add('sword-shake');
+    setTimeout(() => app.classList.remove('sword-shake'), 500);
+    return;
+  }
+  // +20강(최고 강화): 난리 나게!
+  const icons = ['🎉', '🎊', '✨', '⭐', '💫', '👑', '🔥'];
+  let i = 0;
+  const burstTimer = setInterval(() => {
+    spawnConfettiBurst(60, icons);
+    playSound('levelUp');
+    i++;
+    if (i >= 5) clearInterval(burstTimer);
+  }, 260);
+  app.classList.add('sword-shake');
+  setTimeout(() => app.classList.remove('sword-shake'), 1200);
+  showSwordMaxBanner();
 }
 
 function busk() {
@@ -5378,9 +5756,8 @@ async function cloudLoadGame() {
       } else {
         applySaveData(cloudData, { checkOffline: true });
         refreshAllScreens();
-        if (!seenFeatureUpdateSep2026) {
-          seenFeatureUpdateSep2026 = true;
-          setTimeout(() => document.getElementById('whatsNewModal').classList.add('show'), 900);
+        if (hasUnseenNotice()) {
+          setTimeout(openNoticeModal, 900);
         }
       }
     } else {
@@ -5507,6 +5884,10 @@ async function syncLeaderboard(opts) {
     await db.collection('leaderboard').doc(currentUser.uid).set({ name, updatedAt, tierName: overallTier.name, tierIcon: overallTier.icon, amount: toBigStorable(casinoTotalWinnings), nameColor: nameColorHex, mansionIcon });
     await db.collection(`leaderboard_weekly_${weeklyPeriodKey}`).doc(currentUser.uid).set({ name, updatedAt, tierName: weeklyTier.name, tierIcon: weeklyTier.icon, amount: toBigStorable(weeklyWinnings), nameColor: nameColorHex, mansionIcon });
     await db.collection(`leaderboard_monthly_${monthlyPeriodKey}`).doc(currentUser.uid).set({ name, updatedAt, tierName: monthlyTier.name, tierIcon: monthlyTier.icon, amount: toBigStorable(monthlyWinnings), nameColor: nameColorHex, mansionIcon });
+    // 검배틀 랭킹(승점, 전체기간) + 매치메이킹용 내 현재 검 레벨(검이 없으면 -1)도 함께 올려둔다.
+    await db.collection('leaderboard_sword').doc(currentUser.uid).set({ name, updatedAt, amount: swordBattleWins, nameColor: nameColorHex, mansionIcon, swordLevel: swordOwned ? swordLevel : -1 });
+    // 검 랭킹(월간, 이번 달 최고 강화 레벨 기준)
+    await db.collection(`leaderboard_sword_monthly_${monthlyPeriodKey}`).doc(currentUser.uid).set({ name, updatedAt, amount: swordMonthlyBestLevel, nameColor: nameColorHex, mansionIcon });
   } catch (e) {
     console.error('랭킹보드 동기화 실패:', e);
   }
@@ -5516,6 +5897,8 @@ function getLeaderboardCollectionName(period) {
   if (period === 'weekly') return `leaderboard_weekly_${weeklyPeriodKey}`;
   if (period === 'monthly') return `leaderboard_monthly_${monthlyPeriodKey}`;
   if (period === 'burn') return `leaderboard_burn_monthly_${monthlyPeriodKey}`;
+  if (period === 'sword') return 'leaderboard_sword';
+  if (period === 'swordmonthly') return `leaderboard_sword_monthly_${monthlyPeriodKey}`;
   return 'leaderboard';
 }
 async function fetchLeaderboard(period) {
@@ -5703,8 +6086,10 @@ function buildSaveData() {
     discoveryNudges,
     infiniteUpgradeLevel, nameColor,
     map6Unlocked, voidWave, voidShards, voidDamageLevel, voidEnemyHp, voidEnemyMaxHp, voidRelics,
-    burnedTotal, burnedMonthly, mansionLevel, seenFeatureUpdateSep2026,
+    burnedTotal, burnedMonthly, mansionLevel, lastSeenPatchVersion,
     swordOwned, swordLevel, swordBestLevel, swordBreakCount,
+    swordBattleWins, swordBattleCountToday,
+    swordMonthlyBestLevel, swordReviveCharges, swordColorBoostMonthKey, swordColorBoostMult, claimedSwordSeasonRewards,
     lastSaveTime: Date.now()
   };
 }
@@ -5810,7 +6195,14 @@ function applySaveData(data, opts) {
   swordLevel = data.swordLevel || 0;
   swordBestLevel = data.swordBestLevel || 0;
   swordBreakCount = data.swordBreakCount || 0;
-  seenFeatureUpdateSep2026 = data.seenFeatureUpdateSep2026 || false;
+  swordBattleWins = data.swordBattleWins || 0;
+  swordBattleCountToday = data.swordBattleCountToday || 0;
+  swordMonthlyBestLevel = data.swordMonthlyBestLevel || 0;
+  swordReviveCharges = data.swordReviveCharges || 0;
+  swordColorBoostMonthKey = data.swordColorBoostMonthKey || '';
+  swordColorBoostMult = data.swordColorBoostMult || 1;
+  claimedSwordSeasonRewards = data.claimedSwordSeasonRewards || [];
+  lastSeenPatchVersion = data.lastSeenPatchVersion || '';
   clickUpgradeLevel = data.clickUpgradeLevel || [0,0,0,0];
   jobLevels = data.jobLevels || new Array(allJobs.length).fill(0);
   map2Unlocked = data.map2Unlocked || false;
@@ -5940,9 +6332,8 @@ function loadGame() {
     }
     */
     applySaveData(data, { checkOffline: true });
-    if (!seenFeatureUpdateSep2026) {
-      seenFeatureUpdateSep2026 = true;
-      setTimeout(() => document.getElementById('whatsNewModal').classList.add('show'), 900);
+    if (hasUnseenNotice()) {
+      setTimeout(openNoticeModal, 900);
     }
   } catch(e) {
     console.error('Save load error:', e);
@@ -5983,6 +6374,7 @@ document.getElementById('offlineOkBtn').addEventListener('click', () => {
 
 // 초기화 실행
 loadGame();
+updateNoticeBadge();
 renderWeatherBadge();
 renderStalls();
 if (map2Unlocked) {
