@@ -1271,10 +1271,10 @@
   <div class="modal-overlay" id="swordBattleModal">
     <div class="modal-box">
       <h2>🤺 검 배틀</h2>
-      <p style="font-size:12px; color:var(--paper-dim); margin-top:-4px;">내 검의 강화 레벨로 무작위 상대와 대결해요. 레벨 차이가 클수록 승률도 크게 갈리고, 레벨이 같으면 50:50이에요. 하루 <b id="swordBattleDailyLimitText">10</b>번까지 도전할 수 있어요.</p>
+      <p style="font-size:12px; color:var(--paper-dim); margin-top:-4px;">내 검의 강화 레벨로 무작위 상대와 대결해요. 레벨 차이가 클수록 승률도 크게 갈리고, 레벨이 같으면 50:50이에요. 횟수 제한 없이 계속 도전할 수 있어요.</p>
       <div style="margin:14px 0; text-align:center; background:var(--bg-panel); border-radius:10px; padding:16px 14px;">
         <div style="font-size:12px; color:var(--paper-dim);">내 검: <b id="swordBattleMyName" style="color:var(--gold);">검이 없어요</b></div>
-        <div style="font-size:12px; color:var(--paper-dim); margin-top:4px;">오늘 남은 횟수 <b id="swordBattleRemaining" style="color:var(--gold);">10</b>회 · 누적 승점 <b id="swordBattleWinsText" style="color:var(--gold);">0</b>점</div>
+        <div style="font-size:12px; color:var(--paper-dim); margin-top:4px;">누적 승점 <b id="swordBattleWinsText" style="color:var(--gold);">0</b>점</div>
         <div id="swordBattleResult" style="margin-top:12px; font-size:13px; min-height:20px;"></div>
       </div>
       <button class="start-btn" id="swordBattleStartBtn">⚔️ 배틀 시작</button>
@@ -2237,9 +2237,8 @@ const SWORD_STAGES = [
 // 확률표 기준: 레벨 차이 1당 "상대가 이길 확률"이 5%p씩 줄어들고, 레벨이 같으면 50:50.
 // (레벨 차이 10 이상이면 상대가 이길 확률 0%로 고정 = 내가 사실상 무조건 승리)
 // 내가 이길 확률은 100 - (상대가 이길 확률) 로 계산한다.
-const SWORD_BATTLE_DAILY_LIMIT = 10;
 let swordBattleWins = 0;       // 누적 승점 (검배틀 랭킹 기준)
-let swordBattleCountToday = 0; // 오늘 사용한 배틀 횟수
+let swordBattleCountToday = 0; // (예전 하루 제한용, 더 이상 제한에는 쓰지 않지만 세이브 호환을 위해 유지)
 // ===== 검 랭킹(월간, 강화 레벨 기준) =====
 // 매달 초기화되는 카지노 월간 랭킹과 같은 주기(monthlyPeriodKey)를 그대로 재사용한다.
 // 한 달 동안 도달한 "최고 강화 레벨"로 순위를 매기고, 달이 바뀌면 검이 초기화되면서
@@ -2274,15 +2273,12 @@ async function findSwordBattleOpponent() {
 }
 async function startSwordBattle() {
   initAudio();
-  checkDailyRollover();
   const resultEl = document.getElementById('swordBattleResult');
   if (!swordOwned) { showToast('⚔️ 먼저 검을 만들어주세요!'); return; }
-  if (swordBattleCountToday >= SWORD_BATTLE_DAILY_LIMIT) { showToast(`⚔️ 오늘 배틀 횟수를 다 썼어요! (하루 ${SWORD_BATTLE_DAILY_LIMIT}회, 내일 다시 도전하세요)`); return; }
   const startBtn = document.getElementById('swordBattleStartBtn');
   if (startBtn) startBtn.disabled = true;
   if (resultEl) resultEl.textContent = '⚔️ 상대를 찾는 중...';
   const opponent = await findSwordBattleOpponent();
-  swordBattleCountToday++;
   const oppWinChance = getSwordBattleOppWinChance(swordLevel, opponent.level);
   const myWinChance = 100 - oppWinChance;
   const won = Math.random() * 100 < myWinChance;
@@ -2305,12 +2301,10 @@ async function startSwordBattle() {
 function renderSwordBattlePanel() {
   const myNameEl = document.getElementById('swordBattleMyName');
   if (!myNameEl) return;
-  document.getElementById('swordBattleDailyLimitText').textContent = SWORD_BATTLE_DAILY_LIMIT;
   myNameEl.textContent = swordOwned ? getSwordDisplayName() : '검이 없어요';
-  document.getElementById('swordBattleRemaining').textContent = Math.max(0, SWORD_BATTLE_DAILY_LIMIT - swordBattleCountToday);
   document.getElementById('swordBattleWinsText').textContent = swordBattleWins.toLocaleString('ko-KR');
   const startBtn = document.getElementById('swordBattleStartBtn');
-  if (startBtn) startBtn.textContent = swordBattleCountToday >= SWORD_BATTLE_DAILY_LIMIT ? '⚔️ 오늘 횟수 소진' : '⚔️ 배틀 시작';
+  if (startBtn) startBtn.textContent = '⚔️ 배틀 시작';
 }
 // 강화 구간별 아이콘 (레벨이 오를수록 더 화려해짐)
 const SWORD_LEVEL_TIERS = [
@@ -2695,7 +2689,14 @@ function getClickValue() {
   // 있어서 3%로 낮췄다.)
   // passiveTotalLabel()은 이미 GLOBAL_INCOME_THROTTLE가 적용된 값이라, 여기서 또
   // 곱하면 이중적용이 되므로 flatVal 쪽에만 곱한다.
-  const passiveBonus = passiveTotalLabel() * 0.03;
+  // 다만 이 비율이 고정 3%이면, 후반부에는 패시브 수입 자체가 워낙 커서 "자기계발"을
+  // 아무리 레벨업해도(flatVal 쪽 증가분은 900원 단위라 미미함) 클릭 수익이 거의
+  // 안 바뀌는 것처럼 보이는 문제가 있었다. 그래서 마지막 클릭 업그레이드("자기계발")
+  // 레벨에 비례해 이 비율을 아주 조금씩(레벨당 +0.05%p, 최대 +10%p) 올려줘서,
+  // 레벨업이 후반에도 계속 체감되게 한다.
+  const lastTierLv = clickUpgradeLevel[stages.length - 1];
+  const passiveBonusPct = 0.03 + Math.min(0.10, lastTierLv * 0.0005);
+  const passiveBonus = passiveTotalLabel() * passiveBonusPct;
   return flatVal + passiveBonus;
 }
 function passiveTotalLabel() {
@@ -3293,7 +3294,7 @@ function renderUpgrade() {
   }
   card.classList.toggle('disabled', !affordable);
   document.getElementById('upgradeName').textContent = `💪 ${cu.name}`;
-  document.getElementById('upgradeMeta').textContent = `레벨업 시 Lv.${lv} · 현재 클릭 수익 ${formatWon(getClickValue())}원`;
+  document.getElementById('upgradeMeta').textContent = `레벨업 시 Lv.${lv + 1} · 현재 클릭 수익 ${formatWon(getClickValue())}원`;
   document.getElementById('upgradeCostText').textContent = `${formatWon(cost)}원`;
 }
 
@@ -4551,7 +4552,7 @@ function renderMyRankCard() {
       <span class="my-rank-icon">⚔️</span>
       <div style="flex:1;">
         <div class="my-rank-name">검배틀 승점 <span style="font-size:10px; color:var(--paper-dim); font-weight:normal;">(누적 기준)</span></div>
-        <div class="my-rank-sub">누적 승점 ${swordBattleWins.toLocaleString('ko-KR')}점 · 오늘 남은 횟수 ${Math.max(0, SWORD_BATTLE_DAILY_LIMIT - swordBattleCountToday)}회</div>
+        <div class="my-rank-sub">누적 승점 ${swordBattleWins.toLocaleString('ko-KR')}점</div>
         <div class="my-rank-sub" id="myRankPosition" style="color:var(--gold);">내 순위 불러오는 중...</div>
       </div>
     `;
