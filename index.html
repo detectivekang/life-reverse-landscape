@@ -1271,7 +1271,7 @@
   <div class="modal-overlay" id="swordBattleModal">
     <div class="modal-box">
       <h2>🤺 검 배틀</h2>
-      <p style="font-size:12px; color:var(--paper-dim); margin-top:-4px;">내 검의 강화 레벨로 무작위 상대와 대결해요. 레벨 차이가 클수록 승률도 크게 갈리고, 레벨이 같으면 50:50이에요. 횟수 제한 없이 계속 도전할 수 있어요.</p>
+      <p style="font-size:12px; color:var(--paper-dim); margin-top:-4px;">내 검의 강화 레벨로 무작위 상대와 대결해요. 레벨 차이가 클수록 승률도 크게 갈리고, 레벨이 같으면 50:50이에요. 이기면 승점 +5, 지면 승점 -3(0점 밑으로는 안 내려가요). 횟수 제한 없이 계속 도전할 수 있어요.</p>
       <div style="margin:14px 0; text-align:center; background:var(--bg-panel); border-radius:10px; padding:16px 14px;">
         <div style="font-size:12px; color:var(--paper-dim);">내 검: <b id="swordBattleMyName" style="color:var(--gold);">검이 없어요</b></div>
         <div style="font-size:12px; color:var(--paper-dim); margin-top:4px;">누적 승점 <b id="swordBattleWinsText" style="color:var(--gold);">0</b>점</div>
@@ -1475,7 +1475,7 @@ const stages = [
       { name: '전단지 알바', icon: '📄', baseCost: 2240, baseIncome: 140, desc: '길거리에서 전단지를 나눠주는 일입니다.', anim: 'labor' },
       { name: '인력사무소', icon: '🚧', baseCost: 9600, baseIncome: 430, desc: '매일 아침 인력사무소에 나가 일감을 받습니다.', anim: 'labor' }
     ],
-    clickUpgrade: { name: '체력 보충제', baseCost: 560, add: 6 }
+    clickUpgrade: { name: '체력 보충제', baseCost: 560, add: 40 }
   },
   {
     name: '알바생', icon: '🏪', tapLabel: '편의점 알바', threshold: 325000,
@@ -1486,7 +1486,7 @@ const stages = [
       { name: '배달대행', icon: '🛵', baseCost: 72000, baseIncome: 3600, desc: '오토바이로 음식을 배달합니다.', anim: 'vehicle' },
       { name: '대리운전', icon: '🚗', baseCost: 256000, baseIncome: 9500, desc: '밤늦게 대리운전으로 부수입을 올립니다.', anim: 'vehicle' }
     ],
-    clickUpgrade: { name: '스마트폰 부업 앱', baseCost: 24000, add: 60 }
+    clickUpgrade: { name: '스마트폰 부업 앱', baseCost: 24000, add: 1200 }
   },
   {
     name: '직장인', icon: '💼', tapLabel: '야근하기', threshold: 5000000,
@@ -1497,7 +1497,7 @@ const stages = [
       { name: '야근수당', icon: '🌙', baseCost: 1920000, baseIncome: 70000, desc: '야근이 잦지만 그만큼 수당이 쏠쏠합니다.', anim: 'passive' },
       { name: '소액 재테크', icon: '📊', baseCost: 6400000, baseIncome: 190000, desc: '적금과 소액 주식으로 돈을 굴립니다.', anim: 'passive' }
     ],
-    clickUpgrade: { name: '자기계발', baseCost: 480000, add: 900 }
+    clickUpgrade: { name: '자기계발', baseCost: 480000, add: 50000 }
   }
 ];
 
@@ -2292,16 +2292,19 @@ async function startSwordBattle() {
   const oppName = `+${opponent.level} ${SWORD_STAGES[opponent.level].name}`;
   const oppTag = opponent.isReal ? '실제 유저' : 'AI 상대 · 대결 가능한 다른 유저가 아직 없어요';
   if (won) {
-    swordBattleWins++;
+    swordBattleWins += 5;
     playSound('levelUp');
     spawnConfettiBurst();
     if (resultEl) resultEl.innerHTML = `<div style="color:var(--gold); font-weight:bold;">🎉 ${opponent.name}(${oppName})님을 이겼습니다! (승률 ${Math.round(myWinChance)}%)</div><div style="font-size:11px; color:var(--paper-dim); margin-top:2px;">${oppTag}</div>`;
-    showToast(`🎉 검 배틀 승리! 승점 +1`);
+    showToast(`🎉 검 배틀 승리! 승점 +5`);
     syncLeaderboard({ forceSync: true });
   } else {
+    // 승점이 마이너스로 떨어지지 않게 0에서 멈춘다.
+    swordBattleWins = Math.max(0, swordBattleWins - 3);
     playSound('swordFail');
     if (resultEl) resultEl.innerHTML = `<div style="color:var(--danger);">😢 ${opponent.name}(${oppName})님에게 졌습니다... (승률 ${Math.round(myWinChance)}%)</div><div style="font-size:11px; color:var(--paper-dim); margin-top:2px;">${oppTag}</div>`;
-    showToast(`😢 검 배틀 패배...`);
+    showToast(`😢 검 배틀 패배... 승점 -3`);
+    syncLeaderboard({ forceSync: true });
   }
   renderSwordBattlePanel();
   if (startBtn) startBtn.disabled = false;
@@ -2692,26 +2695,21 @@ function getClickMult() { return boosters.click5.remaining > 0 ? boosters.click5
 const GLOBAL_INCOME_THROTTLE = 0.25;
 
 function getClickValue() {
+  // 클릭 수익은 오직 "이 업그레이드를 몇 번 샀는지"로만 정해진다.
+  // 티어별 add를 "레벨당 고정 증가액"이 아니라 "삼각수 단위값"으로 써서,
+  // Lv1=add×1, Lv2=add×3, Lv3=add×6, Lv4=add×10... 식으로 완만하게 가속되는
+  // (지수적으로 폭발하지 않는) 곡선을 만든다. 예: 근성 단련은 Lv1=1원, Lv2=3원, Lv3=6원.
+  // (예전엔 여기에 "현재 초당 자동수입의 3~13%"를 더해서, 검 강화 Lv5 정도밖에
+  // 안 올렸는데도 재산이 클수록 클릭 한 번에 수백억이 찍히는 문제가 있었다.
+  // 이제는 재산/패시브 수입과 완전히 무관하게, 순수 업그레이드 레벨로만 정해진다.)
   let flatVal = baseClickValue;
-  for (let s = 0; s < stages.length; s++) flatVal += clickUpgradeLevel[s] * stages[s].clickUpgrade.add;
+  for (let s = 0; s < stages.length; s++) {
+    const lv = clickUpgradeLevel[s];
+    const unit = stages[s].clickUpgrade.add;
+    flatVal += unit * lv * (lv + 1) / 2;
+  }
   flatVal *= getClickMult() * clickTalentMult * getCasinoShopClickMult() * getCollectionMult() * getAwakeningMult() * getAchievementMult() * getInfiniteUpgradeMult() * getWeatherClickMult() * getVoidRelicClickMult() * GLOBAL_INCOME_THROTTLE;
-  // 상가/월드비즈니스 단계로 진출하면 클릭 업그레이드가 더 이상 없어서 클릭 수익이
-  // 초반 수준(900원대)에 계속 고정돼 보이는 문제가 있었음. 그래서 클릭 수익에
-  // "현재 초당 자동수입의 일정 비율"을 함께 더해서, 사업 규모가 커질수록 클릭 수익도
-  // 자연스럽게 같이 커지도록 한다. (원래 5%였는데, 패시브가 커질수록 클릭도 같이 커지고
-  // 그 클릭으로 또 재투자가 빨라지는 눈덩이 효과가 전체 성장 속도를 과하게 끌어올리고
-  // 있어서 3%로 낮췄다.)
-  // passiveTotalLabel()은 이미 GLOBAL_INCOME_THROTTLE가 적용된 값이라, 여기서 또
-  // 곱하면 이중적용이 되므로 flatVal 쪽에만 곱한다.
-  // 다만 이 비율이 고정 3%이면, 후반부에는 패시브 수입 자체가 워낙 커서 "자기계발"을
-  // 아무리 레벨업해도(flatVal 쪽 증가분은 900원 단위라 미미함) 클릭 수익이 거의
-  // 안 바뀌는 것처럼 보이는 문제가 있었다. 그래서 마지막 클릭 업그레이드("자기계발")
-  // 레벨에 비례해 이 비율을 아주 조금씩(레벨당 +0.05%p, 최대 +10%p) 올려줘서,
-  // 레벨업이 후반에도 계속 체감되게 한다.
-  const lastTierLv = clickUpgradeLevel[stages.length - 1];
-  const passiveBonusPct = 0.03 + Math.min(0.10, lastTierLv * 0.0005);
-  const passiveBonus = passiveTotalLabel() * passiveBonusPct;
-  return flatVal + passiveBonus;
+  return flatVal;
 }
 function passiveTotalLabel() {
   let total = 0;
