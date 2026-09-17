@@ -1260,9 +1260,9 @@
         <div style="font-size:11px; color:var(--paper-dim); margin-top:4px;">이번 달 최고 +<span id="swordMonthlyBestLevel">0</span>강 · 🛡️ 되돌리기 <span id="swordReviveChargesText" style="color:var(--gold);">0</span>회 보유</div>
       </div>
       <button class="start-btn" id="swordEnhanceBtn" style="display:none;">⚒️ 강화하기</button>
+      <button class="start-btn" id="swordCraftBtn" style="display:none; background:var(--bg-panel); color:var(--gold); border:1px solid var(--gold);">🎲 검 뽑기</button>
       <button class="start-btn" id="openSwordBattleBtn" style="margin-top:8px; background:var(--bg-panel); color:var(--gold); border:1px solid var(--gold);">🤺 검 배틀하기</button>
       <button class="close-btn" id="swordRankBtn" style="margin-top:8px;">🏅 검 랭킹 보기 (월간)</button>
-      <button class="start-btn" id="swordCraftBtn" style="margin-top:8px; display:none; background:var(--bg-panel); color:var(--gold); border:1px solid var(--gold);">🗡️ 새 검 만들기</button>
       <button class="close-btn" id="swordCloseBtn" style="margin-top:10px;">닫기</button>
     </div>
   </div>
@@ -2234,8 +2234,9 @@ const SWORD_STAGES = [
 ];
 
 // ===== 검 배틀 (강화 레벨만으로 승패를 가르는 미니게임) =====
-// 왼쪽(나)-위(상대) 레벨 차이 1당 승률이 5%p씩 갈리고, 레벨이 같으면 50:50.
-// (레벨 차이 10 이상이면 승률 0%로 고정)
+// 확률표 기준: 레벨 차이 1당 "상대가 이길 확률"이 5%p씩 줄어들고, 레벨이 같으면 50:50.
+// (레벨 차이 10 이상이면 상대가 이길 확률 0%로 고정 = 내가 사실상 무조건 승리)
+// 내가 이길 확률은 100 - (상대가 이길 확률) 로 계산한다.
 const SWORD_BATTLE_DAILY_LIMIT = 10;
 let swordBattleWins = 0;       // 누적 승점 (검배틀 랭킹 기준)
 let swordBattleCountToday = 0; // 오늘 사용한 배틀 횟수
@@ -2248,7 +2249,8 @@ let swordReviveCharges = 0;      // 검 파괴를 막아주는 "되돌리기" �
 let swordColorBoostMonthKey = ''; // 이름색 확률 부스트가 적용되는 달(monthlyPeriodKey)
 let swordColorBoostMult = 1;      // 파랑을 제외한 이름색 확률에 곱해지는 배수
 let claimedSwordSeasonRewards = []; // 이미 보상을 지급한 검 랭킹 시즌(월) 목록 (중복 지급 방지)
-function getSwordBattleWinChance(myLevel, oppLevel) {
+function getSwordBattleOppWinChance(myLevel, oppLevel) {
+  // 확률표(상대가 이길 확률) 그대로: 레벨 차이 1당 5%p씩 감소, 차이 10 이상이면 0%.
   return Math.max(0, Math.min(100, 50 - 5 * Math.abs(myLevel - oppLevel)));
 }
 // 로그인 상태면 실제로 검을 보유한 다른 유저 중 무작위로 상대를 고르고,
@@ -2281,19 +2283,20 @@ async function startSwordBattle() {
   if (resultEl) resultEl.textContent = '⚔️ 상대를 찾는 중...';
   const opponent = await findSwordBattleOpponent();
   swordBattleCountToday++;
-  const winChance = getSwordBattleWinChance(swordLevel, opponent.level);
-  const won = Math.random() * 100 < winChance;
+  const oppWinChance = getSwordBattleOppWinChance(swordLevel, opponent.level);
+  const myWinChance = 100 - oppWinChance;
+  const won = Math.random() * 100 < myWinChance;
   const oppName = `+${opponent.level} ${SWORD_STAGES[opponent.level].name}`;
   if (won) {
     swordBattleWins++;
     playSound('levelUp');
     spawnConfettiBurst();
-    if (resultEl) resultEl.innerHTML = `<div style="color:var(--gold); font-weight:bold;">🎉 ${opponent.name}(${oppName})님을 이겼습니다! (승률 ${Math.round(winChance)}%)</div>`;
+    if (resultEl) resultEl.innerHTML = `<div style="color:var(--gold); font-weight:bold;">🎉 ${opponent.name}(${oppName})님을 이겼습니다! (승률 ${Math.round(myWinChance)}%)</div>`;
     showToast(`🎉 검 배틀 승리! 승점 +1`);
     syncLeaderboard();
   } else {
     playSound('swordFail');
-    if (resultEl) resultEl.innerHTML = `<div style="color:var(--danger);">😢 ${opponent.name}(${oppName})님에게 졌습니다... (승률 ${Math.round(winChance)}%)</div>`;
+    if (resultEl) resultEl.innerHTML = `<div style="color:var(--danger);">😢 ${opponent.name}(${oppName})님에게 졌습니다... (승률 ${Math.round(myWinChance)}%)</div>`;
     showToast(`😢 검 배틀 패배...`);
   }
   renderSwordBattlePanel();
