@@ -2252,8 +2252,12 @@ function getSwordBattleOppWinChance(myLevel, oppLevel) {
   // 확률표(상대가 이길 확률) 그대로: 레벨 차이 1당 5%p씩 감소, 차이 10 이상이면 0%.
   return Math.max(0, Math.min(100, 50 - 5 * Math.abs(myLevel - oppLevel)));
 }
-// 로그인 상태면 실제로 검을 보유한 다른 유저 중 무작위로 상대를 고르고,
-// 그런 상대가 없으면(초반, 미로그인 등) 가상의 상대를 대신 만들어낸다.
+// 로그인 상태면 leaderboard_sword 컬렉션(검을 만든 적 있는 실제 유저 목록)에서
+// 무작위로 상대를 고른다. 이 컬렉션은 로그인한 유저가 플레이하면서 syncLeaderboard()가
+// 호출될 때마다 자기 닉네임 + 현재 검 레벨로 갱신해두는 실제 데이터다.
+// 로그인 전이거나, 아직 검을 만든 다른 유저가 한 명도 없으면(예: 초반, 유저 수가
+// 적을 때) 매칭할 실제 상대가 없으므로 그때만 AI 상대를 대신 만들어낸다.
+// isReal로 실제 유저인지 AI인지 구분해서 결과 문구에 표기한다.
 const SWORD_BATTLE_FALLBACK_NAMES = ['떠돌이 검객', '수련생 무사', '그림자 검사', '방랑하는 낭인', '이름 없는 도전자', '왕국의 기사', '숲 속의 사냥꾼', '거리의 무명검사'];
 async function findSwordBattleOpponent() {
   if (currentUser && db) {
@@ -2261,15 +2265,16 @@ async function findSwordBattleOpponent() {
       const snap = await db.collection('leaderboard_sword').orderBy('updatedAt', 'desc').limit(50).get();
       const candidates = snap.docs
         .filter(d => d.id !== currentUser.uid && typeof d.data().swordLevel === 'number' && d.data().swordLevel >= 0)
-        .map(d => ({ name: d.data().name || '이름 없는 검객', level: d.data().swordLevel }));
+        .map(d => ({ name: d.data().name || '이름 없는 검객', level: d.data().swordLevel, isReal: true }));
       if (candidates.length > 0) return candidates[Math.floor(Math.random() * candidates.length)];
     } catch (e) {
       console.error('검배틀 상대 조회 실패:', e);
     }
   }
+  // 실제 상대를 못 찾았을 때만 쓰는 AI 상대. 이름에 표시를 남겨서 실제 유저와 헷갈리지 않게 한다.
   const name = SWORD_BATTLE_FALLBACK_NAMES[Math.floor(Math.random() * SWORD_BATTLE_FALLBACK_NAMES.length)];
   const level = Math.floor(Math.random() * (SWORD_MAX_LEVEL + 1));
-  return { name, level };
+  return { name, level, isReal: false };
 }
 async function startSwordBattle() {
   initAudio();
@@ -2283,16 +2288,17 @@ async function startSwordBattle() {
   const myWinChance = 100 - oppWinChance;
   const won = Math.random() * 100 < myWinChance;
   const oppName = `+${opponent.level} ${SWORD_STAGES[opponent.level].name}`;
+  const oppTag = opponent.isReal ? '실제 유저' : 'AI 상대 · 대결 가능한 다른 유저가 아직 없어요';
   if (won) {
     swordBattleWins++;
     playSound('levelUp');
     spawnConfettiBurst();
-    if (resultEl) resultEl.innerHTML = `<div style="color:var(--gold); font-weight:bold;">🎉 ${opponent.name}(${oppName})님을 이겼습니다! (승률 ${Math.round(myWinChance)}%)</div>`;
+    if (resultEl) resultEl.innerHTML = `<div style="color:var(--gold); font-weight:bold;">🎉 ${opponent.name}(${oppName})님을 이겼습니다! (승률 ${Math.round(myWinChance)}%)</div><div style="font-size:11px; color:var(--paper-dim); margin-top:2px;">${oppTag}</div>`;
     showToast(`🎉 검 배틀 승리! 승점 +1`);
-    syncLeaderboard();
+    syncLeaderboard({ forceSync: true });
   } else {
     playSound('swordFail');
-    if (resultEl) resultEl.innerHTML = `<div style="color:var(--danger);">😢 ${opponent.name}(${oppName})님에게 졌습니다... (승률 ${Math.round(myWinChance)}%)</div>`;
+    if (resultEl) resultEl.innerHTML = `<div style="color:var(--danger);">😢 ${opponent.name}(${oppName})님에게 졌습니다... (승률 ${Math.round(myWinChance)}%)</div><div style="font-size:11px; color:var(--paper-dim); margin-top:2px;">${oppTag}</div>`;
     showToast(`😢 검 배틀 패배...`);
   }
   renderSwordBattlePanel();
@@ -2341,6 +2347,7 @@ function craftNewSword() {
   renderSwordPanel();
   playSound('coin');
   showToast(`${getSwordTierIcon(0)} 새 검 등장: ${getSwordDisplayName()}!`);
+  syncLeaderboard();
 }
 function enhanceSword() {
   if (!swordOwned) { showToast('⚔️ 먼저 검을 만들어주세요!'); return; }
@@ -2356,6 +2363,10 @@ function enhanceSword() {
     swordMonthlyBestLevel = Math.max(swordMonthlyBestLevel, swordLevel);
     playSound('levelUp');
     celebrateSwordEnhance(swordLevel);
+    // 강화 레벨이 오를 때마다 검 랭킹(월간)에 반영되도록 즉시 동기화한다.
+    // (예전엔 이걸 안 해서, 카지노/가챠 등 다른 액션을 안 하면 랭킹에 최신 레벨이
+    // 전혀 반영이 안 되는 문제가 있었다)
+    syncLeaderboard({ forceSync: true });
     if (swordLevel === SWORD_MAX_LEVEL) {
       mascotSay(['🏆🏆🏆 미쳤다!! 드디어 전설의 +20강이 완성됐어!! 이 달 검 랭킹 1등은 따놓은 당상이야!! 🏆🏆🏆']);
     } else if (swordLevel === 19) {
@@ -2386,6 +2397,7 @@ function enhanceSword() {
       mascotSay([`💥 검이 산산조각났어요... +${swordLevel}강까지 갔었는데 아쉬워요.`, `💥 콰장창! 검이 부서졌어요. 다시 도전해봐요!`]);
       swordOwned = false;
       swordLevel = 0;
+      syncLeaderboard();
     }
   }
   renderSwordPanel();
