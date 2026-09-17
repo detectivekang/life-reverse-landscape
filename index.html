@@ -2248,8 +2248,11 @@ let swordReviveCharges = 0;      // 검 파괴를 막아주는 "되돌리기" �
 let swordColorBoostMonthKey = ''; // 이름색 확률 부스트가 적용되는 달(monthlyPeriodKey)
 let swordColorBoostMult = 1;      // 파랑을 제외한 이름색 확률에 곱해지는 배수
 let claimedSwordSeasonRewards = []; // 이미 보상을 지급한 검 랭킹 시즌(월) 목록 (중복 지급 방지)
-function getSwordBattleOppWinChance(myLevel, oppLevel) {
-  // 확률표(상대가 이길 확률) 그대로: 레벨 차이 1당 5%p씩 감소, 차이 10 이상이면 0%.
+function getSwordBattleWinChance(myLevel, oppLevel) {
+  // 확률표(내가 이길 확률) 그대로: 레벨 차이 1당 5%p씩 감소, 레벨이 같으면 50%,
+  // 차이 10 이상이면 0%. (예전엔 이 값을 "상대 승률"로 착각해서 100에서 빼는 바람에
+  // +8 vs +15(차이7, 표상 15%)에서 15% 대신 85%로 뒤집혀 나오는 버그가 있었다.
+  // 이 함수가 반환하는 값 자체가 이미 "내" 승률이라 그대로 쓰면 된다.)
   return Math.max(0, Math.min(100, 50 - 5 * Math.abs(myLevel - oppLevel)));
 }
 // 로그인 상태면 leaderboard_sword 컬렉션(검을 만든 적 있는 실제 유저 목록)에서
@@ -2284,8 +2287,7 @@ async function startSwordBattle() {
   if (startBtn) startBtn.disabled = true;
   if (resultEl) resultEl.textContent = '⚔️ 상대를 찾는 중...';
   const opponent = await findSwordBattleOpponent();
-  const oppWinChance = getSwordBattleOppWinChance(swordLevel, opponent.level);
-  const myWinChance = 100 - oppWinChance;
+  const myWinChance = getSwordBattleWinChance(swordLevel, opponent.level);
   const won = Math.random() * 100 < myWinChance;
   const oppName = `+${opponent.level} ${SWORD_STAGES[opponent.level].name}`;
   const oppTag = opponent.isReal ? '실제 유저' : 'AI 상대 · 대결 가능한 다른 유저가 아직 없어요';
@@ -2726,7 +2728,7 @@ const LOGIN_REQUIRED_THRESHOLD = 100000000; // 1억원
 let progressGateActive = false;
 
 function addMoney(amount) {
-  if (authStateResolved && !currentUser && totalEarned >= LOGIN_REQUIRED_THRESHOLD) {
+  if (!currentUser && totalEarned >= LOGIN_REQUIRED_THRESHOLD) {
     showLoginGate();
     return;
   }
@@ -2734,7 +2736,7 @@ function addMoney(amount) {
   totalEarned += amount;
   checkStageAdvance();
   flashMoney();
-  if (authStateResolved && !currentUser && totalEarned >= LOGIN_REQUIRED_THRESHOLD) {
+  if (!currentUser && totalEarned >= LOGIN_REQUIRED_THRESHOLD) {
     showLoginGate();
   }
 }
@@ -4572,14 +4574,11 @@ function renderMyRankCard() {
     return;
   }
   if (currentLeaderboardPeriod === 'swordmonthly') {
-    const bestName = SWORD_STAGES[swordMonthlyBestLevel] ? SWORD_STAGES[swordMonthlyBestLevel].name : '';
-    const currentText = getSwordDisplayName();
     card.innerHTML = `
       <span class="my-rank-icon">🗡️</span>
       <div style="flex:1;">
         <div class="my-rank-name">검 랭킹 <span style="font-size:10px; color:var(--paper-dim); font-weight:normal;">(이번 달 최고 강화 레벨 기준)</span></div>
-        <div class="my-rank-sub">이번 달 최고 +${swordMonthlyBestLevel}강 ${bestName} · 매달 초기화 · 1~3위 보상 지급</div>
-        <div class="my-rank-sub">현재 보유 중: ${currentText}</div>
+        <div class="my-rank-sub">이번 달 최고 +${swordMonthlyBestLevel}강 · 매달 초기화 · 1~3위 보상 지급</div>
         <div class="my-rank-sub" id="myRankPosition" style="color:var(--gold);">내 순위 불러오는 중...</div>
       </div>
     `;
@@ -4659,17 +4658,13 @@ async function renderLeaderboardList() {
     return;
   }
   if (currentLeaderboardPeriod === 'swordmonthly') {
-    lbEl.innerHTML = list.map(p => {
-      const lv = p.amount || 0;
-      const swordName = SWORD_STAGES[lv] ? SWORD_STAGES[lv].name : '';
-      return `
+    lbEl.innerHTML = list.map(p => `
       <div class="lb-row${p.uid === currentUser.uid ? ' me' : ''}">
         <span class="lb-rank">${p.rank}</span>
         <span class="lb-name"${p.nameColor ? ` style="color:${p.nameColor};font-weight:bold;"` : ''}>${p.mansionIcon ? p.mansionIcon + ' ' : ''}${p.name}</span>
-        <span class="lb-tier">🗡️ +${lv}강 ${swordName}</span>
+        <span class="lb-tier">🗡️ +${p.amount || 0}강</span>
       </div>
-    `;
-    }).join('');
+    `).join('');
     if (!list.some(p => p.uid === currentUser.uid)) appendMyRankRowIfOutsideTop(lbEl, 'swordmonthly', false);
     return;
   }
@@ -5636,13 +5631,6 @@ const pendingReferralCode = new URLSearchParams(location.search).get('ref');
 const REFERRAL_REWARD_COINS = 30;
 let auth = null, db = null;
 let currentUser = null; // { uid, provider: 'google', name }
-// Firebase 인증은 비동기라, 페이지를 막 열었을 때는 실제로 로그인되어 있는 유저라도
-// currentUser가 잠깐 null인 상태를 거친다. 이 틈에 addMoney()의 로그인 게이트 체크가
-// "로그인 안 한 사람이 1억원 넘게 갖고 있다"로 잘못 오인해서, 방치 보상(offlineEarn)이
-// 화면엔 "받았다"고 뜨는데 실제로는 지급이 막혀버리는 버그가 있었다.
-// onAuthStateChanged가 최초로 한 번이라도 응답을 주기 전까지는 게이트 판정을
-// 보류해서, 이 레이스 컨디션을 없앤다.
-let authStateResolved = false;
 let customNickname = localStorage.getItem('lifeReverseNickname') || '';
 
 function initFirebase() {
@@ -5656,7 +5644,6 @@ function initFirebase() {
     db = firebase.firestore();
     authInited = true;
     auth.onAuthStateChanged(user => {
-      authStateResolved = true;
       if (user) {
         currentUser = { uid: user.uid, provider: 'google', name: customNickname || user.displayName || '구글 사용자' };
         onLoginSuccess();
@@ -5695,9 +5682,6 @@ function onLoginSuccess() {
   document.getElementById('loginModal').classList.remove('show');
   showToast(`👤 ${currentUser.name}님 환영합니다! 클라우드 저장이 활성화됐어요.`);
   cloudLoadGame();
-  // 로그인되기 전(currentUser가 아직 null이던 순간)에 검 강화/배틀 등으로 발생한
-  // 랭킹 반영 요청이 밀려 있으면, 로그인이 확정된 지금 바로 흘려보낸다.
-  if (leaderboardSyncPending) syncLeaderboard({ forceSync: true });
 }
 
 function updateLoginUI() {
@@ -5891,15 +5875,7 @@ const LEADERBOARD_SYNC_MIN_INTERVAL = 60000; // 최소 60초 간격
 let leaderboardSyncPending = false;
 
 async function syncLeaderboard(opts) {
-  if (!db) return;
-  if (!currentUser) {
-    // 로그인 전(혹은 Firebase 인증이 아직 응답하기 전)에 검 강화/배틀 등으로 호출되면
-    // 지금은 쓸 방법이 없으니, "나중에 로그인되면 꼭 반영해야 할 변경사항이 있다"만
-    // 표시해두고 끝낸다. onLoginSuccess()에서 로그인되는 순간 이 값을 확인해서
-    // 바로 flush하므로, 이 사이에 있었던 변경도 사라지지 않고 반영된다.
-    leaderboardSyncPending = true;
-    return;
-  }
+  if (!currentUser || !db) return;
   const forceSync = opts && opts.forceSync;
   const now = Date.now();
   if (!forceSync && now - lastLeaderboardSyncTime < LEADERBOARD_SYNC_MIN_INTERVAL) {
@@ -6323,7 +6299,14 @@ function applySaveData(data, opts) {
       const passivePerSec = passiveTotalLabel();
       // 방치 보상은 "그냥 켜두기만 해도 활동적으로 플레이한 것과 비슷하게 벌리는" 문제의
       // 큰 축이라, 수율과 상한을 같이 낮췄다 (50%→30%, 24시간→16시간 상한).
-      const offlineEarn = Math.floor(passivePerSec * Math.min(offlineSec, 57600) * 0.3); // 최대 16시간, 30% 수율
+      const offlineEarnRaw = Math.floor(passivePerSec * Math.min(offlineSec, 57600) * 0.3); // 최대 16시간, 30% 수율
+      // 비로그인 + 1억원 게이트에 이미 걸려 있으면 addMoney()가 내부적으로 조용히
+      // 아무것도 더해주지 않는다. 그런데 이 체크 없이는 "OO원 벌었습니다!" 문구만
+      // 뜨고 실제 money는 하나도 안 늘어서, 겉보기에 "방치보상이 안 먹힌다"처럼 보였다.
+      // 그래서 게이트가 걸려 있으면 애초에 보상 자체를 0으로 계산하고, 대신 로그인하면
+      // 다시 정상적으로 쌓인다는 안내만 띄운다.
+      const offlineGated = !currentUser && (totalEarned >= LOGIN_REQUIRED_THRESHOLD || money >= LOGIN_REQUIRED_THRESHOLD);
+      const offlineEarn = offlineGated ? 0 : offlineEarnRaw;
       const comeback = getComebackBonus(offlineSec);
       if (comeback) luckyCoins += comeback.coins;
       if (offlineEarn > 0 || comeback) {
@@ -6339,6 +6322,8 @@ function applySaveData(data, opts) {
           comebackEl.style.display = 'none';
         }
         document.getElementById('offlineModal').classList.add('show');
+      } else if (offlineGated && offlineEarnRaw > 0) {
+        showToast('💤 오래 자리를 비우셨네요! 로그인하면 방치 보상도 다시 쌓여요.');
       }
     }
   }
