@@ -2247,11 +2247,13 @@ let swordColorBoostMonthKey = ''; // 이름색 확률 부스트가 적용되는 
 let swordColorBoostMult = 1;      // 파랑을 제외한 이름색 확률에 곱해지는 배수
 let claimedSwordSeasonRewards = []; // 이미 보상을 지급한 검 랭킹 시즌(월) 목록 (중복 지급 방지)
 function getSwordBattleWinChance(myLevel, oppLevel) {
-  // 확률표(내가 이길 확률) 그대로: 레벨 차이 1당 5%p씩 감소, 레벨이 같으면 50%,
-  // 차이 10 이상이면 0%. (예전엔 이 값을 "상대 승률"로 착각해서 100에서 빼는 바람에
-  // +8 vs +15(차이7, 표상 15%)에서 15% 대신 85%로 뒤집혀 나오는 버그가 있었다.
-  // 이 함수가 반환하는 값 자체가 이미 "내" 승률이라 그대로 쓰면 된다.)
-  return Math.max(0, Math.min(100, 50 - 5 * Math.abs(myLevel - oppLevel)));
+  // 레벨 차이 1당 5%p, 레벨이 같으면 50%. 방향성 있게 계산해서, 내가 상대보다 강하면
+  // 강할수록 내 승률이 올라가고(최대 100%), 내가 더 약하면 약할수록 내려간다(최소 0%).
+  // (예전엔 |myLevel-oppLevel|로만 계산해서 방향을 구분 못했다. 그래서 15강 vs 2강처럼
+  // 내가 압도적으로 강해도 승률이 그냥 0%로 나오는 등, 누가 유리한지와 무관하게 격차만
+  // 보고 확률이 정해지는 버그가 있었다. 예: 5강 vs 16강이면 내 승률 0%, 16강 vs 17강이면
+  // 내 승률 45%가 나오는 게 맞는 동작이다.)
+  return Math.max(0, Math.min(100, 50 + 5 * (myLevel - oppLevel)));
 }
 // 로그인 상태면 leaderboard_sword 컬렉션(검을 만든 적 있는 실제 유저 목록)에서
 // 무작위로 상대를 고른다. 이 컬렉션은 로그인한 유저가 플레이하면서 syncLeaderboard()가
@@ -2266,7 +2268,7 @@ async function findSwordBattleOpponent() {
       const docs = await dbGetDocsOrdered('leaderboard_sword', 'updatedAt', 50);
       const candidates = docs
         .filter(d => d.id !== currentUser.uid && typeof d.swordLevel === 'number' && d.swordLevel >= 0)
-        .map(d => ({ name: d.name || '이름 없는 검객', level: d.swordLevel, isReal: true }));
+        .map(d => ({ uid: d.id, name: d.name || '이름 없는 검객', level: d.swordLevel, battleScore: d.amount || 0, isReal: true }));
       if (candidates.length > 0) return candidates[Math.floor(Math.random() * candidates.length)];
     } catch (e) {
       console.error('검배틀 상대 조회 실패:', e);
@@ -2276,6 +2278,24 @@ async function findSwordBattleOpponent() {
   const name = SWORD_BATTLE_FALLBACK_NAMES[Math.floor(Math.random() * SWORD_BATTLE_FALLBACK_NAMES.length)];
   const level = Math.floor(Math.random() * (SWORD_MAX_LEVEL + 1));
   return { name, level, isReal: false };
+}
+// 실제 유저와 검배틀을 하고 나면, 내 승점만 오르내리는 게 아니라 상대방의 검배틀 점수도
+// 같이 반영한다(내가 이기면 상대 -5, 내가 지면 상대 +5, 둘 다 0 밑으로는 안 내려감).
+// 클라이언트에서 직접 남의 행(row)을 update하면 (1) RLS 정책이 막을 수 있고 (2) 동시에
+// 여러 대결이 겹치면 값을 덮어써버리는 경쟁 상태가 생길 수 있어서, 대신 Postgres
+// RPC 함수(apply_sword_battle_result)를 호출한다 - 서버에서 원자적으로 증감시키고,
+// delta도 ±5로만 제한해서 이 경로로 점수를 함부로 조작할 수 없게 막아둔다.
+// (Supabase 프로젝트에 이 함수가 없으면 실패하니, SQL Editor에서 먼저 만들어야 한다 -
+// apply_sword_battle_result.sql 참고)
+async function applySwordBattleResultToOpponent(opponent, iWon) {
+  if (!opponent.isReal || !opponent.uid || !db) return;
+  try {
+    const delta = iWon ? -5 : 5;
+    const { error } = await db.rpc('apply_sword_battle_result', { p_opponent_id: opponent.uid, p_delta: delta });
+    if (error) throw error;
+  } catch (e) {
+    console.error('상대방 검배틀 점수 반영 실패:', e);
+  }
 }
 async function startSwordBattle() {
   initAudio();
@@ -2296,6 +2316,7 @@ async function startSwordBattle() {
     if (resultEl) resultEl.innerHTML = `<div style="color:var(--gold); font-weight:bold;">🎉 ${opponent.name}(${oppName})님을 이겼습니다! (승률 ${Math.round(myWinChance)}%)</div><div style="font-size:11px; color:var(--paper-dim); margin-top:2px;">${oppTag}</div>`;
     showToast(`🎉 검 배틀 승리! 승점 +5`);
     syncLeaderboard({ forceSync: true });
+    applySwordBattleResultToOpponent(opponent, true);
   } else {
     // 승점이 마이너스로 떨어지지 않게 0에서 멈춘다.
     // 승리(+5)/패배(-5) 점수를 대칭으로 둬서, 승률 50%(레벨이 같은 상대와 계속 대결)면
@@ -2306,6 +2327,7 @@ async function startSwordBattle() {
     if (resultEl) resultEl.innerHTML = `<div style="color:var(--danger);">😢 ${opponent.name}(${oppName})님에게 졌습니다... (승률 ${Math.round(myWinChance)}%)</div><div style="font-size:11px; color:var(--paper-dim); margin-top:2px;">${oppTag}</div>`;
     showToast(`😢 검 배틀 패배... 승점 -5`);
     syncLeaderboard({ forceSync: true });
+    applySwordBattleResultToOpponent(opponent, false);
   }
   renderSwordBattlePanel();
   if (startBtn) startBtn.disabled = false;
@@ -3536,7 +3558,6 @@ document.getElementById('swordBattleRankBtn').addEventListener('click', () => {
   document.querySelectorAll('.lb-period-tab').forEach(b => b.classList.toggle('active', b.dataset.period === 'sword'));
   document.getElementById('burnMoneyBtn').style.display = 'none';
   document.getElementById('rankModal').classList.add('show');
-  if (leaderboardSyncPending) syncLeaderboard({ forceSync: true });
   renderRankModal();
   startLeaderboardAutoRefresh();
 });
@@ -3546,7 +3567,6 @@ document.getElementById('swordRankBtn').addEventListener('click', () => {
   document.querySelectorAll('.lb-period-tab').forEach(b => b.classList.toggle('active', b.dataset.period === 'swordmonthly'));
   document.getElementById('burnMoneyBtn').style.display = 'none';
   document.getElementById('rankModal').classList.add('show');
-  if (leaderboardSyncPending) syncLeaderboard({ forceSync: true });
   renderRankModal();
   startLeaderboardAutoRefresh();
 });
@@ -4762,7 +4782,6 @@ function stopLeaderboardAutoRefresh() {
 
 document.getElementById('rankOpenBtn').addEventListener('click', () => {
   document.getElementById('rankModal').classList.add('show');
-  if (leaderboardSyncPending) syncLeaderboard({ forceSync: true });
   renderRankModal();
   startLeaderboardAutoRefresh();
 });
@@ -5997,26 +6016,11 @@ async function claimReferralRewards() {
 // 주간/월간 랭킹은 기간 키가 컬렉션 이름에 포함되어 있어서, 기간이 바뀌면
 // 자연스럽게 새 컬렉션으로 기록되고 이전 기간 데이터는 그대로 보존된다.
 //
-// 카지노에서 이길 때마다 호출되는데, 승리마다 즉시 3건씩(leaderboard/weekly/monthly)
-// 쓰기가 나가면 연타 시 Firestore 쓰기 할당량이 순식간에 소진된다.
-// saveGame()의 30초 throttle과 동일하게, 여기도 최소 간격을 두고 그 사이의
-// 값 변경은 다음 호출(또는 세션 종료 시 강제 동기화)에 몰아서 반영한다.
-let lastLeaderboardSyncTime = 0;
-const LEADERBOARD_SYNC_MIN_INTERVAL = 60000; // 최소 60초 간격
-let leaderboardSyncPending = false;
-
-async function syncLeaderboard(opts) {
+// (예전 Firestore 시절엔 쓰기 횟수 자체에 할당량이 있어서 최소 60초 간격으로 몰아
+// 보내는 throttle을 뒀었는데, Supabase(Postgres)로 옮긴 뒤로는 그런 제약이 없어서
+// 그냥 매번 즉시(실시간으로) 반영한다.)
+async function syncLeaderboard() {
   if (!currentUser || !db) return;
-  const forceSync = opts && opts.forceSync;
-  const now = Date.now();
-  if (!forceSync && now - lastLeaderboardSyncTime < LEADERBOARD_SYNC_MIN_INTERVAL) {
-    // 아직 최소 간격이 안 지났으면 쓰기를 보내지 않고, "밀린 변경사항이 있다"만 표시해둔다.
-    // 이후 다음 정상 호출이나 세션 종료 시 forceSync로 마지막 값이 반영된다.
-    leaderboardSyncPending = true;
-    return;
-  }
-  lastLeaderboardSyncTime = now;
-  leaderboardSyncPending = false;
   try {
     checkPeriodRollover();
     // 전체 랭킹은 평생 누적(casinoTotalWinnings) 기준 등급, 주간/월간은 그 기간 동안
@@ -6286,7 +6290,6 @@ function saveGame(opts) {
 function saveOnSessionEnd() {
   saveGame({ forceCloud: true });
   // 카지노 연승 등으로 랭킹 동기화가 60초 제한에 걸려 밀려 있었다면, 세션이 끝나기 전에 마지막 값을 확실히 반영
-  if (leaderboardSyncPending) syncLeaderboard({ forceSync: true });
 }
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) saveOnSessionEnd();
