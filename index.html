@@ -14,7 +14,7 @@
 // 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
 // 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
 (function() {
-  var CURRENT_VERSION = '2026091801';
+  var CURRENT_VERSION = '2026091803';
   try {
     if (sessionStorage.getItem('lrVersionChecked') === CURRENT_VERSION) return;
     fetch(location.pathname + '?_cb=' + Date.now(), { cache: 'no-store' })
@@ -1271,7 +1271,7 @@
   <div class="modal-overlay" id="swordBattleModal">
     <div class="modal-box">
       <h2>🤺 검 배틀</h2>
-      <p style="font-size:12px; color:var(--paper-dim); margin-top:-4px;">내 검의 강화 레벨로 무작위 상대와 대결해요. 레벨 차이가 클수록 승률도 크게 갈리고, 레벨이 같으면 50:50이에요. 이기면 승점 +5, 지면 승점 -3(0점 밑으로는 안 내려가요). 횟수 제한 없이 계속 도전할 수 있어요.</p>
+      <p style="font-size:12px; color:var(--paper-dim); margin-top:-4px;">내 검의 강화 레벨로 무작위 상대와 대결해요. 레벨 차이가 클수록 승률도 크게 갈리고, 레벨이 같으면 50:50이에요. 이기면 승점 +5, 지면 승점 -5(0점 밑으로는 안 내려가요). 횟수 제한 없이 계속 도전할 수 있어요.</p>
       <div style="margin:14px 0; text-align:center; background:var(--bg-panel); border-radius:10px; padding:16px 14px;">
         <div style="font-size:12px; color:var(--paper-dim);">내 검: <b id="swordBattleMyName" style="color:var(--gold);">검이 없어요</b></div>
         <div style="font-size:12px; color:var(--paper-dim); margin-top:4px;">누적 승점 <b id="swordBattleWinsText" style="color:var(--gold);">0</b>점</div>
@@ -1531,8 +1531,8 @@ function burnMoney() {
   render();
   renderMyRankCard();
   if (currentUser && db) {
-    db.collection(`leaderboard_burn_monthly_${monthlyPeriodKey}`).doc(currentUser.uid)
-      .set({ name: currentUser.name, updatedAt: Date.now(), amount: toBigStorable(burnedMonthly), nameColor: nameColor ? nameColor.color : null })
+    dbSetDoc(`leaderboard_burn_monthly_${monthlyPeriodKey}`, currentUser.uid,
+      { name: currentUser.name, updatedAt: Date.now(), amount: toBigStorable(burnedMonthly), nameColor: nameColor ? nameColor.color : null })
       .catch(() => {});
   }
 }
@@ -2265,10 +2265,10 @@ const SWORD_BATTLE_FALLBACK_NAMES = ['떠돌이 검객', '수련생 무사', '�
 async function findSwordBattleOpponent() {
   if (currentUser && db) {
     try {
-      const snap = await db.collection('leaderboard_sword').orderBy('updatedAt', 'desc').limit(50).get();
-      const candidates = snap.docs
-        .filter(d => d.id !== currentUser.uid && typeof d.data().swordLevel === 'number' && d.data().swordLevel >= 0)
-        .map(d => ({ name: d.data().name || '이름 없는 검객', level: d.data().swordLevel, isReal: true }));
+      const docs = await dbGetDocsOrdered('leaderboard_sword', 'updatedAt', 50);
+      const candidates = docs
+        .filter(d => d.id !== currentUser.uid && typeof d.swordLevel === 'number' && d.swordLevel >= 0)
+        .map(d => ({ name: d.name || '이름 없는 검객', level: d.swordLevel, isReal: true }));
       if (candidates.length > 0) return candidates[Math.floor(Math.random() * candidates.length)];
     } catch (e) {
       console.error('검배틀 상대 조회 실패:', e);
@@ -2300,10 +2300,13 @@ async function startSwordBattle() {
     syncLeaderboard({ forceSync: true });
   } else {
     // 승점이 마이너스로 떨어지지 않게 0에서 멈춘다.
-    swordBattleWins = Math.max(0, swordBattleWins - 3);
+    // 승리(+5)/패배(-5) 점수를 대칭으로 둬서, 승률 50%(레벨이 같은 상대와 계속 대결)면
+    // 평균적으로 승점 변화가 0이 되게 한다. 그냥 "많이 돌리기만" 해서는 승점이 안 오르고,
+    // 실제로 승률이 50%를 넘어야(=상대보다 검 레벨이 높아야) 장기적으로 승점이 쌓인다.
+    swordBattleWins = Math.max(0, swordBattleWins - 5);
     playSound('swordFail');
     if (resultEl) resultEl.innerHTML = `<div style="color:var(--danger);">😢 ${opponent.name}(${oppName})님에게 졌습니다... (승률 ${Math.round(myWinChance)}%)</div><div style="font-size:11px; color:var(--paper-dim); margin-top:2px;">${oppTag}</div>`;
-    showToast(`😢 검 배틀 패배... 승점 -3`);
+    showToast(`😢 검 배틀 패배... 승점 -5`);
     syncLeaderboard({ forceSync: true });
   }
   renderSwordBattlePanel();
@@ -2822,6 +2825,13 @@ let isBrandNewPlayer = false;
 // 함께 올려준다. lastSeenPatchVersion이 patchNotes[0].version과 다르면 "안 읽은 공지"로
 // 간주해 배지를 띄우고, 기존 유저가 접속하면 자동으로 한 번 띄워준다.
 const patchNotes = [
+  {
+    version: '2026091803',
+    date: '2026-09-18',
+    items: [
+      '⚔️ 검배틀 승점 밸런스 조정: 패배 시 감점을 -3 → -5로 변경(승리 +5와 동일하게). 승률 50%(레벨이 같은 상대와 계속 대결)면 평균적으로 승점이 오르지 않고, 실제 승률이 50%를 넘어야(=상대보다 검 레벨이 높아야) 승점이 쌓여요'
+    ]
+  },
   {
     version: '2026091801',
     date: '2026-09-18',
@@ -5192,8 +5202,8 @@ async function checkSwordSeasonReward(prevKey) {
   if (!currentUser || !db) return;
   if (claimedSwordSeasonRewards.includes(prevKey)) return;
   try {
-    const snap = await db.collection(`leaderboard_sword_monthly_${prevKey}`).orderBy('amount', 'desc').limit(3).get();
-    const ids = snap.docs.map(d => d.id);
+    const docs = await dbGetDocsOrdered(`leaderboard_sword_monthly_${prevKey}`, 'amount', 3);
+    const ids = docs.map(d => d.id);
     const rank = ids.indexOf(currentUser.uid);
     claimedSwordSeasonRewards.push(prevKey);
     if (rank === -1) return;
@@ -5218,8 +5228,8 @@ async function checkWeeklySeasonReward(prevKey) {
   if (!currentUser || !db) return;
   if (claimedSeasonRewards.includes(prevKey)) return;
   try {
-    const snap = await db.collection(`leaderboard_weekly_${prevKey}`).orderBy('amount', 'desc').limit(3).get();
-    const ids = snap.docs.map(d => d.id);
+    const docs = await dbGetDocsOrdered(`leaderboard_weekly_${prevKey}`, 'amount', 3);
+    const ids = docs.map(d => d.id);
     const rank = ids.indexOf(currentUser.uid);
     if (rank === -1) return;
     const rewardByRank = [10, 6, 3]; // 1위/2위/3위 특성 포인트 보상
@@ -5629,6 +5639,67 @@ const firebaseConfig = {
 
 let authInited = false;
 
+// ===== 데이터 계층 (현재 구현: Firebase) =====
+// 이 구역의 함수들만 Firebase(Firestore/Auth) API를 직접 알고 있습니다.
+// 이 구역 밖의 나머지 코드는 아래 함수들만 호출하고, db.collection(...)이나
+// firebase.auth() 같은 걸 직접 부르지 않습니다.
+// => 나중에 Supabase 등 다른 백엔드로 옮길 때는 이 구역 안의 구현만
+//    갈아치우면 되고, 이 구역 밖의 코드는 손댈 필요가 없습니다.
+
+// 문서 하나를 통째로 덮어쓴다 (Firestore: collection(name).doc(id).set(data))
+function dbSetDoc(collectionName, docId, data) {
+  return db.collection(collectionName).doc(docId).set(data);
+}
+
+// 문서 하나를 읽는다. 없으면 null, 있으면 { id, ...필드 } 형태로 반환한다.
+async function dbGetDoc(collectionName, docId) {
+  const snap = await db.collection(collectionName).doc(docId).get();
+  return snap.exists ? { id: snap.id, ...snap.data() } : null;
+}
+
+// 문서 하나의 일부 필드만 갱신한다 (문서가 이미 존재해야 함)
+function dbUpdateDoc(collectionName, docId, data) {
+  return db.collection(collectionName).doc(docId).update(data);
+}
+
+// 컬렉션을 특정 필드 기준 내림차순으로 정렬해서 가져온다. limitN이 없으면 전체를 가져온다.
+async function dbGetDocsOrdered(collectionName, orderField, limitN) {
+  let q = db.collection(collectionName).orderBy(orderField, 'desc');
+  if (limitN) q = q.limit(limitN);
+  const snap = await q.get();
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+// 컬렉션에서 특정 필드가 특정 값과 일치하는 문서들만 가져온다 (등호 비교만 지원)
+async function dbGetDocsWhere(collectionName, field, value) {
+  const snap = await db.collection(collectionName).where(field, '==', value).get();
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+// 서버가 기록하는(클라이언트가 조작할 수 없는) 저장 시각 값
+function dbServerTimestamp() {
+  return firebase.firestore.FieldValue.serverTimestamp();
+}
+
+// 로그인 상태가 바뀔 때마다 콜백을 호출한다. 로그아웃 상태면 null, 로그인 상태면
+// { uid, displayName }을 전달한다.
+function authOnStateChange(callback) {
+  auth.onAuthStateChanged(user => {
+    callback(user ? { uid: user.uid, displayName: user.displayName } : null);
+  });
+}
+
+// 구글 로그인 팝업을 띄운다. 실패하면 에러를 던진다(호출부에서 catch).
+function authSignInWithGoogle() {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  return auth.signInWithPopup(provider);
+}
+
+// 로그아웃한다.
+function authSignOut() {
+  if (auth) auth.signOut();
+}
+
 // ===== 친구 초대 (바이럴 성장 루프) =====
 // ?ref=<초대한사람의 uid> 형태의 링크로 들어오면, 그 유저가 처음 로그인(=신규 계정
 // 최초 생성)할 때 초대한 사람과 초대받은 사람 모두에게 코인을 지급한다.
@@ -5648,7 +5719,7 @@ function initFirebase() {
     auth = firebase.auth();
     db = firebase.firestore();
     authInited = true;
-    auth.onAuthStateChanged(user => {
+    authOnStateChange(user => {
       if (user) {
         currentUser = { uid: user.uid, provider: 'google', name: customNickname || user.displayName || '구글 사용자' };
         onLoginSuccess();
@@ -5667,15 +5738,14 @@ function initFirebase() {
 
 function loginWithGoogle() {
   if (!authInited) { showToast('아직 로그인 설정이 완료되지 않았어요 (firebaseConfig 필요)'); return; }
-  const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider).catch(err => {
+  authSignInWithGoogle().catch(err => {
     console.error(err);
     showToast('구글 로그인에 실패했습니다.');
   });
 }
 
 function logout() {
-  if (auth) auth.signOut();
+  authSignOut();
   currentUser = null;
   updateLoginUI();
   showToast('로그아웃 되었습니다. 이후 진행은 이 기기에만 저장됩니다.');
@@ -5726,8 +5796,8 @@ async function cloudSaveGame(dataObj, opts) {
     // serverSavedAt: 클라이언트가 조작할 수 없는 "서버가 기록한 저장 시각".
     // Firestore 보안 규칙에서 "직전 저장 대비 경과 시간 × 최대 증가 속도"를
     // 검증할 때 이 값을 기준으로 삼는다 (클라이언트가 보낸 시간은 신뢰하지 않음).
-    const payload = { ...sanitizeBigNumbersForFirestore(dataObj), serverSavedAt: firebase.firestore.FieldValue.serverTimestamp() };
-    await db.collection('saves').doc(currentUser.uid).set(payload);
+    const payload = { ...sanitizeBigNumbersForFirestore(dataObj), serverSavedAt: dbServerTimestamp() };
+    await dbSetDoc('saves', currentUser.uid, payload);
   } catch (e) {
     console.error('클라우드 저장 실패:', e);
     if (rethrow) throw e;
@@ -5737,8 +5807,7 @@ async function cloudSaveGame(dataObj, opts) {
 async function cloudLoadGame() {
   if (!currentUser || !db) return;
   try {
-    const doc = await db.collection('saves').doc(currentUser.uid).get();
-    const cloudData = doc.exists ? doc.data() : null;
+    const cloudData = await dbGetDoc('saves', currentUser.uid);
     // 버전 불일치 시 클라우드 세이브를 버리고 초기화하던 로직을 주석 처리 - 이제 버전이 달라도 그대로 불러온다.
     const isVersionMismatch = false; /* cloudData && cloudData.gameVersion !== GAME_VERSION; */
     if (cloudData && !isVersionMismatch) {
@@ -5814,7 +5883,7 @@ async function cloudLoadGame() {
         // 신규 계정 생성이 정상적으로 끝난 시점 = 초대 코드를 처리할 타이밍.
         // 자기 자신을 초대할 순 없게 막고, 진짜 신규 계정에서만(버전 리셋이 아닐 때만)
         // 처리해서 기존 유저가 리셋될 때 코인이 잘못 지급되지 않게 한다.
-        if (!doc.exists && pendingReferralCode && pendingReferralCode !== currentUser.uid) {
+        if (!cloudData && pendingReferralCode && pendingReferralCode !== currentUser.uid) {
           await applyReferralSignup(pendingReferralCode);
         }
       } catch (e) {
@@ -5836,10 +5905,10 @@ async function applyReferralSignup(referrerUid) {
   try {
     luckyCoins += REFERRAL_REWARD_COINS;
     saveGame({ forceCloud: true });
-    await db.collection('referrals').doc(currentUser.uid).set({
+    await dbSetDoc('referrals', currentUser.uid, {
       referrerUid,
       claimed: false,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      createdAt: dbServerTimestamp()
     });
     showToast(`🎁 초대 링크로 가입! 행운의 코인 +${REFERRAL_REWARD_COINS}개를 받았어요!`);
   } catch (e) {
@@ -5851,12 +5920,12 @@ async function applyReferralSignup(referrerUid) {
 async function claimReferralRewards() {
   if (!currentUser || !db) return;
   try {
-    const snap = await db.collection('referrals').where('referrerUid', '==', currentUser.uid).get();
-    const unclaimed = snap.docs.filter(d => d.data().claimed === false);
+    const docs = await dbGetDocsWhere('referrals', 'referrerUid', currentUser.uid);
+    const unclaimed = docs.filter(d => d.claimed === false);
     if (!unclaimed.length) return;
     let totalCoins = 0;
     for (const d of unclaimed) {
-      await d.ref.update({ claimed: true });
+      await dbUpdateDoc('referrals', d.id, { claimed: true });
       totalCoins += REFERRAL_REWARD_COINS;
     }
     luckyCoins += totalCoins;
@@ -5904,13 +5973,13 @@ async function syncLeaderboard(opts) {
     const updatedAt = Date.now();
     const nameColorHex = nameColor ? nameColor.color : null;
     const mansionIcon = getMansionTier().icon;
-    await db.collection('leaderboard').doc(currentUser.uid).set({ name, updatedAt, tierName: overallTier.name, tierIcon: overallTier.icon, amount: toBigStorable(casinoTotalWinnings), nameColor: nameColorHex, mansionIcon });
-    await db.collection(`leaderboard_weekly_${weeklyPeriodKey}`).doc(currentUser.uid).set({ name, updatedAt, tierName: weeklyTier.name, tierIcon: weeklyTier.icon, amount: toBigStorable(weeklyWinnings), nameColor: nameColorHex, mansionIcon });
-    await db.collection(`leaderboard_monthly_${monthlyPeriodKey}`).doc(currentUser.uid).set({ name, updatedAt, tierName: monthlyTier.name, tierIcon: monthlyTier.icon, amount: toBigStorable(monthlyWinnings), nameColor: nameColorHex, mansionIcon });
+    await dbSetDoc('leaderboard', currentUser.uid, { name, updatedAt, tierName: overallTier.name, tierIcon: overallTier.icon, amount: toBigStorable(casinoTotalWinnings), nameColor: nameColorHex, mansionIcon });
+    await dbSetDoc(`leaderboard_weekly_${weeklyPeriodKey}`, currentUser.uid, { name, updatedAt, tierName: weeklyTier.name, tierIcon: weeklyTier.icon, amount: toBigStorable(weeklyWinnings), nameColor: nameColorHex, mansionIcon });
+    await dbSetDoc(`leaderboard_monthly_${monthlyPeriodKey}`, currentUser.uid, { name, updatedAt, tierName: monthlyTier.name, tierIcon: monthlyTier.icon, amount: toBigStorable(monthlyWinnings), nameColor: nameColorHex, mansionIcon });
     // 검배틀 랭킹(승점, 전체기간) + 매치메이킹용 내 현재 검 레벨(검이 없으면 -1)도 함께 올려둔다.
-    await db.collection('leaderboard_sword').doc(currentUser.uid).set({ name, updatedAt, amount: swordBattleWins, nameColor: nameColorHex, mansionIcon, swordLevel: swordOwned ? swordLevel : -1 });
+    await dbSetDoc('leaderboard_sword', currentUser.uid, { name, updatedAt, amount: swordBattleWins, nameColor: nameColorHex, mansionIcon, swordLevel: swordOwned ? swordLevel : -1 });
     // 검 랭킹(월간, 이번 달 최고 강화 레벨 기준)
-    await db.collection(`leaderboard_sword_monthly_${monthlyPeriodKey}`).doc(currentUser.uid).set({ name, updatedAt, amount: swordMonthlyBestLevel, nameColor: nameColorHex, mansionIcon });
+    await dbSetDoc(`leaderboard_sword_monthly_${monthlyPeriodKey}`, currentUser.uid, { name, updatedAt, amount: swordMonthlyBestLevel, nameColor: nameColorHex, mansionIcon });
   } catch (e) {
     console.error('랭킹보드 동기화 실패:', e);
   }
@@ -5934,11 +6003,8 @@ async function fetchLeaderboard(period) {
     // 뒤틀릴 수 있다. 그래서 넉넉히 더 받아온 뒤(limit 10 대신 40) fromBigStorable로
     // 전부 실제 숫자로 변환해서 우리가 직접 다시 정렬한다 - 예전 오염된 문서가 섞여
     // 있어도 화면에 보이는 순위는 항상 실제 금액 크기 기준으로 정확하게 나온다.
-    const snap = await db.collection(colName).orderBy('amount', 'desc').limit(40).get();
-    const decoded = snap.docs.map((d) => {
-      const raw = d.data();
-      return { uid: d.id, ...raw, amount: fromBigStorable(raw.amount) };
-    });
+    const docs = await dbGetDocsOrdered(colName, 'amount', 40);
+    const decoded = docs.map((raw) => ({ uid: raw.id, ...raw, amount: fromBigStorable(raw.amount) }));
     decoded.sort((a, b) => b.amount - a.amount);
     return decoded.slice(0, 10).map((entry, i) => ({ rank: i + 1, ...entry }));
   } catch (e) {
@@ -5955,10 +6021,10 @@ async function fetchMyRankInfo(period) {
   try {
     checkPeriodRollover();
     const colName = getLeaderboardCollectionName(period);
-    const snap = await db.collection(colName).orderBy('amount', 'desc').get();
+    const docs = await dbGetDocsOrdered(colName, 'amount', null);
     // fetchLeaderboard와 마찬가지로 타입이 섞인 문서 때문에 Firestore 정렬 순서를
     // 그대로 믿지 않고, 실제 금액(fromBigStorable)으로 다시 정렬한 뒤 내 순위를 찾는다.
-    const decoded = snap.docs.map((d) => ({ uid: d.id, amount: fromBigStorable(d.data().amount) }));
+    const decoded = docs.map((d) => ({ uid: d.id, amount: fromBigStorable(d.amount) }));
     decoded.sort((a, b) => b.amount - a.amount);
     const idx = decoded.findIndex((d) => d.uid === currentUser.uid);
     return { rank: idx === -1 ? null : idx + 1, total: decoded.length };
