@@ -717,9 +717,9 @@
   .my-rank-fill { height: 100%; background: var(--gold); border-radius: 3px; }
   .share-btn-row { display: flex; gap: 8px; margin-top: 10px; }
   .share-mini-btn { flex: 1; margin: 0; padding: 9px 4px; font-size: 11px; }
-  .lb-period-tabs { display: flex; gap: 6px; margin-bottom: 8px; }
+  .lb-period-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
   .lb-period-tab {
-    flex: 1; background: #2A241D; border: 1px solid #3a332a; border-radius: 8px;
+    flex: 1 1 30%; background: #2A241D; border: 1px solid #3a332a; border-radius: 8px;
     color: var(--paper-dim); font-size: 10.5px; padding: 6px 4px; text-align: center; cursor: pointer;
   }
   .lb-period-tab.active { background: var(--gold); color: var(--ink); font-weight: bold; border-color: var(--gold); }
@@ -1093,6 +1093,7 @@
         <button class="lb-period-tab" data-period="burn">🔥 소각 랭킹</button>
         <button class="lb-period-tab" data-period="sword">⚔️ 검배틀 랭킹</button>
         <button class="lb-period-tab" data-period="swordmonthly">🗡️ 검 랭킹</button>
+        <button class="lb-period-tab" data-period="swordcurrent">🗡️ 현재검 랭킹</button>
       </div>
       <button class="start-btn" id="burnMoneyBtn" style="display:none; margin-top:10px; background:#c0392b;">🔥 지금 가진 돈 전부 태우기</button>
       <div id="leaderboardList" class="leaderboard-list">
@@ -4618,6 +4619,18 @@ function renderMyRankCard() {
     renderMyRankPosition(periodForRank);
     return;
   }
+  if (currentLeaderboardPeriod === 'swordcurrent') {
+    card.innerHTML = `
+      <span class="my-rank-icon">🗡️</span>
+      <div style="flex:1;">
+        <div class="my-rank-name">현재검 랭킹 <span style="font-size:10px; color:var(--paper-dim); font-weight:normal;">(지금 들고 있는 검 기준, 실시간)</span></div>
+        <div class="my-rank-sub">현재 보유 중: ${getSwordDisplayName()}</div>
+        <div class="my-rank-sub" id="myRankPosition" style="color:var(--gold);">${swordOwned ? '내 순위 불러오는 중...' : '검이 없으면 순위에 안 들어가요'}</div>
+      </div>
+    `;
+    if (swordOwned) renderMyRankPosition(periodForRank);
+    return;
+  }
   const isWeekly = currentLeaderboardPeriod === 'weekly';
   const periodAmount = isWeekly ? weeklyWinnings : monthlyWinnings;
   const periodLabel = isWeekly ? '이번 주' : '이번 달';
@@ -4655,7 +4668,7 @@ document.getElementById('burnMoneyBtn').addEventListener('click', () => { initAu
 
 async function renderLeaderboardList() {
   const lbEl = document.getElementById('leaderboardList');
-  const periodLabels = { weekly: '주간', monthly: '월간', burn: '소각', sword: '검배틀', swordmonthly: '검(월간)' };
+  const periodLabels = { weekly: '주간', monthly: '월간', burn: '소각', sword: '검배틀', swordmonthly: '검(월간)', swordcurrent: '현재검' };
   const periodLabel = periodLabels[currentLeaderboardPeriod] || '';
   if (!currentUser) {
     lbEl.innerHTML = `<p style="font-size:11px; color:var(--paper-dim);">구글 로그인을 하면 다른 플레이어들과의 ${periodLabel} 랭킹을 볼 수 있어요.</p>`;
@@ -4664,7 +4677,7 @@ async function renderLeaderboardList() {
   lbEl.innerHTML = `<p style="font-size:11px; color:var(--paper-dim);">불러오는 중...</p>`;
   const list = await fetchLeaderboard(currentLeaderboardPeriod);
   if (list.length === 0) {
-    const firstMsg = currentLeaderboardPeriod === 'sword' ? '첫 번째로 검배틀 승점을 기록해보세요!' : currentLeaderboardPeriod === 'swordmonthly' ? '첫 번째로 검을 강화해보세요!' : '첫 번째로 딴 돈을 기록해보세요!';
+    const firstMsg = currentLeaderboardPeriod === 'sword' ? '첫 번째로 검배틀 승점을 기록해보세요!' : (currentLeaderboardPeriod === 'swordmonthly' || currentLeaderboardPeriod === 'swordcurrent') ? '첫 번째로 검을 강화해보세요!' : '첫 번째로 딴 돈을 기록해보세요!';
     lbEl.innerHTML = `<p style="font-size:11px; color:var(--paper-dim);">아직 ${periodLabel} 랭킹 데이터가 없어요. ${firstMsg}</p>`;
     return;
   }
@@ -4699,6 +4712,22 @@ async function renderLeaderboardList() {
       </div>
     `).join('');
     if (!list.some(p => p.uid === currentUser.uid)) appendMyRankRowIfOutsideTop(lbEl, 'swordmonthly', false);
+    return;
+  }
+  if (currentLeaderboardPeriod === 'swordcurrent') {
+    lbEl.innerHTML = list.map(p => {
+      const lv = p.swordLevel || 0;
+      const swordName = SWORD_STAGES[lv] ? SWORD_STAGES[lv].name : '';
+      return `
+      <div class="lb-row${p.uid === currentUser.uid ? ' me' : ''}">
+        <span class="lb-rank">${p.rank}</span>
+        <span class="lb-name"${p.nameColor ? ` style="color:${p.nameColor};font-weight:bold;"` : ''}>${p.mansionIcon ? p.mansionIcon + ' ' : ''}${p.name}</span>
+        <span class="lb-tier">🗡️ +${lv}강 ${swordName}</span>
+      </div>
+    `;
+    }).join('');
+    // 검이 없으면 순위 대상이 아니라서, 나를 별도로 보여주는 것도 검을 갖고 있을 때만 한다.
+    if (swordOwned && !list.some(p => p.uid === currentUser.uid)) appendMyRankRowIfOutsideTop(lbEl, 'swordcurrent', false);
     return;
   }
   lbEl.innerHTML = list.map(p => {
@@ -4740,6 +4769,8 @@ async function appendMyRankRowIfOutsideTop(lbEl, period, isBurn) {
     row.innerHTML = `<span class="lb-rank">${info.rank}</span><span class="lb-name">${currentUser.name} (나)</span><span class="lb-tier">⚔️ ${swordBattleWins.toLocaleString('ko-KR')}점</span>`;
   } else if (period === 'swordmonthly') {
     row.innerHTML = `<span class="lb-rank">${info.rank}</span><span class="lb-name">${currentUser.name} (나)</span><span class="lb-tier">🗡️ +${swordMonthlyBestLevel}강</span>`;
+  } else if (period === 'swordcurrent') {
+    row.innerHTML = `<span class="lb-rank">${info.rank}</span><span class="lb-name">${currentUser.name} (나)</span><span class="lb-tier">${getSwordDisplayName()}</span>`;
   } else {
     const myAmount = period === 'weekly' ? weeklyWinnings : monthlyWinnings;
     row.innerHTML = `<span class="lb-rank">${info.rank}</span><span class="lb-name">${currentUser.name} (나)</span><span class="lb-tier">${formatWon(myAmount)}원</span>`;
@@ -6051,21 +6082,28 @@ function getLeaderboardCollectionName(period) {
   if (period === 'monthly') return `leaderboard_monthly_${monthlyPeriodKey}`;
   if (period === 'burn') return `leaderboard_burn_monthly_${monthlyPeriodKey}`;
   if (period === 'sword') return 'leaderboard_sword';
+  if (period === 'swordcurrent') return 'leaderboard_sword'; // 검배틀 매치메이킹용으로 실시간으로 갱신되는 같은 컬렉션을 재사용
   if (period === 'swordmonthly') return `leaderboard_sword_monthly_${monthlyPeriodKey}`;
   return 'leaderboard';
+}
+// 'swordcurrent'만 amount(승점)가 아니라 swordLevel(지금 들고 있는 검 레벨)로 정렬한다.
+function getLeaderboardSortField(period) {
+  return period === 'swordcurrent' ? 'swordLevel' : 'amount';
 }
 async function fetchLeaderboard(period) {
   if (!db) return [];
   try {
     checkPeriodRollover();
     const colName = getLeaderboardCollectionName(period);
+    const sortField = getLeaderboardSortField(period);
     // Firestore의 orderBy('amount')는 필드 타입이 섞여 있으면(예전 버전에서 잘못 저장된
     // 문서, 형식이 다른 BN: 문자열 등) 값 크기가 아니라 "타입" 기준으로도 갈려서 순서가
     // 뒤틀릴 수 있다. 그래서 넉넉히 더 받아온 뒤(limit 10 대신 40) fromBigStorable로
     // 전부 실제 숫자로 변환해서 우리가 직접 다시 정렬한다 - 예전 오염된 문서가 섞여
     // 있어도 화면에 보이는 순위는 항상 실제 금액 크기 기준으로 정확하게 나온다.
-    const docs = await dbGetDocsOrdered(colName, 'amount', 40);
-    const decoded = docs.map((raw) => ({ uid: raw.id, ...raw, amount: fromBigStorable(raw.amount) }));
+    let docs = await dbGetDocsOrdered(colName, sortField, 40);
+    if (period === 'swordcurrent') docs = docs.filter(d => typeof d.swordLevel === 'number' && d.swordLevel >= 0);
+    const decoded = docs.map((raw) => ({ uid: raw.id, ...raw, amount: sortField === 'swordLevel' ? (raw.swordLevel || 0) : fromBigStorable(raw.amount) }));
     decoded.sort((a, b) => b.amount - a.amount);
     return decoded.slice(0, 10).map((entry, i) => ({ rank: i + 1, ...entry }));
   } catch (e) {
@@ -6082,10 +6120,12 @@ async function fetchMyRankInfo(period) {
   try {
     checkPeriodRollover();
     const colName = getLeaderboardCollectionName(period);
-    const docs = await dbGetDocsOrdered(colName, 'amount', null);
+    const sortField = getLeaderboardSortField(period);
+    let docs = await dbGetDocsOrdered(colName, sortField, null);
+    if (period === 'swordcurrent') docs = docs.filter(d => typeof d.swordLevel === 'number' && d.swordLevel >= 0);
     // fetchLeaderboard와 마찬가지로 타입이 섞인 문서 때문에 Firestore 정렬 순서를
     // 그대로 믿지 않고, 실제 금액(fromBigStorable)으로 다시 정렬한 뒤 내 순위를 찾는다.
-    const decoded = docs.map((d) => ({ uid: d.id, amount: fromBigStorable(d.amount) }));
+    const decoded = docs.map((d) => ({ uid: d.id, amount: sortField === 'swordLevel' ? (d.swordLevel || 0) : fromBigStorable(d.amount) }));
     decoded.sort((a, b) => b.amount - a.amount);
     const idx = decoded.findIndex((d) => d.uid === currentUser.uid);
     return { rank: idx === -1 ? null : idx + 1, total: decoded.length };
