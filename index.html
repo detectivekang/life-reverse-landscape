@@ -14,7 +14,7 @@
 // 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
 // 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
 (function() {
-  var CURRENT_VERSION = '2026091804';
+  var CURRENT_VERSION = '2026091805';
   try {
     if (sessionStorage.getItem('lrVersionChecked') === CURRENT_VERSION) return;
     fetch(location.pathname + '?_cb=' + Date.now(), { cache: 'no-store' })
@@ -2718,6 +2718,27 @@ function getClickMult() { return boosters.click5.remaining > 0 ? boosters.click5
 // 이 값 하나만 올리고 내리면 게임 전체 속도가 같이 움직이니, 실측 후 여기만 조정하면 됨.
 const GLOBAL_INCOME_THROTTLE = 0.25;
 
+// ===== 재화 수급 소프트캡 =====
+// GLOBAL_INCOME_THROTTLE은 "속도"에 곱해지는 상수라서 여러 배율(컬렉션·업적·각성·
+// 무한강화·날씨·카지노상점·환생 등)이 겹쳐 지수적으로 불어나는 것 자체는 못 막는다.
+// 실제로 재산이 커진 뒤 카지노에서 "올인" 배팅으로 잭팟을 터뜨리면 순수익이 한 번에
+// 천문학적으로 튀어서, 주간 랭킹 1위가 "항하사"(10^56 단위) 같은 말이 안 되는 수치까지
+// 찍히는 문제가 생겼다.
+// 그래서 게임이 자체적으로 정한 "최고 칭호" 달성 기준(총 수입 1e20원)을 SOFT_CAP_START로
+// 두고, 그 지점을 넘어선 값부터는 아래 공식으로 증가율을 강하게 눌러버린다.
+// 공식: cap 이하는 그대로, cap을 넘으면 cap * (raw/cap)^SOFT_CAP_EXPONENT.
+// 예) exponent 0.08이면, raw가 10배 커질 때마다 결과값은 약 1.2배만 커진다(사실상 거의 정지).
+// money/totalEarned(addMoney 경로)와 카지노 순수익(casinoTotalWinnings/weeklyWinnings/
+// monthlyWinnings) 양쪽 다 이 함수를 거치게 해서, 어느 한쪽만 뚫려서 다시 폭발하는
+// 일이 없게 한다. cap 이하인 값(대다수의 정상 플레이)은 100% 그대로 동작해서 초반 체감에
+// 전혀 영향이 없다.
+const SOFT_CAP_START = 1e20; // = earn_max_title 업적 기준과 동일
+const SOFT_CAP_EXPONENT = 0.08;
+function applySoftCap(raw) {
+  if (!isFinite(raw) || raw <= SOFT_CAP_START) return raw;
+  return SOFT_CAP_START * Math.pow(raw / SOFT_CAP_START, SOFT_CAP_EXPONENT);
+}
+
 function getClickValue() {
   // 클릭 수익은 오직 "이 업그레이드를 몇 번 샀는지"로만 정해진다.
   // 티어별 add를 "레벨당 고정 증가액"이 아니라 "삼각수 단위값"으로 써서,
@@ -2754,8 +2775,8 @@ function addMoney(amount) {
     showLoginGate();
     return;
   }
-  money += amount;
-  totalEarned += amount;
+  money = applySoftCap(money + amount);
+  totalEarned = applySoftCap(totalEarned + amount);
   checkStageAdvance();
   flashMoney();
   if (!currentUser && totalEarned >= LOGIN_REQUIRED_THRESHOLD) {
@@ -2846,6 +2867,15 @@ let isBrandNewPlayer = false;
 // 함께 올려준다. lastSeenPatchVersion이 patchNotes[0].version과 다르면 "안 읽은 공지"로
 // 간주해 배지를 띄우고, 기존 유저가 접속하면 자동으로 한 번 띄워준다.
 const patchNotes = [
+  {
+    version: '2026091805',
+    date: '2026-09-18',
+    items: [
+      '⚖️ 재화 소프트캡 도입: 총 수입이 최고 칭호 기준(1e20원)을 넘어서면 그 이후로는 값이 매우 느리게만 늘어나도록 조정했어요. 여러 배율이 겹쳐서 순위가 "항하사" 같은 비정상적인 단위까지 치솟던 문제를 막기 위한 조치예요',
+      '🎰 카지노 순수익(주간/월간/전체 랭킹에 쓰이는 값)에도 같은 소프트캡을 적용해서, "올인" 잭팟 한 번으로 순위가 통째로 뒤집히는 걸 방지했어요',
+      '🔧 이미 비정상적으로 커진 기존 재화도 접속하면 자동으로 정상 범위로 재조정돼요'
+    ]
+  },
   {
     version: '2026091803',
     date: '2026-09-18',
@@ -5321,12 +5351,12 @@ function resolveCasinoResult(outcome, bet, winPayout, resEl, subText) {
     // 반복 플레이 시 플레이어에게 유리한 쪽으로 뒤집힐 수 있다. 합산 보너스에 상한을 둔다.
     const combinedCasinoBonus = Math.min(1.15, (1 + vip.bonus) * casinoTalentMult) * getWeatherCasinoMult();
     const netProfit = Math.floor((winPayout - bet) * combinedCasinoBonus);
-    money += bet + netProfit;
+    money = applySoftCap(money + bet + netProfit);
     if (netProfit > 0) {
       checkPeriodRollover();
-      casinoTotalWinnings += netProfit;
-      weeklyWinnings += netProfit;
-      monthlyWinnings += netProfit;
+      casinoTotalWinnings = applySoftCap(casinoTotalWinnings + netProfit);
+      weeklyWinnings = applySoftCap(weeklyWinnings + netProfit);
+      monthlyWinnings = applySoftCap(monthlyWinnings + netProfit);
     }
     playSound('levelUp');
     spawnConfettiBurst();
@@ -6361,8 +6391,8 @@ window.addEventListener('storage', (e) => {
 
 function applySaveData(data, opts) {
   opts = opts || {};
-  money = fromBigStorable(data.money) || 0;
-  totalEarned = fromBigStorable(data.totalEarned) || 0;
+  money = applySoftCap(fromBigStorable(data.money) || 0);
+  totalEarned = applySoftCap(fromBigStorable(data.totalEarned) || 0);
   stageIndex = data.stageIndex || 0;
   baseClickValue = data.baseClickValue || 1;
   infiniteUpgradeLevel = data.infiniteUpgradeLevel || 0;
@@ -6443,10 +6473,10 @@ function applySaveData(data, opts) {
   casinoPlaysCount = data.casinoPlaysCount || 0;
   casinoTotalWagered = fromBigStorable(data.casinoTotalWagered) || 0;
   casinoWinCount = data.casinoWinCount || 0;
-  casinoTotalWinnings = fromBigStorable(data.casinoTotalWinnings) || 0;
-  weeklyWinnings = fromBigStorable(data.weeklyWinnings) || 0;
+  casinoTotalWinnings = applySoftCap(fromBigStorable(data.casinoTotalWinnings) || 0);
+  weeklyWinnings = applySoftCap(fromBigStorable(data.weeklyWinnings) || 0);
   weeklyPeriodKey = data.weeklyPeriodKey || '';
-  monthlyWinnings = fromBigStorable(data.monthlyWinnings) || 0;
+  monthlyWinnings = applySoftCap(fromBigStorable(data.monthlyWinnings) || 0);
   monthlyPeriodKey = data.monthlyPeriodKey || '';
   checkPeriodRollover();
   lastSaveTime = data.lastSaveTime || Date.now();
