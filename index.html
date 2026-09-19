@@ -14,7 +14,7 @@
 // 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
 // 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
 (function() {
-  var CURRENT_VERSION = '2026091906';
+  var CURRENT_VERSION = '2026091907';
   try {
     if (sessionStorage.getItem('lrVersionChecked') === CURRENT_VERSION) return;
     fetch(location.pathname + '?_cb=' + Date.now(), { cache: 'no-store' })
@@ -2941,9 +2941,11 @@ const GLOBAL_INCOME_THROTTLE = 0.25;
 // 두고, 그 지점을 넘어선 값부터는 아래 공식으로 증가율을 강하게 눌러버린다.
 // 공식: cap 이하는 그대로, cap을 넘으면 cap * (raw/cap)^SOFT_CAP_EXPONENT.
 // 예) exponent 0.08이면, raw가 10배 커질 때마다 결과값은 약 1.2배만 커진다(사실상 거의 정지).
-// money/totalEarned(addMoney 경로)와 카지노 순수익(casinoTotalWinnings/weeklyWinnings/
-// monthlyWinnings) 양쪽 다 이 함수를 거치게 해서, 어느 한쪽만 뚫려서 다시 폭발하는
-// 일이 없게 한다. cap 이하인 값(대다수의 정상 플레이)은 100% 그대로 동작해서 초반 체감에
+// money/totalEarned(addMoney 경로)에는 계속 이 함수를 적용한다. 카지노 순수익
+// (casinoTotalWinnings/weeklyWinnings/monthlyWinnings, 랭킹 표시용 값)은 모든 유저의
+// 순위가 전부 "해원"에서 뭉개져 보이는 문제 때문에 캡을 뺐다. 판돈(money)이 위 캡으로
+// 묶여 있어서 순수익은 지수적으로 폭발하지 않고 플레이한 만큼 누적으로만 늘어난다.
+// cap 이하인 값(대다수의 정상 플레이)은 100% 그대로 동작해서 초반 체감에
 // 전혀 영향이 없다.
 const SOFT_CAP_START = 1e20; // = earn_max_title 업적 기준과 동일
 const SOFT_CAP_EXPONENT = 0.08;
@@ -3476,6 +3478,14 @@ let isBrandNewPlayer = false;
 // 함께 올려준다. lastSeenPatchVersion이 patchNotes[0].version과 다르면 "안 읽은 공지"로
 // 간주해 배지를 띄우고, 기존 유저가 접속하면 자동으로 한 번 띄워준다.
 const patchNotes = [
+  {
+    version: '2026091907',
+    date: '2026-09-19',
+    items: [
+      '🏆 주간/월간/평생 랭킹 금액이 더 이상 "해원"에서 막히지 않아요. 카지노에서 딴 돈은 제한 없이 그대로 쌓이고 표시돼요',
+      '👥 랭킹의 "전체 ○○명 중 ○○위"가 실제 참가자 전체 기준으로 집계돼요 (예전엔 일부만 세어져서 인원이 적게 나올 수 있었어요)'
+    ]
+  },
   {
     version: '2026091904',
     date: '2026-09-19',
@@ -6472,9 +6482,9 @@ function resolveCasinoResult(outcome, bet, winPayout, resEl, subText) {
     money = applySoftCap(money + bet + netProfit);
     if (netProfit > 0) {
       checkPeriodRollover();
-      casinoTotalWinnings = applySoftCap(casinoTotalWinnings + netProfit);
-      weeklyWinnings = applySoftCap(weeklyWinnings + netProfit);
-      monthlyWinnings = applySoftCap(monthlyWinnings + netProfit);
+      casinoTotalWinnings = casinoTotalWinnings + netProfit;
+      weeklyWinnings = weeklyWinnings + netProfit;
+      monthlyWinnings = monthlyWinnings + netProfit;
     }
     playSound('levelUp');
     spawnConfettiBurst();
@@ -6905,15 +6915,32 @@ async function dbUpdateDoc(collectionName, docId, data) {
 }
 
 // 컬렉션을 특정 필드 기준 내림차순으로 정렬해서 가져온다. limitN이 없으면 전체를 가져온다.
-async function dbGetDocsOrdered(collectionName, orderField, limitN) {
+// Supabase(PostgREST)는 한 번에 돌려줄 수 있는 행 수에 서버 상한(Max rows)이 있어서, 그냥
+// select 한 번으로는 참가자가 많아도 상한만큼(예: 1000, 설정에 따라 그보다 훨씬 적을 수도 있음)만
+// 오고 나머지가 조용히 잘린다. 그래서 range()로 페이지를 나눠 count(전체 행 수)에 도달할 때까지
+// 이어서 받는다. columns로 필요한 컬럼만 지정하면 전체 순위 집계처럼 무거운 조회의 전송량이 줄어든다.
+async function dbGetDocsOrdered(collectionName, orderField, limitN, columns) {
   const { table, boardKey } = resolveTable(collectionName);
   const col = CAMEL_TO_SNAKE[orderField] || orderField;
-  let q = db.from(table).select('*').order(col, { ascending: false });
-  if (boardKey) q = q.eq('board_key', boardKey);
-  if (limitN) q = q.limit(limitN);
-  const { data: rows, error } = await q;
-  if (error) throw error;
-  return rows.map(row => ({ id: row.user_id, ...toCamelRow(row) }));
+  const PAGE_SIZE = 1000;
+  const all = [];
+  let from = 0;
+  for (let guard = 0; guard < 500; guard++) {
+    const want = limitN ? Math.min(PAGE_SIZE, limitN - all.length) : PAGE_SIZE;
+    let q = db.from(table).select(columns || '*', { count: 'exact' })
+      .order(col, { ascending: false, nullsFirst: false })
+      .order('user_id', { ascending: true }) // 페이지 사이에 순서가 흔들리지 않게 고정
+      .range(from, from + want - 1);
+    if (boardKey) q = q.eq('board_key', boardKey);
+    const { data: rows, error, count } = await q;
+    if (error) throw error;
+    if (!rows || rows.length === 0) break;
+    all.push(...rows);
+    from += rows.length;
+    if (limitN && all.length >= limitN) break;
+    if (typeof count === 'number' && all.length >= count) break;
+  }
+  return all.map(row => ({ id: row.user_id, ...toCamelRow(row) }));
 }
 
 // 컬렉션에서 특정 필드가 특정 값과 일치하는 문서들만 가져온다 (등호 비교만 지원)
@@ -7270,16 +7297,31 @@ async function fetchLeaderboard(period) {
 // 상위 10명 밖이어도 "나는 전체 몇 명 중 몇 위인지"를 보여주기 위한 조회.
 // 참가자가 아주 많아지면 비용이 커질 수 있는 방식(전체를 정렬해서 내 위치를 센다)이라,
 // 유저 수가 크게 늘어나면 서버 집계(count) 쿼리 등으로 바꾸는 게 좋다.
-async function fetchMyRankInfo(period) {
-  if (!currentUser || !db) return null;
+// 전체 조회는 비용이 커서, 같은 탭에 대한 요청(내 순위 카드 + 목록 아래 내 순위 줄 등)이
+// 짧은 시간 안에 겹치면 한 번만 조회하고 결과를 나눠 쓴다.
+const MY_RANK_CACHE_MS = 8000;
+const myRankCache = {};
+function fetchMyRankInfo(period) {
+  if (!currentUser || !db) return Promise.resolve(null);
+  const key = period + '|' + currentUser.uid;
+  const hit = myRankCache[key];
+  if (hit && Date.now() - hit.at < MY_RANK_CACHE_MS) return hit.promise;
+  const promise = fetchMyRankInfoUncached(period);
+  myRankCache[key] = { at: Date.now(), promise };
+  promise.then(r => { if (r === null && myRankCache[key] && myRankCache[key].promise === promise) delete myRankCache[key]; });
+  return promise;
+}
+async function fetchMyRankInfoUncached(period) {
   try {
     checkPeriodRollover();
     const colName = getLeaderboardCollectionName(period);
     const sortField = getLeaderboardSortField(period);
-    let docs = await dbGetDocsOrdered(colName, sortField, null);
+    // 순위/인원만 필요하니 user_id, amount, sword_level 컬럼만 받아온다. 서버 상한(Max rows)에
+    // 걸려 잘리지 않도록 dbGetDocsOrdered가 페이지를 이어서 전부 받아온다.
+    let docs = await dbGetDocsOrdered(colName, sortField, null, 'user_id,amount,sword_level');
     if (period === 'swordcurrent') docs = docs.filter(d => typeof d.swordLevel === 'number' && d.swordLevel >= 0);
-    // fetchLeaderboard와 마찬가지로 타입이 섞인 문서 때문에 Firestore 정렬 순서를
-    // 그대로 믿지 않고, 실제 금액(fromBigStorable)으로 다시 정렬한 뒤 내 순위를 찾는다.
+    // fetchLeaderboard와 마찬가지로 타입이 섞인 문서 때문에 정렬 순서를 그대로 믿지 않고,
+    // 실제 금액(fromBigStorable)으로 다시 정렬한 뒤 내 순위를 찾는다.
     const decoded = docs.map((d) => ({ uid: d.id, amount: sortField === 'swordLevel' ? (d.swordLevel || 0) : fromBigStorable(d.amount) }));
     decoded.sort((a, b) => b.amount - a.amount);
     const idx = decoded.findIndex((d) => d.uid === currentUser.uid);
@@ -7598,10 +7640,10 @@ function applySaveData(data, opts) {
   casinoPlaysCount = data.casinoPlaysCount || 0;
   casinoTotalWagered = fromBigStorable(data.casinoTotalWagered) || 0;
   casinoWinCount = data.casinoWinCount || 0;
-  casinoTotalWinnings = applySoftCap(fromBigStorable(data.casinoTotalWinnings) || 0);
-  weeklyWinnings = applySoftCap(fromBigStorable(data.weeklyWinnings) || 0);
+  casinoTotalWinnings = fromBigStorable(data.casinoTotalWinnings) || 0;
+  weeklyWinnings = fromBigStorable(data.weeklyWinnings) || 0;
   weeklyPeriodKey = data.weeklyPeriodKey || '';
-  monthlyWinnings = applySoftCap(fromBigStorable(data.monthlyWinnings) || 0);
+  monthlyWinnings = fromBigStorable(data.monthlyWinnings) || 0;
   monthlyPeriodKey = data.monthlyPeriodKey || '';
   checkPeriodRollover();
   lastSaveTime = data.lastSaveTime || Date.now();
