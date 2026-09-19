@@ -14,7 +14,7 @@
 // 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
 // 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
 (function() {
-  var CURRENT_VERSION = '2026091903';
+  var CURRENT_VERSION = '2026091905';
   try {
     if (sessionStorage.getItem('lrVersionChecked') === CURRENT_VERSION) return;
     fetch(location.pathname + '?_cb=' + Date.now(), { cache: 'no-store' })
@@ -318,6 +318,64 @@
     30% { transform: translateY(-10px) scale(1.25) rotate(3deg); }
     100% { opacity: 0; transform: translateY(-46px) scale(1.05) rotate(-2deg); }
   }
+  /* ===== 인생 단계 (아바타 / 배경 / 여정) ===== */
+  .stage-progress { cursor: pointer; }
+  #stageIconTop { display: inline-block; }
+  #stageIconTop img { height: 16px; width: auto; vertical-align: middle; }
+  /* 직장인 이후 단계의 거리 배경 (JS가 --ls-bg / --ls-building 값을 넣는다). .app 접두사로 .scene.stage3 보다 우선 */
+  .app .scene[data-life-theme] { background: var(--ls-bg); }
+  .app .scene[data-life-theme] .building { background: var(--ls-building); }
+  .life-avatar {
+    position: absolute; left: 8px; bottom: 33px; z-index: 4; font-size: 20px; line-height: 1;
+    cursor: pointer; user-select: none; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.45));
+  }
+  .life-avatar img { height: 26px; width: auto; display: block; }
+  .la-acc { position: absolute; right: -9px; bottom: -3px; font-size: 0.55em; line-height: 1; }
+  .life-avatar.pop, #stageIconTop.pop { animation: lifePop 0.8s ease-out; }
+  @keyframes lifePop {
+    0% { transform: scale(0.4) rotate(-12deg); } 40% { transform: scale(1.6) rotate(6deg); } 100% { transform: scale(1) rotate(0); }
+  }
+  .crit-screen-flash.gold { background: radial-gradient(circle, rgba(255,214,102,0.55), transparent 70%); animation-duration: 0.5s; }
+  .life-banner {
+    position: absolute; left: 8px; right: 8px; top: 22%; z-index: 26; pointer-events: none;
+    display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 14px; margin: 0 auto; max-width: 340px;
+    background: rgba(28,23,15,0.9); border: 2px solid var(--gold); border-radius: 16px; text-align: center;
+    box-shadow: 0 0 24px rgba(232,179,61,0.55); animation: lifeBanner 2.8s ease-out forwards;
+  }
+  .life-banner .lb-head { font-family: 'Black Han Sans', sans-serif; font-size: 12px; color: var(--gold); letter-spacing: 0.04em; }
+  .life-banner .lb-avatar { position: relative; font-size: 46px; line-height: 1; }
+  .life-banner .lb-avatar img { height: 52px; width: auto; }
+  .life-banner .lb-avatar .la-acc { font-size: 20px; right: -12px; bottom: -4px; }
+  .life-banner .lb-name { font-family: 'Black Han Sans', sans-serif; font-size: 22px; color: #ffe08a; text-shadow: 0 0 10px rgba(255,180,60,0.8); }
+  .life-banner .lb-line { font-size: 11px; color: var(--paper-dim); line-height: 1.45; }
+  @keyframes lifeBanner {
+    0% { opacity: 0; transform: translateY(14px) scale(0.85); } 12% { opacity: 1; transform: translateY(0) scale(1.05); }
+    20% { transform: scale(1); } 85% { opacity: 1; } 100% { opacity: 0; transform: translateY(-12px); }
+  }
+  .life-card {
+    display: flex; align-items: center; gap: 12px; text-align: left; background: #2A241D;
+    border: 1px solid var(--gold-dim); border-radius: 12px; padding: 10px 12px; margin: 4px 0 10px;
+  }
+  .life-card-avatar { position: relative; font-size: 44px; line-height: 1; min-width: 56px; text-align: center; }
+  .life-card-avatar img { height: 56px; width: auto; }
+  .life-card-avatar .la-acc { font-size: 20px; right: -2px; bottom: -4px; }
+  .life-card-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .life-card-info b { color: var(--gold); font-size: 15px; }
+  .life-card-info span { font-size: 11px; color: var(--paper-dim); }
+  .life-next { text-align: left; font-size: 11.5px; color: var(--paper-dim); margin: 0 0 10px; line-height: 1.5; }
+  .life-list { max-height: 40vh; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; text-align: left; }
+  .life-row { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 9px; background: #241f18; font-size: 12px; color: var(--paper-dim); }
+  .life-row.done { color: var(--paper); }
+  .life-row.current { border: 1px solid var(--gold); color: var(--gold); background: #2f271b; }
+  .life-row:not(.done):not(.current) .lr-av { opacity: 0.5; }
+  .life-row .lr-av { font-size: 20px; width: 26px; text-align: center; flex: 0 0 auto; }
+  .life-row .lr-av img { height: 22px; width: auto; }
+  .life-row .lr-name { flex: 1; font-weight: bold; }
+  .life-row .lr-need { font-size: 10.5px; color: var(--paper-dim); white-space: nowrap; }
+  @media (prefers-reduced-motion: reduce) {
+    .life-banner, .life-avatar.pop, #stageIconTop.pop { animation: none; }
+  }
+
   /* ===== 콤보 게이지 / 피버 ===== */
   #feverBar { flex: 0 0 auto; position: relative; height: 0; z-index: 29; pointer-events: none; }
   #feverBar .fever-track {
@@ -886,7 +944,7 @@
       <div class="money-row"><span class="icon">💰</span><b id="hudMoney">0원</b></div>
       <span id="incomeSub">클릭당 1원 · 초당 0원</span>
     </div>
-    <div class="stage-progress">
+    <div class="stage-progress" id="stageProgress" title="내 인생 여정 보기">
       <div class="stage-top-row"><span id="stageIconTop">📦</span><b id="stageNameTop">노숙자</b><span class="scene-label" id="sceneLabel">· 지하철역 뒷골목</span></div>
       <div class="stage-track">
         <div class="stage-fill" id="subwayFill"></div>
@@ -933,6 +991,7 @@
 
   <div id="part1Screen">
     <div class="scene">
+      <div class="life-avatar" id="lifeAvatar" title="내 인생 보기"></div>
       <div class="skyline" aria-hidden="true">
         <span class="building"></span><span class="building"></span><span class="building"></span>
         <span class="building"></span><span class="building"></span><span class="building"></span>
@@ -1162,6 +1221,23 @@
       </div>
       <div id="casinoShopList"></div>
       <button class="close-btn" id="casinoShopCloseBtn" style="margin-top:8px;">닫기</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="lifeModal">
+    <div class="modal-box">
+      <h2>🧭 내 인생 여정</h2>
+      <div class="life-card">
+        <div class="life-card-avatar" id="lifeModalAvatar"></div>
+        <div class="life-card-info">
+          <b id="lifeModalName"></b>
+          <span id="lifeModalScene"></span>
+          <span id="lifeModalTotal"></span>
+        </div>
+      </div>
+      <div class="life-next" id="lifeModalNext"></div>
+      <div class="life-list" id="lifeList"></div>
+      <button class="close-btn" id="lifeCloseBtn" style="margin-top:10px;">닫기</button>
     </div>
   </div>
 
@@ -2924,6 +3000,261 @@ function clearLoginGate() {
 // 새로 만든 기능들(일일미션/환생/카지노 상점)은 버튼이 조용히 나타날 뿐이라 신규
 // 유저가 발견 못 하고 지나칠 수 있다. 각 기능을 실제로 사용할 수 있게 되는 시점에
 // 딱 한 번씩만 안내 토스트를 띄운다.
+// ===== 인생 단계 (메인 진행축) =====
+// 기존의 "직업 단계(stages 4개)"와 "재산 칭호(wealthTitles 15개)"를 하나의 여정(19단계)으로 묶어 보여주는
+// 표시 계층이다. 저장 데이터(stageIndex, 직업/업그레이드 배열)와 직업 해금 규칙은 그대로 두고,
+// 총 수입(totalEarned)만으로 현재 단계를 계산한다 → 세이브 호환에 영향 없음.
+//
+// [캐릭터/배경 교체 방법] 지금은 이모지/CSS로 그리지만, 아래 LIFE_LOOKS 항목에
+//   avatarImg: '파일명.png'  → 캐릭터를 이미지로 (없거나 로드 실패 시 이모지로 자동 대체)
+//   bgImg: '파일명.jpg'      → 거리 배경을 이미지로 (그라데이션 위에 깔림, 직장인 이후 단계만 해당)
+// 을 채우면 된다. 파일은 LIFE_ASSET_BASE 폴더에 두거나 전체 URL/data URI를 적는다.
+const LIFE_ASSET_BASE = 'assets/life/';
+function lifeAssetUrl(file) { return /^(https?:|data:|\/)/.test(file) ? file : LIFE_ASSET_BASE + file; }
+
+// 순서: 노숙자, 일용직, 알바생, 직장인, 자영업자, 그다음은 wealthTitles 1~14 (새싹 ~ 인생역전 그 자체)
+// theme = [하늘색, 땅색, 건물색] (직장인까지는 기존 .scene.stageN CSS가 담당)
+const LIFE_LOOKS = [
+  { avatar: '🧔', acc: '📦', tag: '무일푼에서 시작해요. 폐지 한 장이 첫걸음!' },
+  { avatar: '👷', acc: '🔨', tag: '일당이 생겼어요. 조금씩 나아지고 있어요!' },
+  { avatar: '🙋', acc: '🏪', tag: '편의점 불빛 아래, 나만의 밥벌이를 시작했어요' },
+  { avatar: '🧑‍💼', acc: '💼', tag: '드디어 정규직! 월급날이 기다려져요' },
+  { avatar: '🧑‍🍳', acc: '🏬', tag: '내 이름을 건 가게가 생겼어요!', scene: '내 가게 골목' },
+  { avatar: '🙂', acc: '🌱', tag: '작은 성공이 싹트기 시작했어요', scene: '소문난 가게', theme: ['#7fb8e6', '#d6e8c8', '#5a86ad'] },
+  { avatar: '😎', acc: '💰', tag: '통장에 억 소리 나는 숫자가 찍혔어요', scene: '내 건물 앞', theme: ['#8ec3ea', '#e2ecd0', '#5f8fb5'] },
+  { avatar: '🤵', acc: '🏠', tag: '동네에서 소문난 부자가 됐어요', scene: '고급 주택가', theme: ['#f1b56d', '#e7d2a8', '#8a6a52'] },
+  { avatar: '👨‍💼', acc: '🏢', tag: '사업이 세계로 뻗어나갈 준비를 해요', scene: '본사 사옥', theme: ['#5a8ed6', '#cfd8e6', '#3f6494'] },
+  { avatar: '🤵‍♂️', acc: '🏭', tag: '여러 회사를 거느린 그룹 총수가 됐어요', scene: '그룹 본사 앞', theme: ['#2f3f6b', '#9aa7c2', '#2b3350'] },
+  { avatar: '🧐', acc: '👔', tag: '재계 서열에 이름을 올렸어요', scene: '재계 사교장', theme: ['#1d1f3a', '#c9a55c', '#3a3350'] },
+  { avatar: '🧑‍✈️', acc: '🌐', tag: '국경을 넘어 세계 시장을 누벼요', scene: '해외 지사', theme: ['#16324f', '#4f8fb3', '#24506e'] },
+  { avatar: '🧑‍⚖️', acc: '🏛️', tag: '내 한마디에 시장이 움직여요', scene: '중앙은행 앞', theme: ['#2a2a44', '#c7b98a', '#4a4a6a'] },
+  { avatar: '🤴', acc: '🌎', tag: '세계 경제를 손에 쥔 큰손이 됐어요', scene: '월가 한복판', theme: ['#10263f', '#2f7f8f', '#1d4d63'] },
+  { avatar: '🦸', acc: '👑', tag: '대륙 하나쯤은 내 손안에!', scene: '왕궁 테라스', theme: ['#3b1d2e', '#d4a24c', '#6a2f3f'] },
+  { avatar: '🧑‍🚀', acc: '🚀', tag: '이제 하늘을 넘어 우주로!', scene: '우주 발사장', theme: ['#05081c', '#232a5c', '#3a4380'] },
+  { avatar: '🧑‍🚀', acc: '🌌', tag: '은하계 곳곳에 내 회사가 있어요', scene: '은하 정거장', theme: ['#0a0420', '#3a1f6a', '#5b34a0'] },
+  { avatar: '🧙', acc: '🏆', tag: '누구나 아는 인생역전의 전설', scene: '전설의 무대', theme: ['#1b0f2e', '#e0b33d', '#7a4fc9'] },
+  { avatar: '🧞', acc: '✨', tag: '당신이 곧 인생역전입니다', scene: '초월의 공간', theme: ['#000010', '#4b2c8f', '#ffd166'] }
+];
+
+const LIFE_STAGES = (() => {
+  const base = [];
+  stages.forEach((st, i) => base.push({
+    kind: 'stage', ref: i, id: 'stage' + i, name: st.name, icon: st.icon,
+    at: i === 0 ? 0 : stages[i - 1].threshold, scene: st.sceneName
+  }));
+  // 직장인 마지막 문턱(=상가가 열리는 시점)에서 새 단계 "자영업자"로 이어진다
+  base.push({ kind: 'extra', id: 'shopowner', name: '자영업자', icon: '🏬', at: stages[stages.length - 1].threshold, scene: '' });
+  wealthTitles.forEach((t, j) => {
+    if (j > 0) base.push({ kind: 'wealth', ref: j, id: 'wealth' + j, name: t.name, icon: t.icon, at: t.threshold, scene: '' });
+  });
+  return base.map((b, i) => {
+    const look = LIFE_LOOKS[i] || {};
+    return Object.assign(b, {
+      scene: look.scene || b.scene || '',
+      tag: look.tag || '',
+      avatar: { emoji: look.avatar || b.icon, acc: look.acc || '', img: look.avatarImg || null },
+      theme: look.theme ? { sky: look.theme[0], ground: look.theme[1], building: look.theme[2], img: look.bgImg || null } : null
+    });
+  });
+})();
+
+function getLifeStageIndex() {
+  let idx = 0;
+  LIFE_STAGES.forEach((st, i) => { if (totalEarned >= st.at) idx = i; });
+  // 직업 단계(stageIndex)가 이미 올라 있으면 인생 단계가 그보다 낮게 보이지 않게 맞춘다
+  return Math.max(idx, Math.min(stageIndex, stages.length - 1));
+}
+// 현재 단계 → 다음 단계 사이의 진행도 (자릿수 차이가 커서 로그 스케일)
+function lifeStageProgress(idx) {
+  const cur = LIFE_STAGES[idx], next = LIFE_STAGES[idx + 1];
+  if (!next) return 1;
+  const p = cur.at < 1
+    ? totalEarned / next.at
+    : (Math.log10(Math.max(totalEarned, 1)) - Math.log10(cur.at)) / (Math.log10(next.at) - Math.log10(cur.at));
+  return Math.max(0, Math.min(1, p));
+}
+
+// 캐릭터를 요소에 그린다. 이미지가 지정돼 있으면 이미지, 없거나 로드에 실패하면 이모지(+소품)
+function paintAvatar(el, stage, px, withAcc) {
+  if (!el) return;
+  const a = stage.avatar;
+  const paintEmoji = () => {
+    el.textContent = a.emoji;
+    if (withAcc && a.acc) {
+      const acc = document.createElement('span');
+      acc.className = 'la-acc';
+      acc.textContent = a.acc;
+      el.appendChild(acc);
+    }
+  };
+  el.textContent = '';
+  if (a.img) {
+    const img = document.createElement('img');
+    img.alt = stage.name;
+    img.style.height = px + 'px';
+    img.onerror = paintEmoji;
+    img.src = lifeAssetUrl(a.img);
+    el.appendChild(img);
+  } else {
+    paintEmoji();
+  }
+}
+// 직장인 이후 단계의 거리 배경. 이전 단계들은 기존 .scene.stageN CSS를 그대로 쓴다
+function applyLifeTheme(stage) {
+  const sceneEl = document.querySelector('.scene');
+  if (!sceneEl) return;
+  const t = stage.theme;
+  if (!t) {
+    sceneEl.removeAttribute('data-life-theme');
+    sceneEl.style.removeProperty('--ls-bg');
+    sceneEl.style.removeProperty('--ls-building');
+    return;
+  }
+  const grad = 'linear-gradient(180deg, ' + t.sky + ' 0%, ' + t.ground + ' 42%, ' + t.ground + ' 100%)';
+  sceneEl.style.setProperty('--ls-bg', t.img ? 'url("' + lifeAssetUrl(t.img) + '") center / cover no-repeat, ' + grad : grad);
+  sceneEl.style.setProperty('--ls-building', t.building);
+  sceneEl.setAttribute('data-life-theme', stage.id);
+}
+
+let lastLifeIdx = -1;     // 승급 연출 판단용 (저장하지 않음. 불러오기/환생 직후엔 조용히 맞춘다)
+let lifeAppliedIdx = -1;
+let lifeFillPct = -1;
+function updateLifeStageUI() {
+  const idx = getLifeStageIndex();
+  const cur = LIFE_STAGES[idx];
+  if (lastLifeIdx < 0 || idx < lastLifeIdx) {
+    lastLifeIdx = idx;
+  } else if (idx > lastLifeIdx) {
+    const prev = LIFE_STAGES[lastLifeIdx];
+    lastLifeIdx = idx;
+    celebrateLifeStageUp(cur, prev);
+  }
+  if (idx !== lifeAppliedIdx) {
+    lifeAppliedIdx = idx;
+    paintAvatar(document.getElementById('stageIconTop'), cur, 16, false);
+    document.getElementById('stageNameTop').textContent = cur.name;
+    document.getElementById('sceneLabel').textContent = '· ' + cur.scene;
+    paintAvatar(document.getElementById('lifeAvatar'), cur, 26, true);
+    applyLifeTheme(cur);
+    lifeFillPct = -1;
+  }
+  const pct = Math.round(lifeStageProgress(idx) * 100);
+  if (pct !== lifeFillPct) {
+    lifeFillPct = pct;
+    document.getElementById('subwayFill').style.width = pct + '%';
+  }
+}
+
+// 이번 승급으로 새로 생긴 수입원/열린 콘텐츠 안내
+function lifeStageUnlockNotes(stage, prev) {
+  const notes = [];
+  if (stage.kind === 'stage' && stage.ref > 0) {
+    notes.push('💼 새 수입원: ' + stages[stage.ref].jobs.map(j => j.icon + ' ' + j.name).join(' · '));
+  }
+  const opened = UI_FEATURES.filter(f => f.at > prev.at && f.at <= stage.at);
+  if (opened.length) notes.push('🔓 해금: ' + opened.map(f => f.icon + ' ' + f.name).join(', '));
+  return notes;
+}
+function celebrateLifeStageUp(stage, prev) {
+  const app = document.getElementById('app');
+  const banner = document.createElement('div');
+  banner.className = 'life-banner';
+  const head = document.createElement('div');
+  head.className = 'lb-head';
+  head.textContent = '🎉 인생 단계 상승!';
+  const av = document.createElement('div');
+  av.className = 'lb-avatar';
+  paintAvatar(av, stage, 52, true);
+  const nm = document.createElement('div');
+  nm.className = 'lb-name';
+  nm.textContent = stage.icon + ' ' + stage.name;
+  banner.appendChild(head);
+  banner.appendChild(av);
+  banner.appendChild(nm);
+  [stage.tag].concat(lifeStageUnlockNotes(stage, prev)).forEach(t => {
+    if (!t) return;
+    const line = document.createElement('div');
+    line.className = 'lb-line';
+    line.textContent = t;
+    banner.appendChild(line);
+  });
+  app.appendChild(banner);
+  setTimeout(() => banner.remove(), 2800);
+
+  const flash = document.createElement('div');
+  flash.className = 'crit-screen-flash gold';
+  document.body.appendChild(flash);
+  setTimeout(() => flash.remove(), 520);
+  spawnConfettiBurst(18, ['🪙', '💰', '✨', '⭐']);
+  // 직업 승급/칭호 승급은 기존 로직이 효과음을 내므로, 새로 생긴 단계(자영업자)만 여기서 낸다
+  if (stage.kind === 'extra') playSound('levelUp');
+  ['lifeAvatar', 'stageIconTop'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('pop');
+    void el.offsetWidth;
+    el.classList.add('pop');
+    setTimeout(() => el.classList.remove('pop'), 850);
+  });
+}
+
+// 내 인생 여정 모달: 인생 카드 + 다음 단계 + 전체 단계 목록
+function renderLifeModal() {
+  const idx = getLifeStageIndex();
+  const cur = LIFE_STAGES[idx], next = LIFE_STAGES[idx + 1];
+  paintAvatar(document.getElementById('lifeModalAvatar'), cur, 56, true);
+  document.getElementById('lifeModalName').textContent = cur.icon + ' ' + cur.name;
+  document.getElementById('lifeModalScene').textContent = cur.scene;
+  document.getElementById('lifeModalTotal').textContent = '총 수입 ' + formatWon(totalEarned) + '원';
+  const nextEl = document.getElementById('lifeModalNext');
+  nextEl.textContent = '';
+  if (next) {
+    const line = document.createElement('div');
+    line.textContent = '다음 단계 ▶ ' + next.icon + ' ' + next.name + ' · 총 수입 ' + goalWonLabel(next.at) + '원';
+    const track = document.createElement('div');
+    track.className = 'daily-bar-track';
+    track.style.marginTop = '5px';
+    const fill = document.createElement('div');
+    fill.className = 'daily-bar-fill';
+    fill.style.width = Math.round(lifeStageProgress(idx) * 100) + '%';
+    track.appendChild(fill);
+    nextEl.appendChild(line);
+    nextEl.appendChild(track);
+  } else {
+    nextEl.textContent = '🏆 마지막 단계에 도달했어요!';
+  }
+  const list = document.getElementById('lifeList');
+  list.textContent = '';
+  LIFE_STAGES.forEach((st, i) => {
+    const row = document.createElement('div');
+    row.className = 'life-row' + (i < idx ? ' done' : i === idx ? ' current' : '');
+    const av = document.createElement('span');
+    av.className = 'lr-av';
+    paintAvatar(av, st, 22, false);
+    const nm = document.createElement('span');
+    nm.className = 'lr-name';
+    nm.textContent = st.icon + ' ' + st.name;
+    const need = document.createElement('span');
+    need.className = 'lr-need';
+    need.textContent = i < idx ? '✅' : i === idx ? '지금 여기' : '🔒 ' + goalWonLabel(st.at) + '원';
+    row.appendChild(av);
+    row.appendChild(nm);
+    row.appendChild(need);
+    list.appendChild(row);
+  });
+  const curRow = list.querySelector('.life-row.current');
+  if (curRow) list.scrollTop = Math.max(0, curRow.offsetTop - 60);
+}
+function openLifeModal() {
+  renderLifeModal();
+  document.getElementById('lifeModal').classList.add('show');
+}
+document.getElementById('stageProgress').addEventListener('click', openLifeModal);
+document.getElementById('lifeAvatar').addEventListener('click', openLifeModal);
+document.getElementById('lifeCloseBtn').addEventListener('click', () => {
+  document.getElementById('lifeModal').classList.remove('show');
+});
+
 // ===== 진행형 해금 (첫 3분 단순화) =====
 // 처음 접속한 유저에게 모든 기능을 한꺼번에 보여주지 않고, 총 수입(totalEarned)이 목표에 닿을 때마다
 // 하나씩 열어준다. 한 번 열린 기능은 환생/리셋 이후에도 다시 잠기지 않는다(세이브에 uiUnlocks로 저장).
@@ -2949,6 +3280,7 @@ const UI_FEATURES = [
 
 // 10의 거듭제곱에 가까운 목표를 "10만 / 10억 / 1경"처럼 깔끔하게 표기
 function goalWonLabel(n) {
+  if (n < 1e4) return n.toLocaleString('ko-KR');
   const g = Math.floor(Math.log10(n) / 4);
   const v = n / Math.pow(10, g * 4);
   return (Number.isInteger(v) ? v : +v.toFixed(2)) + (magnitudeUnits[g] || '');
@@ -3124,6 +3456,26 @@ let isBrandNewPlayer = false;
 // 함께 올려준다. lastSeenPatchVersion이 patchNotes[0].version과 다르면 "안 읽은 공지"로
 // 간주해 배지를 띄우고, 기존 유저가 접속하면 자동으로 한 번 띄워준다.
 const patchNotes = [
+  {
+    version: '2026091904',
+    date: '2026-09-19',
+    items: [
+      '🎲 랜덤 이벤트가 내 인생 단계와 자산에 맞춰 찾아와요: 초반엔 길에서 지갑 줍기, 중반엔 사업 투자 제안, 후반엔 기업 인수 제안처럼요',
+      '💸 이벤트 금액은 내 수입 규모에 맞춰지고, 선택하기 전에 투자금과 위험이 미리 표시돼요',
+      '📣 "응원" 이벤트에서 피버 게이지를 미리 채울 수 있어요. 피버 도중에는 이벤트가 끼어들지 않아요',
+      '🧾 자산이 커지면 세무조사, 부동산 급매, 로또 같은 이벤트도 등장해요'
+    ]
+  },
+  {
+    version: '2026091903',
+    date: '2026-09-19',
+    items: [
+      '🧭 인생 단계가 하나의 여정으로 합쳐졌어요: 노숙자부터 "인생역전 그 자체"까지 19단계. 화면 위쪽 단계 표시를 누르면 내 인생 카드와 전체 여정을 볼 수 있어요',
+      '🧑 단계가 오르면 캐릭터가 바뀌고, 거리 배경도 함께 변해요 (직장인 이후로도 계속!)',
+      '🎉 단계 상승 연출 추가: 화면 효과와 함께 새로 열린 콘텐츠와 수입원을 알려줘요',
+      '🏬 5백만원에서 "자영업자" 단계가 새로 생겼어요 (상가가 열리는 시점이에요)'
+    ]
+  },
   {
     version: '2026091902',
     date: '2026-09-19',
@@ -3581,32 +3933,11 @@ function render() {
   const stage = stages[stageIndex];
   document.getElementById('tapIcon').textContent = stage.icon;
   document.getElementById('tapLabel').textContent = stage.tapLabel;
-  if (map2Unlocked) {
-    const wealth = getWealthTitle();
-    document.getElementById('stageIconTop').textContent = wealth.icon;
-    document.getElementById('stageNameTop').textContent = wealth.name;
-  } else {
-    document.getElementById('stageIconTop').textContent = stage.icon;
-    document.getElementById('stageNameTop').textContent = stage.name;
-  }
-  document.getElementById('sceneLabel').textContent = '· ' + stage.sceneName;
   const sceneEl = document.querySelector('.scene');
   if (sceneEl && !sceneEl.classList.contains('stage' + stageIndex)) {
     sceneEl.className = 'scene stage' + stageIndex;
   }
-
-  const prevThreshold = stageIndex === 0 ? 0 : stages[stageIndex - 1].threshold;
-  const range = stage.threshold - prevThreshold;
-  const progress = Math.min(1, (totalEarned - prevThreshold) / range);
-  document.getElementById('subwayFill').style.width = ((stageIndex + progress) / stages.length * 100) + '%';
-
-  const stopsEl = document.getElementById('subwayStops');
-  stopsEl.innerHTML = '';
-  stages.forEach((s, i) => {
-    const dot = document.createElement('div');
-    dot.className = 'stop' + (i < stageIndex ? ' done' : i === stageIndex ? ' current' : '');
-    stopsEl.appendChild(dot);
-  });
+  updateLifeStageUI(); // 상단 단계 표시/캐릭터/배경/진행바 (직업 단계 + 재산 칭호를 하나로 통합)
 
   allJobs.forEach((job, idx) => {
     if (job.stageIdx > stageIndex) return;
@@ -5112,7 +5443,7 @@ async function renderLeaderboardList() {
 // 상위 10명 목록 밖에 있을 때, 목록 맨 아래에 구분선과 함께 "나"의 실제 순위를 이어서 보여준다.
 async function appendMyRankRowIfOutsideTop(lbEl, period, isBurn) {
   const info = await fetchMyRankInfo(period);
-  if (!info || info.rank === null || info.rank <= 10) return;
+  if (!info || info.rank === null || info.rank <= LEADERBOARD_TOP_N) return;
   // 조회하는 동안 사용자가 다른 탭으로 넘어갔을 수 있으니 그 사이 탭이 바뀌었으면 그리지 않는다.
   if (currentLeaderboardPeriod !== period) return;
   const divider = document.createElement('div');
@@ -5203,9 +5534,9 @@ function unsubscribeLeaderboardRealtime() {
   }
 }
 
-// Realtime이 (설정 미비 등으로) 조용히 안 오는 경우를 대비한 폴백. 예전보다 훨씬
-// 짧은 주기(1분)로만 보조적으로 재조회한다 - 정상적으로 Realtime이 들어오고 있어도
-// 겹쳐서 한 번 더 그리는 정도라 문제 없다.
+// Realtime이 (설정 미비 등으로) 조용히 안 오는 경우를 대비한 폴백. 짧은 주기(1분)로만
+// 보조적으로 재조회한다 - 정상적으로 Realtime이 들어오고 있어도 겹쳐서 한 번 더
+// 그리는 정도라 문제 없다.
 const LEADERBOARD_FALLBACK_REFRESH_INTERVAL = 60 * 1000; // 1분
 let leaderboardRefreshTimer = null;
 
@@ -5445,6 +5776,7 @@ let feverEndsAt = 0;
 let feverCooldownEndsAt = 0;
 let feverLastTapAt = 0;
 let feverLastTickAt = 0;
+let feverHoldUntil = 0; // 이 시각까지는 게이지가 줄지 않는다 (응원 이벤트로 채운 게이지 보존용)
 let feverEarned = 0;
 let feverParticleCount = 0;
 let lastFeverUiKey = '';
@@ -5523,7 +5855,7 @@ function feverTick() {
   feverLastTickAt = now;
   if (feverActive) {
     if (now >= feverEndsAt) endFever();
-  } else if (feverGauge > 0 && now - feverLastTapAt > FEVER_IDLE_GRACE_MS) {
+  } else if (feverGauge > 0 && now - feverLastTapAt > FEVER_IDLE_GRACE_MS && now >= feverHoldUntil) {
     feverGauge = Math.max(0, feverGauge - FEVER_DECAY_PER_SEC * dt);
   }
   updateFeverUI();
@@ -5684,13 +6016,226 @@ function scheduleNextRandomEvent() {
   const delay = 90000 + Math.random() * 60000;
   setTimeout(triggerRandomEvent, delay);
 }
+// ===== 상황 인식형 이벤트 엔진 =====
+// 예전엔 4종을 무작위로 뽑았지만, 이제는 지금의 인생 단계 / 자산 / 피버 상태를 보고
+// "지금 나올 수 있는 이벤트"만 골라서 뽑는다.
+//  - minStage/maxStage : LIFE_STAGES 인덱스 범위 (0=노숙자 ... 18=인생역전 그 자체)
+//  - minMoney / can(ctx): 자산·상태 조건
+//  - build(ctx)        : 그 순간의 금액을 계산해 제목/설명/선택지/결과를 만든다.
+//                        선택하기 전에 투자금과 위험을 설명에 보여준다.
+// 보상/피해는 "1분치 수입(unit)" 또는 보유금의 일정 비율로 정해서 어느 단계에서든 균형이 유지된다.
+// 기존 4종은 그대로 보존해 같은 풀에 넣었다.
+function eventTier(idx) { return idx <= 1 ? 'street' : idx <= 4 ? 'work' : idx <= 8 ? 'owner' : idx <= 13 ? 'tycoon' : 'elite'; }
+function evUnit() { return Math.max(passiveTotalLabel() * 60, getClickValue() * 30, 60); }
+function evCtx() {
+  const idx = getLifeStageIndex();
+  return { idx, stage: LIFE_STAGES[idx], tier: eventTier(idx), money, unit: evUnit() };
+}
+function evText(map, ctx) { return map[ctx.tier] || map.default || ''; }
+function evWon(n) { return formatWon(n) + '원'; }
+function evGain(n) { const g = Math.max(0, Math.floor(n)); money += g; return g; }
+function evLoss(n) { const l = Math.max(0, Math.min(Math.floor(n), Math.floor(money))); money -= l; return l; }
+function lottoCost(ctx) { return Math.max(1e5, Math.floor(ctx.unit * 2)); }
+
+const EVENT_POOL = [
+  // --- 기존 이벤트 4종 (그대로 보존) ---
+  { id: 'friendLoan',  minStage: 0, maxStage: 18, minMoney: 1e4, weight: 1, event: randomEvents[0] },
+  { id: 'scratch',     minStage: 0, maxStage: 18, minMoney: 1e4, weight: 1, event: randomEvents[1] },
+  { id: 'shadyInvest', minStage: 0, maxStage: 18, minMoney: 1e4, weight: 1, event: randomEvents[2] },
+  { id: 'partner',     minStage: 0, maxStage: 18, minMoney: 1e4, weight: 1, event: randomEvents[3] },
+
+  // --- 초반: 노숙자 ~ 자영업자 ---
+  { id: 'wallet', minStage: 0, maxStage: 4, minMoney: 0, weight: 3, build: ctx => ({
+    title: '👛 길에서 지갑을 발견했습니다',
+    desc: evText({ street: '골목길 바닥에서 낡은 지갑을 주웠습니다.', default: '퇴근길에 누군가 흘린 지갑을 주웠습니다.' }, ctx) + ' 안에는 현금과 신분증이 들어 있어요.',
+    choiceA: '주인에게 돌려주기', choiceB: '슬쩍 챙기기',
+    resolve: pick => {
+      if (pick === 'A') return `🙏 주인이 크게 고마워하며 사례금 +${evWon(evGain(ctx.unit * 3))}을 줬습니다.`;
+      if (Math.random() < 0.75) return `💰 지갑 속 현금 +${evWon(evGain(ctx.unit * 6))}을 챙겼습니다. (아무도 못 봤겠죠?)`;
+      const l = evLoss(Math.min(ctx.money * 0.3, ctx.unit * 4));
+      return l > 0 ? `🚨 CCTV에 찍혔습니다... 벌금 -${evWon(l)}` : '🚨 CCTV에 찍혔지만 가진 게 없어 훈계만 듣고 풀려났습니다.';
+    }
+  }) },
+  { id: 'junk', minStage: 0, maxStage: 2, minMoney: 0, weight: 2, build: ctx => ({
+    title: '📦 고물상 특가',
+    desc: '고물상 아저씨가 "오늘 시세가 좋다"며 모아둔 걸 지금 넘기라고 합니다. 내일이면 값이 오를 수도, 떨어질 수도 있어요.',
+    choiceA: '지금 팔기', choiceB: '내일 팔기 (도박)',
+    resolve: pick => {
+      if (pick === 'A') return `💵 +${evWon(evGain(ctx.unit * 2))}을 받았습니다.`;
+      if (Math.random() < 0.5) return `📈 시세가 올랐습니다! +${evWon(evGain(ctx.unit * 5))}`;
+      return `📉 시세가 폭락했습니다... +${evWon(evGain(ctx.unit * 1))}만 받았습니다.`;
+    }
+  }) },
+  { id: 'credit', minStage: 4, maxStage: 6, minMoney: 1e6, weight: 2, build: ctx => ({
+    title: '📒 단골의 외상 부탁',
+    desc: '오랜 단골손님이 이번 달만 외상으로 해달라고 부탁합니다. 대부분 갚지만 가끔 떼이기도 해요.',
+    choiceA: '외상 허용', choiceB: '정중히 거절',
+    resolve: pick => {
+      if (pick === 'B') return '단골이 서운한 표정으로 돌아갔습니다.';
+      if (Math.random() < 0.8) return `🙌 약속대로 갚았고 팁까지 얹어줬습니다. +${evWon(evGain(ctx.unit * 5))}`;
+      return `😢 연락이 끊겼습니다... -${evWon(evLoss(ctx.unit * 3))}`;
+    }
+  }) },
+
+  // --- 전 구간: 피버와 연결되는 응원 이벤트 (피버 중/재충전 중에는 나오지 않음) ---
+  { id: 'cheer', minStage: 1, maxStage: 18, minMoney: 0, weight: 2, can: () => !feverActive && Date.now() >= feverCooldownEndsAt, build: ctx => ({
+    title: '📣 응원이 쏟아집니다',
+    desc: evText({
+      street: '같은 골목 사람들이 "힘내라!"며 응원해줍니다.',
+      work: '동료들이 응원 단톡방을 열고 파이팅을 외칩니다.',
+      owner: '단골손님들이 우리 가게를 응원하는 후기를 남겼습니다.',
+      tycoon: '임직원들이 사기 진작 행사를 열고 뜨겁게 응원합니다.',
+      elite: '전 세계 팬들이 당신의 이름을 외치며 응원합니다.'
+    }, ctx) + ' 이 기운을 피버로 바꿔볼까요?',
+    choiceA: '🔥 피버 게이지 충전', choiceB: '💰 응원금 받기',
+    resolve: pick => {
+      if (pick === 'A') {
+        feverGauge = Math.max(feverGauge, FEVER_GAUGE_MAX * 0.9);
+        feverLastTapAt = Date.now();
+        feverHoldUntil = Date.now() + 20000;
+        updateFeverUI();
+        return '🔥 피버 게이지가 90%까지 찼습니다! 20초 안에 연타하면 피버가 터져요!';
+      }
+      return `💰 응원금 +${evWon(evGain(ctx.unit * 3))}을 받았습니다.`;
+    }
+  }) },
+
+  // --- 중반 이후: 자산이 충분할 때만 ---
+  { id: 'lotto', minStage: 3, maxStage: 18, minMoney: 0, weight: 2, can: ctx => ctx.money >= lottoCost(ctx) * 20, build: ctx => {
+    const cost = lottoCost(ctx);
+    return {
+      title: '🎟️ 로또 한 장 어때요?',
+      desc: `복권방 앞을 지나는데 로또 한 장(${evWon(cost)})이 눈에 들어옵니다. 대부분은 꽝이지만, 아주 드물게 큰 당첨금이 터집니다.`,
+      choiceA: '구매하기', choiceB: '지나가기',
+      resolve: pick => {
+        if (pick === 'B') return '복권방을 그냥 지나쳤습니다.';
+        const paid = evLoss(cost);
+        const r = Math.random();
+        let mult = 0, label = '';
+        if (r < 0.003) { mult = 150; label = '🎊 1등 당첨!!!'; }
+        else if (r < 0.033) { mult = 8; label = '🎉 2등 당첨!'; }
+        else if (r < 0.183) { mult = 2; label = '🍀 3등 당첨!'; }
+        if (mult === 0) return `꽝... (-${evWon(paid)}) 다음 기회에.`;
+        if (mult === 150) setTimeout(() => mascotSay(MASCOT_LINES.megaGolden), 600);
+        return `${label} +${evWon(evGain(paid * mult))}`;
+      }
+    };
+  } },
+  { id: 'invest', minStage: 4, maxStage: 18, minMoney: 1e6, weight: 2, build: ctx => {
+    const stake = Math.floor(ctx.money * 0.1);
+    return {
+      title: '💼 사업 투자 제안',
+      desc: evText({
+        work: '단골손님이 새 사업 아이템에 투자를 제안합니다.',
+        owner: '친구가 새 사업에 투자해보라고 제안합니다.',
+        tycoon: '해외 펀드 매니저가 신사업 공동 투자를 제안합니다.',
+        elite: '우주 개척 펀드가 지분 투자를 제안합니다.'
+      }, ctx) + ` 투자금은 ${evWon(stake)}. 성공하면 투자금의 3배를 돌려받지만, 실패하면 전액 잃습니다.`,
+      choiceA: '투자한다', choiceB: '거절한다',
+      resolve: pick => {
+        if (pick === 'B') return '신중하게 거절했습니다. 기회는 또 옵니다.';
+        const st = Math.min(stake, Math.floor(money));
+        if (Math.random() < 0.35) return `📈 성공! 투자금의 3배를 돌려받았습니다. (+${evWon(evGain(st * 2))})`;
+        return `📉 실패... 투자금 -${evWon(evLoss(st))}`;
+      }
+    };
+  } },
+  { id: 'tax', minStage: 5, maxStage: 18, minMoney: 1e7, weight: 2, build: ctx => {
+    const bill = Math.floor(ctx.money * 0.04);
+    return {
+      title: '🧾 세무조사 통지',
+      desc: evText({
+        owner: '세무서에서 세무조사 통지서가 도착했습니다.',
+        tycoon: '국세청 특별 세무조사팀이 방문했습니다.',
+        elite: '국제 조세 당국이 조사에 착수했습니다.'
+      }, ctx) + ` 납부할 세금은 ${evWon(bill)}. 절세 컨설팅은 성공하면 크게 아끼지만, 적발되면 가산세가 붙습니다.`,
+      choiceA: '성실 납부', choiceB: '절세 컨설팅',
+      resolve: pick => {
+        if (pick === 'A') return `🧾 세금 -${evWon(evLoss(bill))}을 납부했습니다. 마음은 편합니다.`;
+        if (Math.random() < 0.6) return `✨ 절세 성공! 수수료 -${evWon(evLoss(ctx.money * 0.01))}만 냈습니다.`;
+        return `🚨 적발! 가산세까지 -${evWon(evLoss(ctx.money * 0.09))}`;
+      }
+    };
+  } },
+  { id: 'interview', minStage: 6, maxStage: 14, minMoney: 1e8, weight: 1, build: ctx => ({
+    title: '📰 언론 인터뷰 요청',
+    desc: '경제 매체에서 인터뷰 요청이 왔습니다. 이름을 알릴 기회지만, 말 한마디가 구설이 될 수도 있어요.',
+    choiceA: '인터뷰 응하기', choiceB: '정중히 사양',
+    resolve: pick => {
+      if (pick === 'B') return '조용히 내실을 다지기로 했습니다.';
+      if (Math.random() < 0.65) return `📰 호평이 쏟아졌습니다! 매출이 뛰었어요. +${evWon(evGain(ctx.unit * 10))}`;
+      return `💥 발언이 논란이 됐습니다... -${evWon(evLoss(ctx.unit * 6))}`;
+    }
+  }) },
+  { id: 'estate', minStage: 7, maxStage: 13, minMoney: 1e9, weight: 2, build: ctx => {
+    const stake = Math.floor(ctx.money * 0.1);
+    return {
+      title: '🏢 부동산 급매',
+      desc: `급매로 나온 건물이 있습니다. 매입 대금은 ${evWon(stake)}. 값이 오르면 40% 이익, 내리면 20% 손해를 볼 수 있어요.`,
+      choiceA: '매입하기', choiceB: '지켜보기',
+      resolve: pick => {
+        if (pick === 'B') return '조금 더 지켜보기로 했습니다.';
+        const st = Math.min(stake, Math.floor(money));
+        if (Math.random() < 0.5) return `🏢 시세가 올라 되팔았습니다! +${evWon(evGain(st * 0.4))}`;
+        return `📉 시세가 내려갔습니다... -${evWon(evLoss(st * 0.2))}`;
+      }
+    };
+  } },
+  { id: 'acquisition', minStage: 9, maxStage: 18, minMoney: 1e11, weight: 2, build: ctx => ({
+    title: '🏦 기업 인수 제안',
+    desc: evText({
+      tycoon: '대기업이 당신의 회사에 인수 제안을 보내왔습니다.',
+      elite: '거대 다국적 기업이 당신의 회사에 인수 제안을 보내왔습니다.'
+    }, ctx) + ' 협상이 잘 되면 프리미엄을 받지만, 결렬되면 자문 비용이 듭니다.',
+    choiceA: '협상하기', choiceB: '거절하기',
+    resolve: pick => {
+      if (pick === 'B') return '"내 회사는 내가 지킨다!" 제안을 정중히 거절했습니다.';
+      if (Math.random() < 0.55) return `🤝 인수 프리미엄을 받았습니다! +${evWon(evGain(ctx.unit * 30))}`;
+      return `협상이 결렬됐습니다... 자문 비용 -${evWon(evLoss(ctx.unit * 10))}`;
+    }
+  }) }
+];
+
+// 지금 나올 수 있는 이벤트 목록 (인생 단계 / 자산 / 상태 조건을 모두 만족하는 것)
+function getEligibleEvents(ctx) {
+  return EVENT_POOL.filter(d =>
+    ctx.idx >= d.minStage && ctx.idx <= d.maxStage &&
+    ctx.money >= (d.minMoney || 0) &&
+    (!d.can || d.can(ctx))
+  );
+}
+let lastEventId = null;
+function pickEvent(ctx) {
+  const pool = getEligibleEvents(ctx);
+  // 같은 이벤트가 연달아 나오지 않게 한다 (고를 게 하나뿐이면 예외)
+  const cands = pool.length > 1 ? pool.filter(d => d.id !== lastEventId) : pool;
+  if (!cands.length) return null;
+  const total = cands.reduce((a, d) => a + (d.weight || 1), 0);
+  let r = Math.random() * total;
+  for (const d of cands) {
+    r -= (d.weight || 1);
+    if (r <= 0) return d;
+  }
+  return cands[cands.length - 1];
+}
 function triggerRandomEvent() {
-  if (document.querySelector('.modal-overlay.show') || money < 10000) {
+  if (document.querySelector('.modal-overlay.show')) {
     scheduleNextRandomEvent();
     return;
   }
-  const ev = randomEvents[Math.floor(Math.random() * randomEvents.length)];
-  showRandomEventModal(ev);
+  if (feverActive) {
+    // 피버 중에는 끼어들지 않고 잠깐 뒤로 미룬다
+    setTimeout(triggerRandomEvent, 15000);
+    return;
+  }
+  const ctx = evCtx();
+  const def = pickEvent(ctx);
+  if (!def) {
+    scheduleNextRandomEvent();
+    return;
+  }
+  lastEventId = def.id;
+  showRandomEventModal(def.build ? def.build(ctx) : def.event);
   scheduleNextRandomEvent();
 }
 scheduleNextRandomEvent();
@@ -6675,6 +7220,11 @@ function getLeaderboardCollectionName(period) {
 function getLeaderboardSortField(period) {
   return period === 'swordcurrent' ? 'swordLevel' : 'amount';
 }
+// 랭킹창에 몇 명까지 보여줄지. 예전엔 10명이라 순위가 조금만 밀려도 안 보였는데,
+// 더 많이 보고 싶다는 요청으로 30명까지 늘렸다. 실제로 DB에서 넉넉히 더 받아와서
+// (LEADERBOARD_FETCH_LIMIT) 우리가 직접 재정렬한 뒤 그중 상위 N명만 자른다.
+const LEADERBOARD_TOP_N = 30;
+const LEADERBOARD_FETCH_LIMIT = 100;
 async function fetchLeaderboard(period) {
   if (!db) return [];
   try {
@@ -6686,11 +7236,11 @@ async function fetchLeaderboard(period) {
     // 뒤틀릴 수 있다. 그래서 넉넉히 더 받아온 뒤(limit 10 대신 40) fromBigStorable로
     // 전부 실제 숫자로 변환해서 우리가 직접 다시 정렬한다 - 예전 오염된 문서가 섞여
     // 있어도 화면에 보이는 순위는 항상 실제 금액 크기 기준으로 정확하게 나온다.
-    let docs = await dbGetDocsOrdered(colName, sortField, 40);
+    let docs = await dbGetDocsOrdered(colName, sortField, LEADERBOARD_FETCH_LIMIT);
     if (period === 'swordcurrent') docs = docs.filter(d => typeof d.swordLevel === 'number' && d.swordLevel >= 0);
     const decoded = docs.map((raw) => ({ uid: raw.id, ...raw, amount: sortField === 'swordLevel' ? (raw.swordLevel || 0) : fromBigStorable(raw.amount) }));
     decoded.sort((a, b) => b.amount - a.amount);
-    return decoded.slice(0, 10).map((entry, i) => ({ rank: i + 1, ...entry }));
+    return decoded.slice(0, LEADERBOARD_TOP_N).map((entry, i) => ({ rank: i + 1, ...entry }));
   } catch (e) {
     console.error('랭킹보드 조회 실패:', e);
     return [];
@@ -7060,6 +7610,7 @@ function applySaveData(data, opts) {
   }
   checkUiUnlocks(true);
   feverCount = Number(data.feverCount) || 0;
+  lastLifeIdx = -1; // 세이브를 불러온 직후(클라우드 동기화 포함)에는 승급 연출을 띄우지 않는다
 
   if (opts.checkOffline) {
     const now = Date.now();
