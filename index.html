@@ -14,7 +14,7 @@
 // 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
 // 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
 (function() {
-  var CURRENT_VERSION = '2026091905';
+  var CURRENT_VERSION = '2026091906';
   try {
     if (sessionStorage.getItem('lrVersionChecked') === CURRENT_VERSION) return;
     fetch(location.pathname + '?_cb=' + Date.now(), { cache: 'no-store' })
@@ -326,7 +326,9 @@
   .app .scene[data-life-theme] { background: var(--ls-bg); }
   .app .scene[data-life-theme] .building { background: var(--ls-building); }
   .life-avatar {
-    position: absolute; left: 8px; bottom: 33px; z-index: 4; font-size: 20px; line-height: 1;
+    /* 예전엔 화면 왼쪽 아래(상점 칸이 있는 자리)에 있어서 상점 아이콘이랑 겹쳐 보였다.
+       스카이라인 뒤 빈 공간인 오른쪽 위 구석으로 옮겨서 상점/사이드워크와 안 겹치게 했다. */
+    position: absolute; right: 8px; top: 6px; z-index: 4; font-size: 20px; line-height: 1;
     cursor: pointer; user-select: none; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.45));
   }
   .life-avatar img { height: 26px; width: auto; display: block; }
@@ -2066,7 +2068,7 @@ const achievements = [
   { id: 'stage3', name: '알바 인생', desc: '알바생으로 승급', icon: '🧑‍🍳', cond: () => stageIndex >= 2, reward: 0 },
   { id: 'earn_10b', name: '자산가 반열', desc: '총 수입 10억원 달성', icon: '💵', cond: () => totalEarned >= 1e9, reward: 0.01 },
   { id: 'earn_1qd', name: '경 단위 재벌', desc: '총 수입 1경원 달성', icon: '🏯', cond: () => totalEarned >= 1e16, reward: 0.04 },
-  { id: 'earn_max_title', name: '인생역전 그 자체', desc: '최고 칭호(총 수입 100해원) 달성', icon: '🪐', cond: () => totalEarned >= 1e20, reward: 0.1 },
+  { id: 'earn_max_title', name: '인생역전 그 자체', desc: '최고 칭호(총 수입 1극원) 달성', icon: '🪐', cond: () => totalEarned >= 1e48, reward: 0.1 },
   { id: 'click_1000', name: '부지런한 손', desc: '누적 클릭 1,000회', icon: '👆', cond: () => totalClickCount >= 1000, reward: 0.01 },
   { id: 'click_10000', name: '클릭의 장인', desc: '누적 클릭 10,000회', icon: '🖐️', cond: () => totalClickCount >= 10000, reward: 0.02 },
   { id: 'click_100000', name: '손가락에 굳은살', desc: '누적 클릭 100,000회', icon: '🦾', cond: () => totalClickCount >= 100000, reward: 0.04 },
@@ -2763,7 +2765,18 @@ const wealthTitles = [
   { threshold: 1e17, name: '우주산업 개척자', icon: '🚀' },
   { threshold: 1e18, name: '은하계 재벌', icon: '🌌' },
   { threshold: 1e19, name: '인생역전의 전설', icon: '🏆' },
-  { threshold: 1e20, name: '인생역전 그 자체', icon: '✨' }
+  // 여기서부터는 magnitudeUnits(해→자→양→구→간→정→재→극)에 맞춰 한 단위씩 올라가는
+  // "초월" 칭호들이다. 예전엔 100해원(1e20)에서 칭호가 끝나버려서 그 이후로는 아무리
+  // 벌어도 계속 같은 칭호+아바타만 보이는 문제가 있었는데, 극(1e48)까지 늘려서 훨씬
+  // 오래 새로운 칭호/캐릭터를 볼 수 있게 했다.
+  { threshold: 1e20, name: '해원의 지배자', icon: '🌠' },        // 해
+  { threshold: 1e24, name: '자원의 초월자', icon: '🌀' },        // 자
+  { threshold: 1e28, name: '양자 우주의 창조주', icon: '⚛️' },   // 양
+  { threshold: 1e32, name: '구원의 지배자', icon: '🕳️' },        // 구
+  { threshold: 1e36, name: '간극을 초월한 자', icon: '♾️' },      // 간
+  { threshold: 1e40, name: '정점의 신', icon: '🌟' },            // 정
+  { threshold: 1e44, name: '재림한 존재', icon: '🔱' },          // 재
+  { threshold: 1e48, name: '인생역전 그 자체', icon: '✨' }       // 극 (최종)
 ];
 function getWealthTitle() {
   let title = wealthTitles[0];
@@ -3001,7 +3014,7 @@ function clearLoginGate() {
 // 유저가 발견 못 하고 지나칠 수 있다. 각 기능을 실제로 사용할 수 있게 되는 시점에
 // 딱 한 번씩만 안내 토스트를 띄운다.
 // ===== 인생 단계 (메인 진행축) =====
-// 기존의 "직업 단계(stages 4개)"와 "재산 칭호(wealthTitles 15개)"를 하나의 여정(19단계)으로 묶어 보여주는
+// 기존의 "직업 단계(stages 4개)"와 "재산 칭호(wealthTitles 22개)"를 하나의 여정(26단계)으로 묶어 보여주는
 // 표시 계층이다. 저장 데이터(stageIndex, 직업/업그레이드 배열)와 직업 해금 규칙은 그대로 두고,
 // 총 수입(totalEarned)만으로 현재 단계를 계산한다 → 세이브 호환에 영향 없음.
 //
@@ -3012,7 +3025,7 @@ function clearLoginGate() {
 const LIFE_ASSET_BASE = 'assets/life/';
 function lifeAssetUrl(file) { return /^(https?:|data:|\/)/.test(file) ? file : LIFE_ASSET_BASE + file; }
 
-// 순서: 노숙자, 일용직, 알바생, 직장인, 자영업자, 그다음은 wealthTitles 1~14 (새싹 ~ 인생역전 그 자체)
+// 순서: 노숙자, 일용직, 알바생, 직장인, 자영업자, 그다음은 wealthTitles 1~21 (새싹 ~ 인생역전 그 자체, 극 단위까지)
 // theme = [하늘색, 땅색, 건물색] (직장인까지는 기존 .scene.stageN CSS가 담당)
 const LIFE_LOOKS = [
   { avatar: '🧔', acc: '📦', tag: '무일푼에서 시작해요. 폐지 한 장이 첫걸음!' },
@@ -3033,6 +3046,13 @@ const LIFE_LOOKS = [
   { avatar: '🧑‍🚀', acc: '🚀', tag: '이제 하늘을 넘어 우주로!', scene: '우주 발사장', theme: ['#05081c', '#232a5c', '#3a4380'] },
   { avatar: '🧑‍🚀', acc: '🌌', tag: '은하계 곳곳에 내 회사가 있어요', scene: '은하 정거장', theme: ['#0a0420', '#3a1f6a', '#5b34a0'] },
   { avatar: '🧙', acc: '🏆', tag: '누구나 아는 인생역전의 전설', scene: '전설의 무대', theme: ['#1b0f2e', '#e0b33d', '#7a4fc9'] },
+  { avatar: '🧙‍♂️', acc: '🌠', tag: '해 단위 재산을 다스리는 존재가 됐어요', scene: '해원의 성소', theme: ['#0d0620', '#5b34a0', '#2a1750'] },
+  { avatar: '🧝‍♂️', acc: '🌀', tag: '숫자 자릿수가 의미 없어지는 경지예요', scene: '차원의 균열', theme: ['#08041a', '#7a3fd6', '#2a1450'] },
+  { avatar: '👽', acc: '⚛️', tag: '양자역학마저 내 뜻대로 움직여요', scene: '양자 정원', theme: ['#020214', '#3fd6c8', '#123a3a'] },
+  { avatar: '😇', acc: '🕳️', tag: '셀 수 없는 재산의 구원자가 됐어요', scene: '무한의 홀', theme: ['#100418', '#d6a53f', '#3a2a12'] },
+  { avatar: '🌈', acc: '♾️', tag: '차원과 차원 사이를 자유로이 거닐어요', scene: '틈새 차원', theme: ['#04041a', '#ff6ec7', '#2a0a3a'] },
+  { avatar: '🌟', acc: '🌟', tag: '모든 정점 위의 정점에 섰어요', scene: '정점의 옥좌', theme: ['#1a1404', '#ffe066', '#4a3a0a'] },
+  { avatar: '🔱', acc: '🔱', tag: '전설이 다시 태어나 재림했어요', scene: '재림의 문', theme: ['#04101a', '#3fa0ff', '#0a2a4a'] },
   { avatar: '🧞', acc: '✨', tag: '당신이 곧 인생역전입니다', scene: '초월의 공간', theme: ['#000010', '#4b2c8f', '#ffd166'] }
 ];
 
@@ -6019,7 +6039,7 @@ function scheduleNextRandomEvent() {
 // ===== 상황 인식형 이벤트 엔진 =====
 // 예전엔 4종을 무작위로 뽑았지만, 이제는 지금의 인생 단계 / 자산 / 피버 상태를 보고
 // "지금 나올 수 있는 이벤트"만 골라서 뽑는다.
-//  - minStage/maxStage : LIFE_STAGES 인덱스 범위 (0=노숙자 ... 18=인생역전 그 자체)
+//  - minStage/maxStage : LIFE_STAGES 인덱스 범위 (0=노숙자 ... 25=인생역전 그 자체)
 //  - minMoney / can(ctx): 자산·상태 조건
 //  - build(ctx)        : 그 순간의 금액을 계산해 제목/설명/선택지/결과를 만든다.
 //                        선택하기 전에 투자금과 위험을 설명에 보여준다.
@@ -6039,10 +6059,10 @@ function lottoCost(ctx) { return Math.max(1e5, Math.floor(ctx.unit * 2)); }
 
 const EVENT_POOL = [
   // --- 기존 이벤트 4종 (그대로 보존) ---
-  { id: 'friendLoan',  minStage: 0, maxStage: 18, minMoney: 1e4, weight: 1, event: randomEvents[0] },
-  { id: 'scratch',     minStage: 0, maxStage: 18, minMoney: 1e4, weight: 1, event: randomEvents[1] },
-  { id: 'shadyInvest', minStage: 0, maxStage: 18, minMoney: 1e4, weight: 1, event: randomEvents[2] },
-  { id: 'partner',     minStage: 0, maxStage: 18, minMoney: 1e4, weight: 1, event: randomEvents[3] },
+  { id: 'friendLoan',  minStage: 0, maxStage: 25, minMoney: 1e4, weight: 1, event: randomEvents[0] },
+  { id: 'scratch',     minStage: 0, maxStage: 25, minMoney: 1e4, weight: 1, event: randomEvents[1] },
+  { id: 'shadyInvest', minStage: 0, maxStage: 25, minMoney: 1e4, weight: 1, event: randomEvents[2] },
+  { id: 'partner',     minStage: 0, maxStage: 25, minMoney: 1e4, weight: 1, event: randomEvents[3] },
 
   // --- 초반: 노숙자 ~ 자영업자 ---
   { id: 'wallet', minStage: 0, maxStage: 4, minMoney: 0, weight: 3, build: ctx => ({
@@ -6078,7 +6098,7 @@ const EVENT_POOL = [
   }) },
 
   // --- 전 구간: 피버와 연결되는 응원 이벤트 (피버 중/재충전 중에는 나오지 않음) ---
-  { id: 'cheer', minStage: 1, maxStage: 18, minMoney: 0, weight: 2, can: () => !feverActive && Date.now() >= feverCooldownEndsAt, build: ctx => ({
+  { id: 'cheer', minStage: 1, maxStage: 25, minMoney: 0, weight: 2, can: () => !feverActive && Date.now() >= feverCooldownEndsAt, build: ctx => ({
     title: '📣 응원이 쏟아집니다',
     desc: evText({
       street: '같은 골목 사람들이 "힘내라!"며 응원해줍니다.',
@@ -6101,7 +6121,7 @@ const EVENT_POOL = [
   }) },
 
   // --- 중반 이후: 자산이 충분할 때만 ---
-  { id: 'lotto', minStage: 3, maxStage: 18, minMoney: 0, weight: 2, can: ctx => ctx.money >= lottoCost(ctx) * 20, build: ctx => {
+  { id: 'lotto', minStage: 3, maxStage: 25, minMoney: 0, weight: 2, can: ctx => ctx.money >= lottoCost(ctx) * 20, build: ctx => {
     const cost = lottoCost(ctx);
     return {
       title: '🎟️ 로또 한 장 어때요?',
@@ -6121,7 +6141,7 @@ const EVENT_POOL = [
       }
     };
   } },
-  { id: 'invest', minStage: 4, maxStage: 18, minMoney: 1e6, weight: 2, build: ctx => {
+  { id: 'invest', minStage: 4, maxStage: 25, minMoney: 1e6, weight: 2, build: ctx => {
     const stake = Math.floor(ctx.money * 0.1);
     return {
       title: '💼 사업 투자 제안',
@@ -6140,7 +6160,7 @@ const EVENT_POOL = [
       }
     };
   } },
-  { id: 'tax', minStage: 5, maxStage: 18, minMoney: 1e7, weight: 2, build: ctx => {
+  { id: 'tax', minStage: 5, maxStage: 25, minMoney: 1e7, weight: 2, build: ctx => {
     const bill = Math.floor(ctx.money * 0.04);
     return {
       title: '🧾 세무조사 통지',
@@ -6181,7 +6201,7 @@ const EVENT_POOL = [
       }
     };
   } },
-  { id: 'acquisition', minStage: 9, maxStage: 18, minMoney: 1e11, weight: 2, build: ctx => ({
+  { id: 'acquisition', minStage: 9, maxStage: 25, minMoney: 1e11, weight: 2, build: ctx => ({
     title: '🏦 기업 인수 제안',
     desc: evText({
       tycoon: '대기업이 당신의 회사에 인수 제안을 보내왔습니다.',
