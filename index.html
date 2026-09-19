@@ -14,7 +14,7 @@
 // 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
 // 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
 (function() {
-  var CURRENT_VERSION = '2026091907';
+  var CURRENT_VERSION = '2026092002';
   try {
     if (sessionStorage.getItem('lrVersionChecked') === CURRENT_VERSION) return;
     fetch(location.pathname + '?_cb=' + Date.now(), { cache: 'no-store' })
@@ -643,6 +643,7 @@
     border-radius: 20px; padding: 9px 26px; font-family: 'Black Han Sans', sans-serif;
     font-size: 13px; cursor: pointer;
   }
+  #swordBattleStartBtn:disabled { opacity: 0.45; cursor: not-allowed; }
   .info-desc { font-size: 12px; color: var(--paper-dim); line-height: 1.6; margin: 8px 0 12px; }
   .info-stats { display: flex; justify-content: space-around; font-size: 11px; color: var(--paper); margin-bottom: 12px; }
   .talent-row {
@@ -921,6 +922,27 @@
   }
   @keyframes wheelSpin { to { transform: rotate(360deg); } }
   .wheel-spinning { animation: wheelSpin 1.1s linear; display: inline-block; }
+  /* 시즌 · 운명 카드 · 명예의 전당 */
+  .fate-card { display: flex; gap: 12px; align-items: center; text-align: left; width: 100%; box-sizing: border-box; background: #2A241D; border: 1px solid var(--gold-dim); border-radius: 12px; padding: 11px 12px; margin-bottom: 8px; cursor: pointer; color: var(--paper); font-family: inherit; }
+  .fate-card:active { background: #35301f; border-color: var(--gold); }
+  .fate-icon { font-size: 28px; flex: 0 0 auto; }
+  .fate-name { font-weight: bold; color: var(--gold); font-size: 13.5px; }
+  .fate-desc { font-size: 11px; color: var(--paper-dim); margin-top: 2px; line-height: 1.45; }
+  .season-grade { font-family: 'Black Han Sans', sans-serif; font-size: 52px; line-height: 1.1; color: var(--gold); text-shadow: 0 0 16px rgba(255,200,80,0.75); }
+  .season-row { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; padding: 6px 2px; border-bottom: 1px solid #3a332a; color: var(--paper); text-align: left; }
+  .season-row b { color: var(--gold); flex: 0 0 auto; }
+  .season-medal-box { margin: 12px 0 4px; font-size: 11.5px; line-height: 1.6; color: var(--paper); background: #1c170f; border: 1px solid var(--gold-dim); border-radius: 10px; padding: 9px 10px; }
+  .hof-tabs { display: flex; gap: 6px; margin-bottom: 8px; }
+  .hof-tab { flex: 1 1 0; background: #2A241D; border: 1px solid #3a332a; border-radius: 8px; color: var(--paper-dim); font-size: 10.5px; padding: 7px 4px; text-align: center; cursor: pointer; font-family: inherit; }
+  .hof-tab.active { background: var(--gold); color: var(--ink); font-weight: bold; border-color: var(--gold); }
+  .hof-body { text-align: left; max-height: 50vh; overflow-y: auto; }
+  .hof-card { background: #2A241D; border: 1px solid #3a332a; border-radius: 10px; padding: 9px 10px; margin-bottom: 8px; }
+  .hof-card h4 { margin: 0 0 4px; font-size: 12.5px; color: var(--gold); }
+  .hof-line { display: flex; gap: 7px; align-items: center; font-size: 11px; color: var(--paper); padding: 2px 0; }
+  .hof-line .who { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hof-line .val { flex: 0 0 auto; color: var(--gold); }
+  .hof-line.me { background: #35301f; border-radius: 6px; }
+  .hof-note { font-size: 10.5px; color: var(--paper-dim); line-height: 1.55; }
 </style>
 <!-- ===== 로그인/클라우드 저장용 SDK (Firebase - 구글 로그인) =====
      구글 로그인이 실제로 작동하려면 이 파일이 https 도메인에 호스팅되어 있어야 합니다.
@@ -1154,12 +1176,13 @@
   <div class="modal-overlay" id="prestigeModal">
     <div class="modal-box">
       <h2>♻️ 환생</h2>
-      <p id="prestigeDesc">지금까지 번 돈을 바탕으로 특성 포인트를 얻고,<br>처음(노숙자)부터 다시 시작합니다.<br>모아둔 컬렉션과 특성은 그대로 유지됩니다.</p>
+      <p id="prestigeDesc">지금까지 번 돈을 바탕으로 특성 포인트를 얻고,<br>처음(노숙자)부터 다시 시작합니다.<br>컬렉션·특성·업적·명예 메달은 그대로 유지되고,<br>환생할 때마다 🎴운명 카드 한 장을 고릅니다.</p>
       <div class="info-stats">
         <div>현재 생산 배율<b id="prestigeCurrentMult">x1.00</b></div>
         <div>획득 포인트<b id="prestigeGainPoints">+0</b></div>
         <div>환생 후 보유 포인트<b id="prestigeNextMult">0P</b></div>
       </div>
+      <div id="prestigeExtra" style="font-size:11px; line-height:1.6; color:var(--paper-dim); background:#1c170f; border:1px solid #3a332a; border-radius:8px; padding:8px 10px; margin-bottom:10px; text-align:left;"></div>
       <div id="challengeCompleteNote" style="display:none; font-size:11.5px; color:#7CFC9A; background:#12351f; border:1px solid #2f6b45; border-radius:8px; padding:8px 10px; margin-bottom:10px;"></div>
       <label id="challengeOfferRow" style="display:flex; align-items:flex-start; gap:8px; font-size:11px; color:var(--paper-dim); background:#1c170f; border:1px solid var(--gold-dim); border-radius:8px; padding:9px 10px; margin-bottom:10px; cursor:pointer;">
         <input type="checkbox" id="challengeCheckbox" style="margin-top:2px;">
@@ -1288,6 +1311,7 @@
       <div class="share-btn-row">
         <button class="close-btn share-mini-btn" id="shareCardBtn">📤 내 기록 공유</button>
         <button class="close-btn share-mini-btn" id="inviteFriendBtn">🎁 친구 초대</button>
+        <button class="close-btn share-mini-btn" id="hofOpenBtn">🏛️ 명예의 전당</button>
       </div>
       <div class="lb-period-tabs" style="margin-top:14px;">
         <button class="lb-period-tab active" data-period="weekly">📅 주간 랭킹</button>
@@ -1472,10 +1496,12 @@
   <div class="modal-overlay" id="swordBattleModal">
     <div class="modal-box">
       <h2>🤺 검 배틀</h2>
-      <p style="font-size:12px; color:var(--paper-dim); margin-top:-4px;">내 검의 강화 레벨로 무작위 상대와 대결해요. 레벨 차이가 클수록 승률도 크게 갈리고, 레벨이 같으면 50:50이에요. 이기면 승점 +5, 지면 승점 -5(0점 밑으로는 안 내려가요). 횟수 제한 없이 계속 도전할 수 있어요.</p>
+      <p style="font-size:12px; color:var(--paper-dim); margin-top:-4px;">내 검의 강화 레벨로 무작위 상대와 대결해요. 레벨 차이가 클수록 승률도 크게 갈리고, 레벨이 같으면 50:50이에요. 이기면 승점 +5, 지면 승점 -5(0점 밑으로는 안 내려가요). 배틀은 최대 10회까지 모아둘 수 있고, 6분마다 1회씩 자동으로 충전돼요.</p>
       <div style="margin:14px 0; text-align:center; background:var(--bg-panel); border-radius:10px; padding:16px 14px;">
         <div style="font-size:12px; color:var(--paper-dim);">내 검: <b id="swordBattleMyName" style="color:var(--gold);">검이 없어요</b></div>
         <div style="font-size:12px; color:var(--paper-dim); margin-top:4px;">누적 승점 <b id="swordBattleWinsText" style="color:var(--gold);">0</b>점</div>
+        <div style="font-size:12px; color:var(--paper-dim); margin-top:4px;">배틀 횟수 <b id="swordBattleTicketText" style="color:var(--gold);">(10/10)</b></div>
+        <div id="swordBattleTicketTimer" style="font-size:11px; color:var(--paper-dim); margin-top:2px; min-height:14px;"></div>
         <div id="swordBattleResult" style="margin-top:12px; font-size:13px; min-height:20px;"></div>
       </div>
       <button class="start-btn" id="swordBattleStartBtn">⚔️ 배틀 시작</button>
@@ -1500,6 +1526,42 @@
       </div>
       <button class="start-btn" id="nameColorRollBtn">뽑기 (<span id="nameColorCost">0원</span>)</button>
       <button class="close-btn" id="nameColorCloseBtn" style="margin-top:10px;">닫기</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="seasonModal">
+    <div class="modal-box">
+      <h2 id="seasonTitle">🗓️ 시즌 종료!</h2>
+      <p id="seasonSub"></p>
+      <div id="seasonBody"></div>
+      <button class="start-btn" id="seasonNextBtn" style="margin-top:10px;">🎴 새 시즌 운명 카드 고르기</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="fateModal">
+    <div class="modal-box">
+      <h2>🎴 이번 생의 운명 카드</h2>
+      <p>한 장을 골라 새 생을 시작하세요.<br>다음 환생(또는 시즌 정산) 때까지 적용돼요.</p>
+      <div id="fateCards"></div>
+      <label id="fateChallengeRow" style="display:none; align-items:flex-start; gap:8px; text-align:left; font-size:11px; color:var(--paper-dim); background:#1c170f; border:1px solid var(--gold-dim); border-radius:8px; padding:9px 10px; margin:4px 0 10px; cursor:pointer;">
+        <input type="checkbox" id="fateChallengeCheckbox" style="margin-top:2px;">
+        <span>🎯 도전과제: <b style="color:var(--gold);">카지노 금지</b> (다음 환생·정산까지 행운의 거리 이용 불가 · 완주 시 총 수입 환생 포인트 2배)</span>
+      </label>
+      <button class="close-btn" id="fateRerollBtn">🔄 다시 뽑기</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="hofModal">
+    <div class="modal-box">
+      <h2>🏛️ 명예의 전당</h2>
+      <p id="hofSeasonLeft" style="margin-bottom:8px;"></p>
+      <div class="hof-tabs">
+        <button class="hof-tab active" data-tab="champions">👑 시즌 챔피언</button>
+        <button class="hof-tab" data-tab="legends">🌟 역대 전설</button>
+        <button class="hof-tab" data-tab="mine">🏅 내 기록실</button>
+      </div>
+      <div id="hofBody" class="hof-body"></div>
+      <button class="close-btn" id="hofCloseBtn" style="margin-top:10px;">닫기</button>
     </div>
   </div>
 
@@ -1758,6 +1820,19 @@ let talentLevels = { production: 0, click: 0, casino: 0 };
 let clickTalentMult = 1;
 let casinoTalentMult = 1;
 let activeChallenge = null; // null | 'no_casino' — 진행 중인 챌린지 환생
+// ===== 시즌제 환생 / 명예의 전당 상태 (로직은 아래 "시즌제 환생 개편" 구간) =====
+let fateCardId = null;          // 이번 생에 적용 중인 운명 카드
+let fateOffer = [];             // 아직 고르지 않은 운명 카드 후보(고르기 전에 닫거나 새로고침해도 이어서 고르게 저장)
+let seasonMedals = { gold: 0, silver: 0, bronze: 0 }; // 역대 시즌 랭킹 메달
+let seasonHistory = [];         // 최근 시즌별 성적(최대 24개)
+let claimedMedalSeasons = [];   // 메달 확인이 끝난 시즌(월) 키
+let medalPendingKey = '';       // 메달 확인이 아직 안 끝난 지난 시즌 키(로그인 후 재시도)
+let bestSeasonEarned = 0;       // 역대 최고 시즌 총 수입
+let bestMonthlyCasino = 0;      // 역대 최고 월간 카지노 수익
+let seasonCount = 0;            // 정산까지 마친 시즌 수
+let pendingSeasonReport = null; // 아직 화면에 안 띄운 시즌 정산 보고서 (저장 안 함)
+let seasonNeedsSave = false;    // 정산 직후 클라우드에 바로 저장해야 함 (저장 안 함)
+let seasonUiReady = false;      // 게임 화면이 준비돼서 모달을 띄워도 되는지 (저장 안 함)
 
 // ===== 카지노 ↔ 본편 연결: 행운의 코인 & 카지노 상점 =====
 // 카지노에서 이길 때마다 소량 쌓이는 소비 가능 재화. casinoTotalWinnings(랭킹/등급용 누적 통계)와는
@@ -2085,6 +2160,9 @@ const achievements = [
   { id: 'mega_golden_5', name: '행운의 여신', desc: '특별(메가) 황금손님 5회 포획', icon: '✨', cond: () => totalMegaGoldenCaught >= 5, reward: 0.05 },
   { id: 'prestige_10', name: '윤회의 끝', desc: '환생 10회 달성', icon: '🔄', cond: () => rebirthCount >= 10, reward: 0.08 },
   { id: 'season_top3', name: '이달의 인물', desc: '주간 랭킹 TOP3 시즌 보상 수령', icon: '🏅', cond: () => claimedSeasonRewards.length >= 1, reward: 0.03 },
+  { id: 'hof_first', name: '명예의 전당 입성', desc: '시즌 랭킹 메달 획득', icon: '🏛️', cond: () => getHonorScore() >= 1, reward: 0.02 },
+  { id: 'hof_gold3', name: '전설의 챔피언', desc: '시즌 랭킹 금메달 3개 획득', icon: '🥇', cond: () => seasonMedals.gold >= 3, reward: 0.05 },
+  { id: 'season_5', name: '시즌 베테랑', desc: '시즌 정산 5회 경험', icon: '🗓️', cond: () => seasonCount >= 5, reward: 0.03 },
   { id: 'challenge_no_casino', name: '금욕의 승부사', desc: '카지노 금지 챌린지 완주', icon: '🎯', cond: () => false, reward: 0.05 },
   { id: 'streak_7', name: '꾸준함의 미학', desc: '7일 연속 접속', icon: '🔥', cond: () => loginStreak >= 7, reward: 0.02 },
   { id: 'streak_30', name: '찐 유저', desc: '30일 연속 접속', icon: '🏵️', cond: () => loginStreak >= 30, reward: 0.06 },
@@ -2440,6 +2518,49 @@ const SWORD_STAGES = [
 // 내가 이길 확률은 100 - (상대가 이길 확률) 로 계산한다.
 let swordBattleWins = 0;       // 누적 승점 (검배틀 랭킹 기준)
 let swordBattleCountToday = 0; // (예전 하루 제한용, 더 이상 제한에는 쓰지 않지만 세이브 호환을 위해 유지)
+// ===== 검 배틀 횟수 제한: 최대 10회 보유, 6분마다 1회 자동 충전 =====
+// 충전은 타이머를 돌리지 않고 "시간이 얼마나 지났는지"로 그때그때 계산한다.
+// 그래서 게임을 꺼둔 동안에도(오프라인) 정상적으로 충전된다.
+//  - swordBattleTickets   : 지금 남은 횟수 (0 ~ MAX)
+//  - swordBattleTicketsAt : 다음 충전 시간을 재기 시작한 기준 시각(ms). 횟수가 가득 차 있을 땐 의미 없음
+const SWORD_BATTLE_MAX_TICKETS = 10;
+const SWORD_BATTLE_REGEN_MS = 6 * 60 * 1000;
+let swordBattleTickets = SWORD_BATTLE_MAX_TICKETS;
+let swordBattleTicketsAt = Date.now();
+let swordBattleBusy = false; // 상대를 찾는 중/결과 처리 중일 때 중복 클릭 방지
+function refreshSwordBattleTickets(now) {
+  now = now || Date.now();
+  if (!Number.isFinite(swordBattleTickets)) swordBattleTickets = SWORD_BATTLE_MAX_TICKETS;
+  swordBattleTickets = Math.max(0, Math.min(SWORD_BATTLE_MAX_TICKETS, Math.floor(swordBattleTickets)));
+  // 가득 차 있으면 충전 시계는 멈춰 있다. 다음에 횟수를 쓰는 순간부터 6분을 새로 잰다.
+  if (swordBattleTickets >= SWORD_BATTLE_MAX_TICKETS) { swordBattleTicketsAt = now; return; }
+  // 기준 시각이 미래(기기 시계를 뒤로 돌렸거나 저장값이 이상함)면 지금부터 다시 잰다.
+  if (!Number.isFinite(swordBattleTicketsAt) || swordBattleTicketsAt > now) { swordBattleTicketsAt = now; return; }
+  const gained = Math.floor((now - swordBattleTicketsAt) / SWORD_BATTLE_REGEN_MS);
+  if (gained > 0) {
+    swordBattleTickets = Math.min(SWORD_BATTLE_MAX_TICKETS, swordBattleTickets + gained);
+    // 남은 자투리 시간(6분 미만)은 버리지 않고 다음 충전 계산에 그대로 이어간다.
+    swordBattleTicketsAt = (swordBattleTickets >= SWORD_BATTLE_MAX_TICKETS) ? now : swordBattleTicketsAt + gained * SWORD_BATTLE_REGEN_MS;
+  }
+}
+function consumeSwordBattleTicket() {
+  const now = Date.now();
+  refreshSwordBattleTickets(now); // 가득 찬 상태였다면 여기서 기준 시각이 now로 잡혀서, 지금부터 충전이 시작된다.
+  if (swordBattleTickets <= 0) return false;
+  swordBattleTickets--;
+  return true;
+}
+function getSwordBattleNextChargeMs() {
+  const now = Date.now();
+  refreshSwordBattleTickets(now);
+  if (swordBattleTickets >= SWORD_BATTLE_MAX_TICKETS) return 0;
+  return Math.max(0, swordBattleTicketsAt + SWORD_BATTLE_REGEN_MS - now);
+}
+function formatSwordBattleCountdown(ms) {
+  const total = Math.ceil(ms / 1000);
+  const m = Math.floor(total / 60), sec = total % 60;
+  return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+}
 // ===== 검 랭킹(월간, 강화 레벨 기준) =====
 // 매달 초기화되는 카지노 월간 랭킹과 같은 주기(monthlyPeriodKey)를 그대로 재사용한다.
 // 한 달 동안 도달한 "최고 강화 레벨"로 순위를 매기고, 달이 바뀌면 검이 초기화되면서
@@ -2502,47 +2623,85 @@ async function applySwordBattleResultToOpponent(opponent, iWon) {
 }
 async function startSwordBattle() {
   initAudio();
+  if (swordBattleBusy) return;
   const resultEl = document.getElementById('swordBattleResult');
   if (!swordOwned) { showToast('⚔️ 먼저 검을 만들어주세요!'); return; }
-  const startBtn = document.getElementById('swordBattleStartBtn');
-  if (startBtn) startBtn.disabled = true;
-  if (resultEl) resultEl.textContent = '⚔️ 상대를 찾는 중...';
-  const opponent = await findSwordBattleOpponent();
-  const myWinChance = getSwordBattleWinChance(swordLevel, opponent.level);
-  const won = Math.random() * 100 < myWinChance;
-  const oppName = `+${opponent.level} ${SWORD_STAGES[opponent.level].name}`;
-  const oppTag = opponent.isReal ? '실제 유저' : 'AI 상대 · 대결 가능한 다른 유저가 아직 없어요';
-  if (won) {
-    swordBattleWins += 5;
-    playSound('levelUp');
-    spawnConfettiBurst();
-    if (resultEl) resultEl.innerHTML = `<div style="color:var(--gold); font-weight:bold;">🎉 ${opponent.name}(${oppName})님을 이겼습니다! (승률 ${Math.round(myWinChance)}%)</div><div style="font-size:11px; color:var(--paper-dim); margin-top:2px;">${oppTag}</div>`;
-    showToast(`🎉 검 배틀 승리! 승점 +5`);
-    syncLeaderboard({ forceSync: true });
-    applySwordBattleResultToOpponent(opponent, true);
-  } else {
-    // 승점이 마이너스로 떨어지지 않게 0에서 멈춘다.
-    // 승리(+5)/패배(-5) 점수를 대칭으로 둬서, 승률 50%(레벨이 같은 상대와 계속 대결)면
-    // 평균적으로 승점 변화가 0이 되게 한다. 그냥 "많이 돌리기만" 해서는 승점이 안 오르고,
-    // 실제로 승률이 50%를 넘어야(=상대보다 검 레벨이 높아야) 장기적으로 승점이 쌓인다.
-    swordBattleWins = Math.max(0, swordBattleWins - 5);
-    playSound('swordFail');
-    if (resultEl) resultEl.innerHTML = `<div style="color:var(--danger);">😢 ${opponent.name}(${oppName})님에게 졌습니다... (승률 ${Math.round(myWinChance)}%)</div><div style="font-size:11px; color:var(--paper-dim); margin-top:2px;">${oppTag}</div>`;
-    showToast(`😢 검 배틀 패배... 승점 -5`);
-    syncLeaderboard({ forceSync: true });
-    applySwordBattleResultToOpponent(opponent, false);
+  // 횟수 차감은 상대를 찾기 전에 먼저 한다 (검이 없을 땐 위에서 걸러져서 횟수를 쓰지 않는다).
+  if (!consumeSwordBattleTicket()) {
+    showToast(`⏳ 배틀 횟수를 모두 사용했어요! ${formatSwordBattleCountdown(getSwordBattleNextChargeMs())} 뒤에 1회 충전돼요`);
+    renderSwordBattlePanel();
+    return;
   }
+  swordBattleBusy = true;
+  // 차감된 횟수를 바로 저장해둔다. 안 그러면 결과가 나오기 전에 새로고침해서 횟수를 되돌리는 꼼수가 가능하다.
+  saveGame();
   renderSwordBattlePanel();
-  if (startBtn) startBtn.disabled = false;
+  if (resultEl) resultEl.textContent = '⚔️ 상대를 찾는 중...';
+  try {
+    const opponent = await findSwordBattleOpponent();
+    const myWinChance = getSwordBattleWinChance(swordLevel, opponent.level);
+    const won = Math.random() * 100 < myWinChance;
+    const oppName = `+${opponent.level} ${SWORD_STAGES[opponent.level].name}`;
+    const oppTag = opponent.isReal ? '실제 유저' : 'AI 상대 · 대결 가능한 다른 유저가 아직 없어요';
+    if (won) {
+      swordBattleWins += 5;
+      playSound('levelUp');
+      spawnConfettiBurst();
+      if (resultEl) resultEl.innerHTML = `<div style="color:var(--gold); font-weight:bold;">🎉 ${opponent.name}(${oppName})님을 이겼습니다! (승률 ${Math.round(myWinChance)}%)</div><div style="font-size:11px; color:var(--paper-dim); margin-top:2px;">${oppTag}</div>`;
+      showToast(`🎉 검 배틀 승리! 승점 +5`);
+      syncLeaderboard({ forceSync: true });
+      applySwordBattleResultToOpponent(opponent, true);
+    } else {
+      // 승점이 마이너스로 떨어지지 않게 0에서 멈춘다.
+      // 승리(+5)/패배(-5) 점수를 대칭으로 둬서, 승률 50%(레벨이 같은 상대와 계속 대결)면
+      // 평균적으로 승점 변화가 0이 되게 한다. 그냥 "많이 돌리기만" 해서는 승점이 안 오르고,
+      // 실제로 승률이 50%를 넘어야(=상대보다 검 레벨이 높아야) 장기적으로 승점이 쌓인다.
+      swordBattleWins = Math.max(0, swordBattleWins - 5);
+      playSound('swordFail');
+      if (resultEl) resultEl.innerHTML = `<div style="color:var(--danger);">😢 ${opponent.name}(${oppName})님에게 졌습니다... (승률 ${Math.round(myWinChance)}%)</div><div style="font-size:11px; color:var(--paper-dim); margin-top:2px;">${oppTag}</div>`;
+      showToast(`😢 검 배틀 패배... 승점 -5`);
+      syncLeaderboard({ forceSync: true });
+      applySwordBattleResultToOpponent(opponent, false);
+    }
+    saveGame();
+  } catch (e) {
+    console.error('검 배틀 진행 중 오류:', e);
+    if (resultEl) resultEl.textContent = '⚠️ 배틀 중 문제가 생겼어요. 잠시 후 다시 시도해주세요.';
+  } finally {
+    swordBattleBusy = false;
+    renderSwordBattlePanel();
+  }
 }
 function renderSwordBattlePanel() {
   const myNameEl = document.getElementById('swordBattleMyName');
   if (!myNameEl) return;
   myNameEl.textContent = swordOwned ? getSwordDisplayName() : '검이 없어요';
   document.getElementById('swordBattleWinsText').textContent = swordBattleWins.toLocaleString('ko-KR');
+  const waitMs = getSwordBattleNextChargeMs(); // 내부에서 충전분도 같이 반영한다
+  const countText = `(${swordBattleTickets}/${SWORD_BATTLE_MAX_TICKETS})`;
+  const ticketEl = document.getElementById('swordBattleTicketText');
+  if (ticketEl) ticketEl.textContent = countText;
+  const timerEl = document.getElementById('swordBattleTicketTimer');
+  if (timerEl) {
+    timerEl.textContent = (swordBattleTickets >= SWORD_BATTLE_MAX_TICKETS)
+      ? '횟수가 가득 찼어요'
+      : `다음 충전까지 ${formatSwordBattleCountdown(waitMs)}`;
+  }
   const startBtn = document.getElementById('swordBattleStartBtn');
-  if (startBtn) startBtn.textContent = '⚔️ 배틀 시작';
+  if (startBtn) {
+    startBtn.disabled = swordBattleBusy || swordBattleTickets <= 0;
+    startBtn.textContent = (swordBattleTickets <= 0)
+      ? `⏳ 충전 중 (${formatSwordBattleCountdown(waitMs)})`
+      : `⚔️ 배틀 시작 ${countText}`;
+  }
+  const openBtn = document.getElementById('openSwordBattleBtn');
+  if (openBtn) openBtn.textContent = `🤺 검 배틀하기 ${countText}`;
 }
+// 배틀 창이 열려 있는 동안엔 1초마다 남은 시간/횟수를 갱신해서, 충전되는 순간 버튼이 바로 살아나게 한다.
+setInterval(() => {
+  const modal = document.getElementById('swordBattleModal');
+  if (modal && modal.classList.contains('show')) renderSwordBattlePanel();
+}, 1000);
 // 강화 구간별 아이콘 (레벨이 오를수록 더 화려해짐)
 const SWORD_LEVEL_TIERS = [
   { max: 2,  icon: '🪵' },
@@ -2917,9 +3076,9 @@ function clickUpgradeCost(stageIdx) {
   const lv = clickUpgradeLevel[stageIdx];
   return Math.ceil(up.baseCost * Math.pow(1.19, lv));
 }
-function getIncomeMult() { return boosters.income3.remaining > 0 ? boosters.income3.mult : 1; }
+function getIncomeMult() { return (boosters.income3.remaining > 0 ? boosters.income3.mult : 1) * getHonorMult() * getFateIncomeMult(); }
 function getSpeedMult() { return boosters.speed15.remaining > 0 ? boosters.speed15.mult : 1; }
-function getClickMult() { return boosters.click5.remaining > 0 ? boosters.click5.mult : 1; }
+function getClickMult() { return (boosters.click5.remaining > 0 ? boosters.click5.mult : 1) * getHonorMult() * getFateClickMult(); }
 
 // ===== 전체 수입 속도 마스터 조절 =====
 // 실제 플레이에서 30분에 1000조까지 벌리는 게 확인돼서(제 모델로는 아무리 후하게 잡아도
@@ -3478,6 +3637,27 @@ let isBrandNewPlayer = false;
 // 함께 올려준다. lastSeenPatchVersion이 patchNotes[0].version과 다르면 "안 읽은 공지"로
 // 간주해 배지를 띄우고, 기존 유저가 접속하면 자동으로 한 번 띄워준다.
 const patchNotes = [
+  {
+    version: '2026092002',
+    date: '2026-09-20',
+    items: [
+      '⚔️ 검 배틀에 횟수 제한이 생겼어요: 최대 10회까지 모아둘 수 있고, 6분마다 1회씩 자동 충전돼요 (전부 쓰면 1시간 뒤 10/10)',
+      '⏳ 배틀 창과 버튼에서 남은 횟수 (n/10)와 다음 충전까지 남은 시간을 볼 수 있어요. 게임을 꺼둔 동안에도 충전돼요'
+    ]
+  },
+  {
+    version: '2026092001',
+    date: '2026-09-20',
+    items: [
+      '♻️ 환생 대개편! 이제 환생할 때마다 🎴운명 카드 3장 중 1장을 골라요. 금수저·근성러·사업가·도박꾼·대기만성 등 카드에 따라 그 생의 플레이가 달라져요 (마음에 안 들면 🎟️코인 10개로 다시 뽑기)',
+      '🗓️ 시즌제 도입: 매월 1일 0시에 시즌이 정산돼요. 이때 돈·사업·검이 초기화(자동 환생)되는 대신 시즌 등급(D~S)에 따라 특성 포인트를 받아요. 컬렉션·특성·업적·메달은 그대로! (총 수입 1억 미만인 초보는 초기화 면제)',
+      '🏛️ 명예의 전당 오픈! 🏅랭크 창의 "🏛️ 명예의 전당" 버튼에서 지난 시즌 챔피언(카지노왕·검성·소각왕 TOP3), 역대 전설 랭킹, 내 기록실을 볼 수 있어요',
+      '🥇 시즌 랭킹 TOP3에게 메달과 보상! 카지노/검/소각 랭킹에서 🥇12P 🥈7P 🥉4P를 받고, 메달은 영구히 남아요',
+      '👑 역대 랭커 특전: 메달은 명예 점수(🥇3 🥈2 🥉1)가 되어 수입·클릭이 최대 +30%, 시즌 정산 보너스 포인트가 최대 +10P까지 늘어나요',
+      '🎯 카지노 금지 챌린지는 이제 시즌 정산까지 완주해도 성공! 도전 신청은 운명 카드 화면에서 해요',
+      '⚠️ 첫 시즌 정산은 10월 1일 0시예요. 그 전에 미리 환생해서 포인트를 챙겨둬도 좋아요. 시즌 종료 3일 전부터 알림이 떠요'
+    ]
+  },
   {
     version: '2026091907',
     date: '2026-09-19',
@@ -4993,17 +5173,16 @@ function openPrestigeModal() {
   const noteEl = document.getElementById('challengeCompleteNote');
   const offerRow = document.getElementById('challengeOfferRow');
   if (activeChallenge === 'no_casino') {
-    // 이번 환생이 곧 챌린지 완주 시점 — 성공을 미리 안내하고, 새 챌린지 제안은 숨김
+    // 이번 환생이 곧 챌린지 완주 시점 — 성공을 미리 안내한다
     noteEl.style.display = 'block';
     noteEl.textContent = `🎯 카지노 금지 챌린지 완주! 이번 환생 포인트가 2배(+${gain * 2}P)로 지급돼요.`;
-    offerRow.style.display = 'none';
   } else {
     noteEl.style.display = 'none';
-    offerRow.style.display = 'flex';
-    document.getElementById('challengeCheckbox').checked = false;
   }
+  offerRow.style.display = 'none'; // 도전과제 신청은 환생 직후 운명 카드 화면에서 한다
+  refreshPrestigeExtra();
   if (gain <= 0) {
-    showToast('아직 환생으로 얻을 게 없어요. 총 수입 1경원 이상 벌어보세요!');
+    showToast(`아직 환생으로 얻을 게 없어요. 총 수입 1경원 이상 벌어보세요! (시즌 종료까지 ${getSeasonDaysLeft()}일)`);
     return;
   }
   document.getElementById('prestigeModal').classList.add('show');
@@ -5015,19 +5194,101 @@ function confirmPrestige() {
   const finalGain = challengeSucceeded ? gain * 2 : gain;
   prestigePoints += finalGain;
   rebirthCount++;
-  if (!map6Unlocked && rebirthCount >= 1) {
-    map6Unlocked = true;
-    document.getElementById('mapBtn6').style.display = 'inline-flex';
-    startVoidWave(1);
-    setTimeout(() => showToast('🌌 새로운 공간의 틈이 열렸습니다! 상단 ⑥ 공허 버튼을 확인해보세요.'), 1200);
-  }
+  unlockVoidAfterRebirth();
   if (challengeSucceeded && !unlockedAchievements.includes('challenge_no_casino')) {
     unlockedAchievements.push('challenge_no_casino');
   }
-  // 이번 판이 챌린지 완주였다면 종료 처리하고, 새 챌린지를 신청했으면 다음 판을 위해 다시 건다
-  activeChallenge = (!challengeSucceeded && document.getElementById('challengeCheckbox').checked) ? 'no_casino' : null;
-  lastCelebratedWealthTitleIndex = 0;
+  activeChallenge = null; // 새 도전 신청은 아래 운명 카드 화면에서 받는다
+  resetLifeProgress();
 
+  document.getElementById('prestigeModal').classList.remove('show');
+  updateChallengeUI();
+  spawnConfettiBurst();
+  if (challengeSucceeded) {
+    showToast(`🎯 챌린지 성공! 카지노 없이 완주해서 특성 포인트 2배(+${finalGain}P)를 받았어요!`);
+  } else {
+    showToast(`♻️ 환생 완료! 특성 포인트 ${finalGain}P를 획득했어요. 이제 운명 카드를 골라보세요!`);
+  }
+  setTimeout(() => mascotSay(MASCOT_LINES.rebirth), 900);
+  beginFateSelection(true);
+  saveGame();
+  updateTalentPointBadge();
+}
+
+document.getElementById('prestigeBtn').addEventListener('click', openPrestigeModal);
+document.getElementById('prestigeConfirmBtn').addEventListener('click', confirmPrestige);
+document.getElementById('prestigeCancelBtn').addEventListener('click', () => {
+  document.getElementById('prestigeModal').classList.remove('show');
+});
+
+// =====================================================================
+// ===== 시즌제 환생 개편 + 명예의 전당 =====
+// 핵심 아이디어
+//  1) 환생할 때마다 "운명 카드" 3장 중 1장을 골라 그 생의 플레이 스타일이 달라진다(로그라이크식).
+//  2) 매월 1일 0시에 시즌이 정산된다: 돈·사업·검을 강제로 초기화(=강제 환생)하는 대신,
+//     시즌 성적(등급)에 따라 특성 포인트를 지급하고, 컬렉션·특성·업적·메달은 그대로 유지한다.
+//  3) 지난 시즌 랭킹(카지노/검/소각) TOP3는 🥇🥈🥉 메달을 영구히 받는다. 메달은 "명예 점수"가 되어
+//     수입·클릭 배율(최대 +30%)과 시즌 정산 보너스 포인트로 돌아온다 → 역대 랭커 특전.
+//  4) 명예의 전당: 지난 시즌 챔피언 / 역대 전설 랭킹 / 내 기록실.
+// 월별 랭킹 데이터는 원래 기간별 보드(leaderboard_monthly_YYYY-MM 등)로 계속 남아 있어서,
+// 챔피언 기록은 별도 테이블 없이 그 보드의 TOP3를 읽어 온다(지난 달은 바뀌지 않으므로 로컬에 캐시).
+// =====================================================================
+const SEASON_MIN_TOTAL = 1e8; // 총 수입이 이 미만인 막 시작한 유저는 월간 강제 환생을 면제한다
+const FATE_REROLL_COST = 10;  // 운명 카드 다시 뽑기 비용(행운의 코인)
+const SEASON_GRADES = [ // 시즌 종료 시점의 재산 칭호 단계(wealthTitles 인덱스) 기준 등급 + 참가 보상 포인트
+  { min: 16, g: 'S', pts: 8 },
+  { min: 12, g: 'A', pts: 5 },
+  { min: 8,  g: 'B', pts: 3 },
+  { min: 4,  g: 'C', pts: 2 },
+  { min: 0,  g: 'D', pts: 1 }
+];
+const MEDAL_ICONS = ['🥇', '🥈', '🥉'];
+const MEDAL_POINTS = [12, 7, 4]; // 금/은/동 메달당 특성 포인트
+
+const FATE_CARDS = {
+  silver_spoon: { icon: '🥄', name: '금수저', desc: '시작 자금 +100만원 · 패시브 수입 +5%', income: 1.05, startMoney: 1e6 },
+  grit:         { icon: '💪', name: '근성러', desc: '클릭 수입 +50%', click: 1.5 },
+  tycoon:       { icon: '🏭', name: '사업가', desc: '패시브 수입 +25% · 클릭 수입 -20%', income: 1.25, click: 0.8 },
+  gambler:      { icon: '🎰', name: '도박꾼', desc: '카지노 승리 배당 +8% · 패시브 수입 -10%', income: 0.9, casino: 1.08 },
+  coin_rich:    { icon: '🎟️', name: '코인 부자', desc: '카지노에서 이기면 행운의 코인 2배', coinMult: 2 },
+  swordsman:    { icon: '⚔️', name: '검사', desc: '시작할 때 검 되돌리기 능력 +1회', startRevive: 1 },
+  late_bloomer: { icon: '📈', name: '대기만성', desc: '매월 1~14일 패시브 -20% → 15일부터 +40%', late: true },
+  lottery:      { icon: '🎁', name: '복권 당첨', desc: '즉시 특성 포인트 +2P', startPoints: 2 }
+};
+function getFateCard() { return fateCardId ? (FATE_CARDS[fateCardId] || null) : null; }
+function getFateIncomeMult() {
+  const f = getFateCard();
+  if (!f) return 1;
+  let m = f.income || 1;
+  if (f.late) m *= (new Date().getDate() >= 15 ? 1.4 : 0.8);
+  return m;
+}
+function getFateClickMult() { const f = getFateCard(); return f && f.click ? f.click : 1; }
+function getFateCasinoMult() { const f = getFateCard(); return f && f.casino ? f.casino : 1; }
+function getFateCoinMult() { const f = getFateCard(); return f && f.coinMult ? f.coinMult : 1; }
+
+// ----- 역대 랭커 특전(명예 점수) -----
+function getHonorScore() { return seasonMedals.gold * 3 + seasonMedals.silver * 2 + seasonMedals.bronze; }
+function getHonorMult() { return 1 + Math.min(0.30, getHonorScore() * 0.005); }            // 수입·클릭 최대 +30%
+function getHonorSeasonBonusPoints() { return Math.min(10, Math.floor(getHonorScore() / 4)); } // 시즌 정산 보너스 포인트 최대 +10P
+
+function hofEsc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function monthLabel(key) {
+  const m = /^(\d{4})-(\d{2})$/.exec(key || '');
+  return m ? `${m[1]}년 ${parseInt(m[2], 10)}월` : (key || '');
+}
+function getSeasonDaysLeft() {
+  const now = new Date();
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  return Math.max(1, Math.ceil((end - now) / 86400000));
+}
+function isModalShown(id) { const el = document.getElementById(id); return !!(el && el.classList.contains('show')); }
+
+// ----- 환생 공통: 이번 생(돈·사업)만 초기화 -----
+function resetLifeProgress() {
+  lastCelebratedWealthTitleIndex = 0;
   money = 0;
   totalEarned = 0;
   stageIndex = 0;
@@ -5042,32 +5303,388 @@ function confirmPrestige() {
   stallProgress5 = new Array(map5Jobs.length).fill(0);
   map2Unlocked = false;
   map5Unlocked = false;
-  document.getElementById('mapSwitch').style.display = 'none';
-  document.getElementById('mapBtn5').style.display = 'none';
-
-  document.getElementById('prestigeModal').classList.remove('show');
-  renderStalls();
-  switchMap('map1');
-  updateChallengeUI();
-  spawnConfettiBurst();
-  if (challengeSucceeded) {
-    showToast(`🎯 챌린지 성공! 카지노 없이 완주해서 특성 포인트 2배(+${finalGain}P)를 받았어요!`);
-  } else {
-    showToast(`♻️ 환생 완료! 특성 포인트 ${finalGain}P를 획득했어요. 🌳특성 메뉴에서 배분해보세요!`);
+  // 화면 갱신에서 오류가 나더라도(불러오기 도중 등) 위에서 바꾼 상태는 이미 확정돼 있어야 한다
+  try {
+    document.getElementById('mapSwitch').style.display = 'none';
+    document.getElementById('mapBtn5').style.display = 'none';
+    renderStalls();
+    switchMap('map1');
+  } catch (e) {
+    console.error('환생 후 화면 갱신 실패:', e);
   }
-  if (activeChallenge === 'no_casino') {
-    setTimeout(() => showToast('🎯 카지노 금지 챌린지 시작! 다음 환생까지 행운의 거리를 이용할 수 없어요.'), 1600);
+}
+function unlockVoidAfterRebirth() {
+  if (!map6Unlocked && rebirthCount >= 1) {
+    map6Unlocked = true;
+    document.getElementById('mapBtn6').style.display = 'inline-flex';
+    startVoidWave(1);
+    setTimeout(() => showToast('🌌 새로운 공간의 틈이 열렸습니다! 상단 ⑥ 공허 버튼을 확인해보세요.'), 1200);
   }
-  setTimeout(() => mascotSay(MASCOT_LINES.rebirth), 900);
-  saveGame();
-  updateTalentPointBadge();
 }
 
-document.getElementById('prestigeBtn').addEventListener('click', openPrestigeModal);
-document.getElementById('prestigeConfirmBtn').addEventListener('click', confirmPrestige);
-document.getElementById('prestigeCancelBtn').addEventListener('click', () => {
-  document.getElementById('prestigeModal').classList.remove('show');
+// ----- 운명 카드 -----
+function pickFateOffer() {
+  const ids = Object.keys(FATE_CARDS);
+  for (let i = ids.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [ids[i], ids[j]] = [ids[j], ids[i]];
+  }
+  return ids.slice(0, 3);
+}
+function beginFateSelection(openNow) {
+  fateCardId = null;
+  fateOffer = pickFateOffer();
+  if (openNow) openFateModal();
+}
+function openFateModal() {
+  if (!fateOffer.length) return;
+  const wrap = document.getElementById('fateCards');
+  wrap.innerHTML = fateOffer.map(id => {
+    const f = FATE_CARDS[id];
+    if (!f) return '';
+    return `<button class="fate-card" data-fate="${id}"><span class="fate-icon">${f.icon}</span><span><div class="fate-name">${f.name}</div><div class="fate-desc">${f.desc}</div></span></button>`;
+  }).join('');
+  wrap.querySelectorAll('.fate-card').forEach(b => b.addEventListener('click', () => chooseFate(b.dataset.fate)));
+  const chRow = document.getElementById('fateChallengeRow');
+  chRow.style.display = activeChallenge === null ? 'flex' : 'none';
+  document.getElementById('fateChallengeCheckbox').checked = false;
+  const rr = document.getElementById('fateRerollBtn');
+  rr.textContent = `🔄 다시 뽑기 (🎟️${FATE_REROLL_COST}) · 보유 ${luckyCoins}`;
+  rr.disabled = luckyCoins < FATE_REROLL_COST;
+  rr.style.opacity = rr.disabled ? '0.5' : '';
+  document.getElementById('fateModal').classList.add('show');
+}
+function chooseFate(id) {
+  const f = FATE_CARDS[id];
+  if (!f || !fateOffer.includes(id)) return;
+  fateCardId = id;
+  fateOffer = [];
+  if (f.startMoney) money = applySoftCap(money + f.startMoney);
+  if (f.startRevive) { swordReviveCharges += f.startRevive; renderSwordPanel(); }
+  if (f.startPoints) { prestigePoints += f.startPoints; updateTalentPointBadge(); }
+  let challengeStarted = false;
+  if (activeChallenge === null && document.getElementById('fateChallengeCheckbox').checked) {
+    activeChallenge = 'no_casino';
+    challengeStarted = true;
+  }
+  document.getElementById('fateModal').classList.remove('show');
+  updateChallengeUI();
+  refreshAllScreens();
+  showToast(`🎴 운명 카드 「${f.name}」 적용! ${f.desc}`);
+  if (challengeStarted) setTimeout(() => showToast('🎯 카지노 금지 챌린지 시작! 완주하면 다음 정산·환생 포인트가 2배예요.'), 1800);
+  saveGame({ forceCloud: true });
+}
+document.getElementById('fateRerollBtn').addEventListener('click', () => {
+  if (luckyCoins < FATE_REROLL_COST || !fateOffer.length) return;
+  luckyCoins -= FATE_REROLL_COST;
+  fateOffer = pickFateOffer();
+  openFateModal();
+  saveGame();
 });
+
+// ----- 시즌 정산(월간 강제 환생) -----
+// checkPeriodRollover()가 월이 바뀐 걸 감지하면 호출한다. 여기서는 상태만 바꾸고(불러오기 도중에도
+// 안전하게), 보고서 모달은 seasonTick()이 게임 화면이 준비된 뒤에 띄운다.
+function settleSeason(prevKey, snap) {
+  const earned = totalEarned;
+  bestSeasonEarned = Math.max(bestSeasonEarned, earned);
+  bestMonthlyCasino = Math.max(bestMonthlyCasino, snap.casino);
+  if (earned < SEASON_MIN_TOTAL) return; // 막 시작한 유저는 그대로 이어서 진행
+
+  const titleIdx = getWealthTitleIndex();
+  const title = wealthTitles[titleIdx];
+  const grade = SEASON_GRADES.find(g => titleIdx >= g.min) || SEASON_GRADES[SEASON_GRADES.length - 1];
+  const baseGain = calcPrestigeGain(); // 1경 이상 벌었을 때만 생기는 일반 환생 포인트
+  const challengeOk = activeChallenge === 'no_casino';
+  const rebirthPts = challengeOk ? baseGain * 2 : baseGain;
+  const honorPts = getHonorSeasonBonusPoints();
+  const total = rebirthPts + grade.pts + honorPts;
+
+  const rows = [];
+  if (baseGain > 0) rows.push({ label: challengeOk ? '총 수입 환생 포인트 (🎯챌린지 2배)' : '총 수입 환생 포인트', val: '+' + rebirthPts + 'P' });
+  rows.push({ label: `시즌 참가 보상 (등급 ${grade.g})`, val: '+' + grade.pts + 'P' });
+  if (honorPts > 0) rows.push({ label: '🏛️ 역대 랭커 특전', val: '+' + honorPts + 'P' });
+
+  prestigePoints += total;
+  rebirthCount++;
+  seasonCount++;
+  unlockVoidAfterRebirth();
+  if (challengeOk && !unlockedAchievements.includes('challenge_no_casino')) unlockedAchievements.push('challenge_no_casino');
+  activeChallenge = null;
+  resetLifeProgress();
+  updateChallengeUI();
+  updateTalentPointBadge();
+
+  seasonHistory.unshift({ key: prevKey, earned, grade: grade.g, title: `${title.icon} ${title.name}`, casino: snap.casino, sword: snap.swordBest, points: total, medals: null });
+  seasonHistory = seasonHistory.slice(0, 24);
+  fateCardId = null;
+  fateOffer = pickFateOffer();
+  pendingSeasonReport = { key: prevKey, earned, grade: grade.g, titleIcon: title.icon, titleName: title.name, casino: snap.casino, swordBest: snap.swordBest, burned: snap.burned, rows, total };
+  seasonNeedsSave = true;
+}
+
+function showSeasonReport(r) {
+  document.getElementById('seasonTitle').textContent = `🗓️ ${monthLabel(r.key)} 시즌 종료!`;
+  document.getElementById('seasonSub').innerHTML = '월이 바뀌어 시즌이 정산됐어요.<br>돈·사업·검은 초기화되고, 컬렉션·특성·업적·메달은 그대로예요.';
+  document.getElementById('seasonBody').innerHTML = `
+    <div class="season-grade">${r.grade}</div>
+    <div style="font-size:11px; color:var(--paper-dim); margin-top:-4px; margin-bottom:8px;">시즌 등급 · ${r.titleIcon} ${hofEsc(r.titleName)}</div>
+    <div class="season-row"><span>시즌 총 수입</span><b>${formatWon(r.earned)}원</b></div>
+    <div class="season-row"><span>월간 카지노 수익</span><b>${formatWon(r.casino)}원</b></div>
+    <div class="season-row"><span>검 최고 강화</span><b>+${r.swordBest}강</b></div>
+    ${r.burned > 0 ? `<div class="season-row"><span>소각한 돈</span><b>${formatWon(r.burned)}원</b></div>` : ''}
+    <div style="margin:10px 0 4px; font-size:12px; color:var(--gold); font-weight:bold;">🎁 정산 보상</div>
+    ${r.rows.map(x => `<div class="season-row"><span>${x.label}</span><b>${x.val}</b></div>`).join('')}
+    <div class="season-row" style="border-bottom:none;"><span><b>합계</b></span><b style="font-size:14px;">+${r.total}P</b></div>
+    <div id="seasonMedalBox" class="season-medal-box"></div>`;
+  renderSeasonMedalBox(r.key);
+  document.getElementById('seasonModal').classList.add('show');
+  spawnConfettiBurst();
+  mascotSay(['한 달 동안 수고했어! 새 시즌엔 더 멀리 가보자!', '시즌 정산 완료! 이제 새 운명 카드를 뽑을 차례야~']);
+}
+document.getElementById('seasonNextBtn').addEventListener('click', () => {
+  document.getElementById('seasonModal').classList.remove('show');
+  if (!fateOffer.length) fateOffer = pickFateOffer();
+  openFateModal();
+});
+
+// ----- 시즌 랭킹 메달 -----
+const HOF_SEASON_BOARDS = [
+  { cat: 'casino', icon: '🎰', title: '카지노왕', board: k => `leaderboard_monthly_${k}`,       fmt: v => formatWon(v) + '원' },
+  { cat: 'sword',  icon: '⚔️', title: '검성',     board: k => `leaderboard_sword_monthly_${k}`, fmt: v => '+' + v + '강' },
+  { cat: 'burn',   icon: '🔥', title: '소각왕',   board: k => `leaderboard_burn_monthly_${k}`,  fmt: v => formatWon(v) + '원' }
+];
+const HOF_ALL_TIME = [
+  { key: 'honor',  board: 'leaderboard_hof_honor',  icon: '🏛️', title: '명예 점수',              big: false, get: () => getHonorScore(),   fmt: v => v.toLocaleString('ko-KR') + '점' },
+  { key: 'earn',   board: 'leaderboard_hof_earn',   icon: '💰', title: '최고 시즌 수입',          big: true,  get: () => bestSeasonEarned,  fmt: v => formatWon(v) + '원' },
+  { key: 'casino', board: 'leaderboard_hof_casino', icon: '🎰', title: '최고 월간 카지노 수익',   big: true,  get: () => bestMonthlyCasino, fmt: v => formatWon(v) + '원' }
+];
+async function fetchBoardTop(board, n) {
+  // fetchLeaderboard와 같은 이유로, DB 정렬을 그대로 믿지 않고 실제 금액으로 다시 정렬한다.
+  const docs = await dbGetDocsOrdered(board, 'amount', 30);
+  return docs
+    .map(d => ({ uid: d.id, name: d.name || '익명', amount: fromBigStorable(d.amount), nameColor: d.nameColor || null, mansionIcon: d.mansionIcon || '' }))
+    .filter(e => e.amount > 0)
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, n);
+}
+const HOF_CACHE_KEY = 'lrHofSeasonCache';
+function hofCacheLoad() { try { return JSON.parse(localStorage.getItem(HOF_CACHE_KEY) || '{}') || {}; } catch (e) { return {}; } }
+function hofCacheSave(c) { try { localStorage.setItem(HOF_CACHE_KEY, JSON.stringify(c)); } catch (e) {} }
+// 지난 달의 TOP3는 더 바뀌지 않으므로 한 번 읽으면 로컬에 캐시해서 다시 조회하지 않는다.
+async function getSeasonTops(key) {
+  const cache = hofCacheLoad();
+  if (cache[key]) return cache[key];
+  const lists = await Promise.all(HOF_SEASON_BOARDS.map(b => fetchBoardTop(b.board(key), 3)));
+  const res = {};
+  HOF_SEASON_BOARDS.forEach((b, i) => { res[b.cat] = lists[i]; });
+  if (key < getMonthKey(new Date())) { cache[key] = res; hofCacheSave(cache); }
+  return res;
+}
+// 지난 시즌 랭킹 확인은 로그인 + 네트워크가 필요해서, 월이 바뀐 순간에 못 하면 나중에(로그인 후) 다시 시도한다.
+let medalCheckBusy = false;
+let lastMedalResult = null;
+async function processPendingMedals() {
+  if (!currentUser || !db || !medalPendingKey || medalCheckBusy) return;
+  const key = medalPendingKey;
+  if (claimedMedalSeasons.includes(key)) { medalPendingKey = ''; return; }
+  medalCheckBusy = true;
+  try {
+    await checkSwordSeasonReward(key); // 기존 검 랭킹 보상(되돌리기·이름색)도 여기서 같이 (재)시도한다
+    const tops = await getSeasonTops(key);
+    const got = [];
+    HOF_SEASON_BOARDS.forEach(b => {
+      const idx = (tops[b.cat] || []).findIndex(e => e.uid === currentUser.uid);
+      if (idx >= 0 && idx < 3) got.push({ cat: b.cat, icon: b.icon, title: b.title, rank: idx });
+    });
+    let pts = 0;
+    got.forEach(g => {
+      pts += MEDAL_POINTS[g.rank];
+      if (g.rank === 0) seasonMedals.gold++; else if (g.rank === 1) seasonMedals.silver++; else seasonMedals.bronze++;
+    });
+    if (pts > 0) { prestigePoints += pts; updateTalentPointBadge(); }
+    claimedMedalSeasons.push(key);
+    medalPendingKey = '';
+    const h = seasonHistory.find(x => x.key === key);
+    if (h) h.medals = got.map(g => MEDAL_ICONS[g.rank] + g.icon);
+    lastMedalResult = { key, got, pts };
+    if (got.length) {
+      showToast(`🏅 ${monthLabel(key)} 시즌 랭킹 메달 ${got.map(g => MEDAL_ICONS[g.rank] + g.icon).join(' ')} · 특성 포인트 +${pts}P!`);
+      mascotSay(['명예의 전당에 이름을 올렸어! 메달은 영원히 남아~', '역대 랭커 특전이 더 세졌어! 명예 배율 확인해봐!']);
+      spawnConfettiBurst();
+    }
+    renderSeasonMedalBox(key);
+    saveGame({ forceCloud: true });
+  } catch (e) {
+    console.error('시즌 메달 확인 실패(나중에 다시 시도):', e);
+  } finally {
+    medalCheckBusy = false;
+  }
+}
+function renderSeasonMedalBox(key) {
+  const box = document.getElementById('seasonMedalBox');
+  if (!box) return;
+  if (lastMedalResult && lastMedalResult.key === key) {
+    const r = lastMedalResult;
+    box.innerHTML = r.got.length
+      ? `<b>🏅 지난 시즌 랭킹 메달!</b><br>${r.got.map(g => `${MEDAL_ICONS[g.rank]} ${g.icon} ${g.title} ${g.rank + 1}위`).join('<br>')}<br><span style="color:#7CFC9A;">특성 포인트 +${r.pts}P · 명예 점수 ${getHonorScore()}점</span>`
+      : '🏅 이번엔 TOP3에 들지 못했어요. 다음 시즌엔 메달에 도전해보세요!';
+  } else if (claimedMedalSeasons.includes(key)) {
+    box.textContent = '🏅 지난 시즌 랭킹 확인이 끝났어요.';
+  } else if (!currentUser) {
+    box.textContent = '🔒 구글 로그인을 하면 지난 시즌 랭킹 메달(🥇🥈🥉)과 보상을 받을 수 있어요.';
+  } else {
+    box.textContent = '🏅 지난 시즌 랭킹 결과를 확인하는 중...';
+  }
+}
+
+// ----- 역대 전설 보드 동기화 (값이 바뀔 때만 기록) -----
+let hofSyncSig = '';
+async function syncHallOfFameBoards() {
+  if (!currentUser || !db) return;
+  bestMonthlyCasino = Math.max(bestMonthlyCasino, monthlyWinnings);
+  const sig = [getHonorScore(), bestSeasonEarned, bestMonthlyCasino, currentUser.uid, currentUser.name].join('|');
+  if (sig === hofSyncSig) return;
+  hofSyncSig = sig;
+  try {
+    const updatedAt = Date.now();
+    const nameColorHex = nameColor ? nameColor.color : null;
+    const mansionIcon = getMansionTier().icon;
+    for (const cfg of HOF_ALL_TIME) {
+      const v = cfg.get();
+      if (v > 0) await dbSetDoc(cfg.board, currentUser.uid, { name: currentUser.name, updatedAt, amount: cfg.big ? toBigStorable(v) : v, nameColor: nameColorHex, mansionIcon });
+    }
+  } catch (e) {
+    hofSyncSig = '';
+    console.error('명예의 전당 기록 동기화 실패:', e);
+  }
+}
+
+// ----- 명예의 전당 화면 -----
+let hofTab = 'champions';
+let hofRenderToken = 0;
+function hofLineHtml(rank, e, fmt) {
+  const me = currentUser && e.uid === currentUser.uid;
+  const style = e.nameColor ? ` style="color:${hofEsc(e.nameColor)};font-weight:bold;"` : '';
+  return `<div class="hof-line${me ? ' me' : ''}"><span>${MEDAL_ICONS[rank] || (rank + 1)}</span><span class="who"${style}>${hofEsc(e.mansionIcon)} ${hofEsc(e.name)}</span><span class="val">${fmt(e.amount)}</span></div>`;
+}
+function renderChampionCard(key, tops) {
+  const rows = HOF_SEASON_BOARDS.map(b => {
+    const list = tops[b.cat] || [];
+    if (!list.length) return '';
+    return `<div style="font-size:10.5px;color:var(--paper-dim);margin-top:5px;">${b.icon} ${b.title}</div>` + list.map((e, i) => hofLineHtml(i, e, b.fmt)).join('');
+  }).join('');
+  return rows ? `<div class="hof-card"><h4>🗓️ ${monthLabel(key)} 시즌 TOP3</h4>${rows}</div>` : '';
+}
+async function renderHofChampions(box, token) {
+  box.innerHTML = '<p class="hof-note">불러오는 중...</p>';
+  let shown = 0, empties = 0;
+  const now = new Date();
+  for (let i = 1; i <= 12; i++) {
+    if (token !== hofRenderToken) return;
+    const key = getMonthKey(new Date(now.getFullYear(), now.getMonth() - i, 1));
+    let tops;
+    try { tops = await getSeasonTops(key); }
+    catch (e) { console.error(e); if (!shown) box.innerHTML = '<p class="hof-note">기록을 불러오지 못했어요. 잠시 후 다시 열어주세요.</p>'; return; }
+    if (token !== hofRenderToken) return;
+    const html = renderChampionCard(key, tops);
+    if (html) {
+      if (!shown) box.innerHTML = '';
+      box.insertAdjacentHTML('beforeend', html);
+      shown++; empties = 0;
+    } else if (++empties >= 3) break;
+  }
+  if (!shown && token === hofRenderToken) box.innerHTML = '<p class="hof-note">아직 종료된 시즌 기록이 없어요.<br>첫 시즌이 끝나면 카지노왕·검성·소각왕이 여기에 영구 기록돼요!</p>';
+}
+async function renderHofLegends(box, token) {
+  box.innerHTML = '<p class="hof-note">불러오는 중...</p>';
+  try {
+    const lists = await Promise.all(HOF_ALL_TIME.map(c => fetchBoardTop(c.board, 10)));
+    if (token !== hofRenderToken) return;
+    box.innerHTML = HOF_ALL_TIME.map((c, i) => `<div class="hof-card"><h4>${c.icon} 역대 ${c.title} TOP10</h4>${lists[i].length ? lists[i].map((e, r) => hofLineHtml(r, e, c.fmt)).join('') : '<div class="hof-note" style="margin:4px 0;">아직 기록이 없어요.</div>'}</div>`).join('');
+  } catch (e) {
+    console.error(e);
+    if (token === hofRenderToken) box.innerHTML = '<p class="hof-note">기록을 불러오지 못했어요. 잠시 후 다시 열어주세요.</p>';
+  }
+}
+function renderHofMine(box) {
+  const m = seasonMedals;
+  const perks = getHonorScore() > 0
+    ? `수입·클릭 <b>x${getHonorMult().toFixed(3)}</b> · 시즌 정산 보너스 <b>+${getHonorSeasonBonusPoints()}P</b>`
+    : '아직 없어요. 시즌 랭킹 TOP3에 들면 메달과 함께 생겨요!';
+  const hist = seasonHistory.length
+    ? seasonHistory.slice(0, 12).map(h => `<div class="hof-line"><span>${hofEsc(h.grade)}</span><span class="who">${monthLabel(h.key)} · ${hofEsc(h.title)}${h.medals && h.medals.length ? ' · ' + h.medals.join('') : ''}</span><span class="val">${formatWon(h.earned)}원</span></div>`).join('')
+    : '<div class="hof-note" style="margin:4px 0;">첫 시즌 정산 후 시즌별 기록이 쌓여요.</div>';
+  box.innerHTML = `
+    <div class="hof-card"><h4>🏅 내 메달</h4>
+      <div class="hof-line"><span>🥇</span><span class="who">금메달</span><span class="val">${m.gold}개</span></div>
+      <div class="hof-line"><span>🥈</span><span class="who">은메달</span><span class="val">${m.silver}개</span></div>
+      <div class="hof-line"><span>🥉</span><span class="who">동메달</span><span class="val">${m.bronze}개</span></div>
+      <div class="hof-line"><span>🏛️</span><span class="who">명예 점수</span><span class="val">${getHonorScore()}점</span></div>
+      <div class="hof-note" style="margin-top:6px;">역대 랭커 특전: ${perks}</div>
+      <div class="hof-note">메달 1개당 특성 포인트 🥇12 🥈7 🥉4 · 명예 점수 🥇3 🥈2 🥉1 (수입·클릭 +0.5%/점, 최대 +30%)</div>
+    </div>
+    <div class="hof-card"><h4>📜 내 역대 기록</h4>
+      <div class="hof-line"><span>💰</span><span class="who">최고 시즌 수입</span><span class="val">${formatWon(bestSeasonEarned)}원</span></div>
+      <div class="hof-line"><span>🎰</span><span class="who">최고 월간 카지노 수익</span><span class="val">${formatWon(Math.max(bestMonthlyCasino, monthlyWinnings))}원</span></div>
+      <div class="hof-line"><span>🗡️</span><span class="who">최고 검 강화</span><span class="val">+${swordBestLevel}강</span></div>
+      <div class="hof-line"><span>♻️</span><span class="who">환생 횟수 / 참여 시즌</span><span class="val">${rebirthCount}회 / ${seasonCount}시즌</span></div>
+    </div>
+    <div class="hof-card"><h4>🗓️ 시즌별 성적</h4>${hist}</div>`;
+}
+function renderHall() {
+  document.getElementById('hofSeasonLeft').innerHTML = `이번 시즌 종료까지 <b style="color:var(--gold);">${getSeasonDaysLeft()}일</b> · 매월 1일 0시에 시즌 정산(자동 환생)`;
+  document.querySelectorAll('.hof-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === hofTab));
+  const box = document.getElementById('hofBody');
+  const token = ++hofRenderToken;
+  if (hofTab === 'mine') { renderHofMine(box); return; }
+  if (!currentUser) { box.innerHTML = '<p class="hof-note">🔒 구글 로그인을 하면 다른 플레이어들의 기록을 볼 수 있어요.<br>(내 기록실 탭은 로그인 없이도 볼 수 있어요)</p>'; return; }
+  if (hofTab === 'legends') renderHofLegends(box, token);
+  else renderHofChampions(box, token);
+}
+document.querySelectorAll('.hof-tab').forEach(b => b.addEventListener('click', () => { hofTab = b.dataset.tab; renderHall(); }));
+document.getElementById('hofOpenBtn').addEventListener('click', () => {
+  document.getElementById('hofModal').classList.add('show');
+  renderHall();
+});
+document.getElementById('hofCloseBtn').addEventListener('click', () => {
+  hofRenderToken++;
+  document.getElementById('hofModal').classList.remove('show');
+});
+
+// ----- 시즌 시계: 월 전환 감지, 보고서/운명 카드 띄우기, 메달 재시도 -----
+function refreshPrestigeExtra() {
+  const el = document.getElementById('prestigeExtra');
+  if (!el) return;
+  const f = getFateCard();
+  el.innerHTML = `🎴 현재 운명: ${f ? `<b>${f.icon} ${f.name}</b> — ${f.desc}` : '없음'}<br>🗓️ 시즌 종료까지 <b>${getSeasonDaysLeft()}일</b> (매월 1일 0시 자동 환생) · 🏛️ 명예 배율 x${getHonorMult().toFixed(3)}`;
+}
+function seasonTick() {
+  if (!seasonUiReady) return;
+  checkPeriodRollover(); // 켜둔 채로 자정이 지나도 바로 시즌을 정산한다
+  if (pendingSeasonReport && !isModalShown('fateModal')) {
+    const r = pendingSeasonReport;
+    pendingSeasonReport = null;
+    showSeasonReport(r);
+  } else if (fateOffer.length && !isModalShown('seasonModal') && !isModalShown('fateModal') && !isModalShown('prestigeModal')) {
+    openFateModal(); // 카드를 고르기 전에 창을 닫았거나 새로고침한 경우 이어서 고르게 한다
+  }
+  if (seasonNeedsSave) { seasonNeedsSave = false; saveGame({ forceCloud: true }); }
+  if (medalPendingKey && currentUser && db) processPendingMedals();
+  if (isModalShown('seasonModal') && lastSeasonReportKey()) renderSeasonMedalBox(lastSeasonReportKey());
+}
+function lastSeasonReportKey() { return seasonHistory.length ? seasonHistory[0].key : ''; }
+setInterval(seasonTick, 2000);
+setTimeout(() => {
+  seasonUiReady = true;
+  // 시즌 마감이 다가오면 하루에 한 번 미리 알려준다
+  const left = getSeasonDaysLeft();
+  const todayKey = getDayKey(new Date());
+  if (left <= 3 && localStorage.getItem('lrSeasonWarnDay') !== todayKey && totalEarned >= SEASON_MIN_TOTAL) {
+    localStorage.setItem('lrSeasonWarnDay', todayKey);
+    showToast(`⏰ 시즌 종료까지 ${left}일! 1일 0시에 돈·사업·검이 초기화되고 정산 보상을 받아요.`);
+  }
+}, 1500);
 
 // ===== 특성 트리 =====
 function updateTalentPointBadge() {
@@ -6388,16 +7005,20 @@ function checkPeriodRollover() {
   const mk = getMonthKey(new Date());
   if (monthlyPeriodKey !== mk) {
     const prevMk = monthlyPeriodKey;
+    // 초기화하기 전에 지난 시즌 성적을 스냅샷으로 남겨둔다(정산 보고서·명예의 전당 기록용)
+    const snap = { casino: monthlyWinnings, burned: burnedMonthly, swordBest: Math.max(swordMonthlyBestLevel, swordOwned ? swordLevel : 0) };
     monthlyPeriodKey = mk;
     monthlyWinnings = 0;
     burnedMonthly = 0;
     if (prevMk) {
-      // 지난달 검 랭킹 상위 3명 보상 확인(비동기) 후, 새 시즌을 위해 검을 초기화한다.
-      checkSwordSeasonReward(prevMk);
+      // 시즌 정산: 돈·사업 강제 환생(총 수입 1억 미만 초보는 면제) + 새 시즌을 위해 검 초기화.
+      settleSeason(prevMk, snap);
       swordOwned = false;
       swordLevel = 0;
       swordMonthlyBestLevel = 0;
       renderSwordPanel();
+      // 지난달 랭킹 메달·검 랭킹 보상은 로그인/네트워크가 준비되면(바로 못 하면 나중에 다시) 확인한다.
+      medalPendingKey = prevMk;
     }
   }
 }
@@ -6470,14 +7091,14 @@ function resolveCasinoResult(outcome, bet, winPayout, resEl, subText) {
     casinoWinCount++;
     casinoWinStreak++;
     casinoBestWinStreak = Math.max(casinoBestWinStreak, casinoWinStreak);
-    luckyCoins += 1; // 카지노에서 이길 때마다 행운의 코인 1개 (본편 상점에서 소비 가능)
+    luckyCoins += 1 * getFateCoinMult(); // 카지노에서 이길 때마다 행운의 코인 1개 (본편 상점에서 소비 가능, 운명 카드 '코인 부자'는 2배)
     if (!discoveryNudges.casinoShop && luckyCoins >= 20) {
       nudgeOnce('casinoShop', '🎟️ 코인이 모였어요! 카지노 패널의 "상점" 버튼에서 특별 아이템을 구매해보세요.', 1500);
     }
     // VIP 배당 보너스와 도박형 특성 배율을 곱으로 무한정 쌓이게 두면(둘 다 최대일 때
     // 약 +37.5%), 원래 손익분기(또는 근소한 하우스 엣지)로 설계된 게임 일부가 대량
     // 반복 플레이 시 플레이어에게 유리한 쪽으로 뒤집힐 수 있다. 합산 보너스에 상한을 둔다.
-    const combinedCasinoBonus = Math.min(1.15, (1 + vip.bonus) * casinoTalentMult) * getWeatherCasinoMult();
+    const combinedCasinoBonus = Math.min(1.15, (1 + vip.bonus) * casinoTalentMult) * getWeatherCasinoMult() * getFateCasinoMult();
     const netProfit = Math.floor((winPayout - bet) * combinedCasinoBonus);
     money = applySoftCap(money + bet + netProfit);
     if (netProfit > 0) {
@@ -7249,6 +7870,8 @@ async function syncLeaderboard() {
     await dbSetDoc('leaderboard_sword', currentUser.uid, { name, updatedAt, amount: swordBattleWins, nameColor: nameColorHex, mansionIcon, swordLevel: swordOwned ? swordLevel : -1 });
     // 검 랭킹(월간, 이번 달 최고 강화 레벨 기준)
     await dbSetDoc(`leaderboard_sword_monthly_${monthlyPeriodKey}`, currentUser.uid, { name, updatedAt, amount: swordMonthlyBestLevel, nameColor: nameColorHex, mansionIcon });
+    // 명예의 전당(역대 전설) 기록은 값이 바뀐 때만 따로 기록한다
+    await syncHallOfFameBoards();
   } catch (e) {
     console.error('랭킹보드 동기화 실패:', e);
   }
@@ -7475,8 +8098,9 @@ function buildSaveData() {
     map6Unlocked, voidWave, voidShards, voidDamageLevel, voidEnemyHp, voidEnemyMaxHp, voidRelics,
     burnedTotal, burnedMonthly, mansionLevel, lastSeenPatchVersion,
     swordOwned, swordLevel, swordBestLevel, swordBreakCount,
-    swordBattleWins, swordBattleCountToday,
+    swordBattleWins, swordBattleCountToday, swordBattleTickets, swordBattleTicketsAt,
     swordMonthlyBestLevel, swordReviveCharges, swordColorBoostMonthKey, swordColorBoostMult, claimedSwordSeasonRewards,
+    fateCardId, fateOffer, seasonMedals, seasonHistory, claimedMedalSeasons, medalPendingKey, bestSeasonEarned, bestMonthlyCasino, seasonCount,
     lastSaveTime: Date.now()
   };
 }
@@ -7583,11 +8207,24 @@ function applySaveData(data, opts) {
   swordBreakCount = data.swordBreakCount || 0;
   swordBattleWins = data.swordBattleWins || 0;
   swordBattleCountToday = data.swordBattleCountToday || 0;
+  // 예전 세이브에는 배틀 횟수 정보가 없다 -> 가득 찬(10/10) 상태로 시작한다.
+  swordBattleTickets = (typeof data.swordBattleTickets === 'number') ? data.swordBattleTickets : SWORD_BATTLE_MAX_TICKETS;
+  swordBattleTicketsAt = (typeof data.swordBattleTicketsAt === 'number') ? data.swordBattleTicketsAt : Date.now();
+  refreshSwordBattleTickets(); // 접속하지 않은 동안 지난 시간만큼 충전 반영
   swordMonthlyBestLevel = data.swordMonthlyBestLevel || 0;
   swordReviveCharges = data.swordReviveCharges || 0;
   swordColorBoostMonthKey = data.swordColorBoostMonthKey || '';
   swordColorBoostMult = data.swordColorBoostMult || 1;
   claimedSwordSeasonRewards = data.claimedSwordSeasonRewards || [];
+  fateCardId = (data.fateCardId && FATE_CARDS[data.fateCardId]) ? data.fateCardId : null;
+  fateOffer = Array.isArray(data.fateOffer) ? data.fateOffer.filter(id => FATE_CARDS[id]) : [];
+  seasonMedals = Object.assign({ gold: 0, silver: 0, bronze: 0 }, data.seasonMedals || {});
+  seasonHistory = Array.isArray(data.seasonHistory) ? data.seasonHistory : [];
+  claimedMedalSeasons = Array.isArray(data.claimedMedalSeasons) ? data.claimedMedalSeasons : [];
+  medalPendingKey = data.medalPendingKey || '';
+  bestSeasonEarned = Number(data.bestSeasonEarned) || 0;
+  bestMonthlyCasino = Number(data.bestMonthlyCasino) || 0;
+  seasonCount = Number(data.seasonCount) || 0;
   lastSeenPatchVersion = data.lastSeenPatchVersion || '';
   clickUpgradeLevel = data.clickUpgradeLevel || [0,0,0,0];
   jobLevels = data.jobLevels || new Array(allJobs.length).fill(0);
