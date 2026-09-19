@@ -14,7 +14,7 @@
 // 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
 // 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
 (function() {
-  var CURRENT_VERSION = '2026091902';
+  var CURRENT_VERSION = '2026091903';
   try {
     if (sessionStorage.getItem('lrVersionChecked') === CURRENT_VERSION) return;
     fetch(location.pathname + '?_cb=' + Date.now(), { cache: 'no-store' })
@@ -1204,7 +1204,7 @@
   <div class="modal-overlay" id="rankModal">
     <div class="modal-box">
       <h2>🏅 미니게임 랭크</h2>
-      <p id="rankLoginNote" style="font-size:10.5px; color:var(--paper-dim); margin:-6px 0 10px;">🔒 랭킹 등록·조회는 구글 로그인이 필요해요. (미로그인 시 등급만 이 기기에서 확인 가능 · 로그인 시 10분마다 전체 순위 자동 갱신)</p>
+      <p id="rankLoginNote" style="font-size:10.5px; color:var(--paper-dim); margin:-6px 0 10px;">🔒 랭킹 등록·조회는 구글 로그인이 필요해요. (미로그인 시 등급만 이 기기에서 확인 가능 · 로그인 시 전체 순위 실시간 갱신)</p>
       <button class="start-btn" id="rankLoginBtn" style="display:none; background:#fff; color:#3c4043; margin-bottom:10px;">🔵 Google로 로그인하고 랭킹 보기</button>
       <div class="my-rank-card" id="myRankCard"></div>
       <div class="share-btn-row">
@@ -4924,10 +4924,10 @@ async function renderRankModal() {
   const noteEl = document.getElementById('rankLoginNote');
   const loginBtn = document.getElementById('rankLoginBtn');
   if (currentUser) {
-    noteEl.textContent = `👤 ${currentUser.name}님으로 로그인됨 · 랭킹에 등록되고 있어요 (전체 순위는 10분마다 자동 갱신)`;
+    noteEl.textContent = `👤 ${currentUser.name}님으로 로그인됨 · 랭킹에 등록되고 있어요 (전체 순위가 실시간으로 갱신돼요)`;
     loginBtn.style.display = 'none';
   } else {
-    noteEl.textContent = '🔒 랭킹 등록·조회는 구글 로그인이 필요해요. (미로그인 시 등급은 이 기기에서만 확인 가능 · 로그인 시 10분마다 전체 순위 자동 갱신)';
+    noteEl.textContent = '🔒 랭킹 등록·조회는 구글 로그인이 필요해요. (미로그인 시 등급은 이 기기에서만 확인 가능 · 로그인 시 전체 순위 실시간 갱신)';
     loginBtn.style.display = 'block';
   }
   await renderLeaderboardList();
@@ -5143,25 +5143,84 @@ document.querySelectorAll('.lb-period-tab').forEach(btn => {
     document.getElementById('burnMoneyBtn').style.display = currentLeaderboardPeriod === 'burn' ? 'block' : 'none';
     renderMyRankCard();
     renderLeaderboardList();
+    // 탭(기간)이 바뀌면 실시간 구독 대상 board_key도 그 탭에 맞게 다시 걸어준다.
+    if (document.getElementById('rankModal').classList.contains('show')) {
+      subscribeLeaderboardRealtime();
+    }
   });
 });
 
-// ===== 랭킹 자동 갱신 (10분마다 DB 재조회) =====
-// 랭킹 모달이 열려있는 동안에만 10분(600000ms) 간격으로 fetchLeaderboard를 다시 호출해
-// 다른 플레이어들의 최신 순위를 반영한다. 모달을 닫으면 불필요한 DB 조회를 막기 위해 정지.
-const LEADERBOARD_REFRESH_INTERVAL = 10 * 60 * 1000; // 10분
+// ===== 랭킹 실시간 갱신 (Supabase Realtime) =====
+// 예전엔 랭킹 모달이 열려있는 동안 10분마다 fetchLeaderboard를 다시 호출하는
+// 폴링 방식이었는데, 지금은 leaderboard_entries 테이블 변경을 실시간(Postgres
+// Changes)으로 구독해서 누군가의 순위가 바뀌는 즉시(약간의 디바운스만 거쳐) 화면에
+// 반영한다. 지금 보고 있는 탭(board_key)에 해당하는 변경만 구독하고, 탭을 바꾸거나
+// 모달을 닫으면 구독을 해제한다.
+// * 주의: Supabase 대시보드에서 leaderboard_entries 테이블의 Realtime(Replication)이
+//   켜져 있어야 실제로 이벤트가 온다. (Database > Replication > supabase_realtime에
+//   leaderboard_entries 테이블 추가) 꺼져 있으면 이 구독은 아무 이벤트도 못 받고
+//   조용히 무동작 상태가 되므로, 아래 폴백 인터벌이 대신 최신 상태를 유지해준다.
+let leaderboardChannel = null;
+let leaderboardRefreshDebounceTimer = null;
+
+// 여러 건이 짧은 시간에 연속으로 바뀌어도(예: syncLeaderboard가 여러 컬렉션에 순차
+// 기록) 화면을 한 번만 다시 그리도록 살짝(500ms) 모아서 처리한다.
+function debouncedRefreshLeaderboard() {
+  if (leaderboardRefreshDebounceTimer) clearTimeout(leaderboardRefreshDebounceTimer);
+  leaderboardRefreshDebounceTimer = setTimeout(() => {
+    if (currentUser && document.getElementById('rankModal').classList.contains('show')) {
+      renderLeaderboardList();
+      renderMyRankPosition(currentLeaderboardPeriod);
+    }
+  }, 500);
+}
+
+function subscribeLeaderboardRealtime() {
+  unsubscribeLeaderboardRealtime();
+  if (!db || !currentUser) return;
+  const boardKey = getLeaderboardCollectionName(currentLeaderboardPeriod);
+  leaderboardChannel = db
+    .channel(`leaderboard_${boardKey}`)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'leaderboard_entries',
+      filter: `board_key=eq.${boardKey}`,
+    }, () => {
+      debouncedRefreshLeaderboard();
+    })
+    .subscribe();
+}
+
+function unsubscribeLeaderboardRealtime() {
+  if (leaderboardChannel) {
+    db.removeChannel(leaderboardChannel);
+    leaderboardChannel = null;
+  }
+  if (leaderboardRefreshDebounceTimer) {
+    clearTimeout(leaderboardRefreshDebounceTimer);
+    leaderboardRefreshDebounceTimer = null;
+  }
+}
+
+// Realtime이 (설정 미비 등으로) 조용히 안 오는 경우를 대비한 폴백. 예전보다 훨씬
+// 짧은 주기(1분)로만 보조적으로 재조회한다 - 정상적으로 Realtime이 들어오고 있어도
+// 겹쳐서 한 번 더 그리는 정도라 문제 없다.
+const LEADERBOARD_FALLBACK_REFRESH_INTERVAL = 60 * 1000; // 1분
 let leaderboardRefreshTimer = null;
 
 function startLeaderboardAutoRefresh() {
   stopLeaderboardAutoRefresh();
+  subscribeLeaderboardRealtime();
   leaderboardRefreshTimer = setInterval(() => {
     if (currentUser && document.getElementById('rankModal').classList.contains('show')) {
       renderLeaderboardList();
     }
-  }, LEADERBOARD_REFRESH_INTERVAL);
+  }, LEADERBOARD_FALLBACK_REFRESH_INTERVAL);
 }
 
 function stopLeaderboardAutoRefresh() {
+  unsubscribeLeaderboardRealtime();
   if (leaderboardRefreshTimer) {
     clearInterval(leaderboardRefreshTimer);
     leaderboardRefreshTimer = null;
