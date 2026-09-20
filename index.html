@@ -14,7 +14,7 @@
 // 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
 // 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
 (function() {
-  var CURRENT_VERSION = '2026092005';
+  var CURRENT_VERSION = '2026092007';
   try {
     if (sessionStorage.getItem('lrVersionChecked') === CURRENT_VERSION) return;
     fetch(location.pathname + '?_cb=' + Date.now(), { cache: 'no-store' })
@@ -147,6 +147,13 @@
   .hud-mult.show { display: block; }
 
   .top-actions { display: flex; gap: 6px; flex: 0 0 auto; }
+  #seasonWarnBar {
+    flex: 0 0 auto; text-align: center; font-size: 11.5px; font-weight: bold; color: #1c1712; cursor: pointer;
+    background: linear-gradient(90deg, #ffd166, #ffb347, #ffd166); padding: 6px 10px;
+  }
+  #seasonWarnBar.hot { background: linear-gradient(90deg, #ff6b5b, #e0432f, #ff6b5b); color: #fff; animation: seasonWarnPulse 1s ease-in-out infinite; }
+  @keyframes seasonWarnPulse { 50% { filter: brightness(1.25); } }
+  @media (prefers-reduced-motion: reduce) { #seasonWarnBar.hot { animation: none; } }
   #seasonEventBanner {
     flex: 0 0 auto; text-align: center; font-size: 11.5px; font-weight: bold; color: #1c1712;
     background: linear-gradient(90deg, #ffd166, #ffb347, #ffd166); background-size: 200% 100%;
@@ -885,6 +892,10 @@
     color: var(--paper-dim); font-size: 10.5px; padding: 6px 4px; text-align: center; cursor: pointer;
   }
   .lb-period-tab.active { background: var(--gold); color: var(--ink); font-weight: bold; border-color: var(--gold); }
+  /* 랭킹 대분류 (2x2) */
+  .rank-cat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; }
+  .rank-cat-btn { background: #2A241D; border: 1px solid #3a332a; border-radius: 10px; color: var(--paper-dim); font-size: 12.5px; padding: 10px 4px; text-align: center; cursor: pointer; white-space: nowrap; }
+  .rank-cat-btn.active { background: var(--gold); color: var(--ink); font-weight: bold; border-color: var(--gold); }
   .leaderboard-list { display: flex; flex-direction: column; gap: 5px; max-height: 32vh; overflow-y: auto; text-align: left; }
   .lb-row { display: flex; align-items: center; gap: 8px; background: #2A241D; border: 1px solid #3a332a; border-radius: 8px; padding: 6px 10px; font-size: 11px; }
   .lb-row.me { border-color: var(--gold); background: #35301f; }
@@ -1155,6 +1166,7 @@
     <div class="fever-label" id="feverLabel"></div>
   </div>
   <div id="seasonEventBanner" style="display:none;"></div>
+  <div id="seasonWarnBar" style="display:none;" role="button" tabindex="0" title="시즌 정산 자세히 보기"></div>
   <div id="installBanner" style="display:none;">
     <span>📲 홈 화면에 추가하면 앱처럼 바로 켤 수 있어요!</span>
     <button id="installBannerBtn">추가하기</button>
@@ -1462,14 +1474,13 @@
         <button class="close-btn share-mini-btn" id="inviteFriendBtn">🎁 친구 초대</button>
         <button class="close-btn share-mini-btn" id="hofOpenBtn">🏛️ 명예의 전당</button>
       </div>
-      <div class="lb-period-tabs" style="margin-top:14px;">
-        <button class="lb-period-tab active" data-period="weekly">📅 주간 랭킹</button>
-        <button class="lb-period-tab" data-period="monthly">🗓️ 월간 랭킹</button>
-        <button class="lb-period-tab" data-period="burn">🔥 소각 랭킹</button>
-        <button class="lb-period-tab" data-period="sword">⚔️ 검배틀 랭킹</button>
-        <button class="lb-period-tab" data-period="swordmonthly">🗡️ 검 랭킹</button>
-        <button class="lb-period-tab" data-period="swordcurrent">🗡️ 현재검 랭킹</button>
+      <div class="rank-cat-grid" id="rankCatGrid" style="margin-top:14px;">
+        <button class="rank-cat-btn" data-cat="wealth">💰 재산</button>
+        <button class="rank-cat-btn active" data-cat="minigame">🎮 미니게임</button>
+        <button class="rank-cat-btn" data-cat="sword">⚔️ 검</button>
+        <button class="rank-cat-btn" data-cat="burn">🔥 소각</button>
       </div>
+      <div class="lb-period-tabs" id="rankSubTabs"></div>
       <button class="start-btn" id="burnMoneyBtn" style="display:none; margin-top:10px; background:#c0392b;">🔥 지금 가진 돈 전부 태우기</button>
       <div id="leaderboardList" class="leaderboard-list">
         <p style="font-size:11px; color:var(--paper-dim);">불러오는 중...</p>
@@ -1764,6 +1775,16 @@
       <p id="seasonSub"></p>
       <div id="seasonBody"></div>
       <button class="start-btn" id="seasonNextBtn" style="margin-top:10px;">🎴 새 시즌 운명 카드 고르기</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="seasonWarnModal">
+    <div class="modal-box">
+      <h2>⏰ 곧 시즌 정산!</h2>
+      <div id="seasonWarnCount" style="font-family:'Black Han Sans', sans-serif; font-size:30px; color:var(--gold); margin:4px 0 2px;"></div>
+      <p id="seasonWarnDate" style="margin-bottom:8px;"></p>
+      <div id="seasonWarnBody" style="text-align:left; font-size:12px; line-height:1.75;"></div>
+      <button class="start-btn" id="seasonWarnCloseBtn" style="margin-top:10px;">확인</button>
     </div>
   </div>
 
@@ -3870,6 +3891,22 @@ let isBrandNewPlayer = false;
 // 간주해 배지를 띄우고, 기존 유저가 접속하면 자동으로 한 번 띄워준다.
 const patchNotes = [
   {
+    version: '2026092007',
+    date: '2026-09-20',
+    items: [
+      '💰 재산 랭킹이 열려요! 랭크 창 💰 재산에서 보유금 / 월간 수익(이번 시즌 총 수입) 순위를 볼 수 있어요. 이번 달에 접속한 유저만 집계돼요',
+      '⏳ 시즌 정산이 가까워지면 알려줘요: 3일 전부터 상단 배너, 24시간 전부터 카운트다운, 1시간·10분·1분 전엔 알림(10분·1분 전엔 안내 창)이 떠요',
+      '🗓️ 정산일(1일)에 접속하지 못해도 걱정 없어요. 며칠 늦게 접속해도 접속하는 순간 똑같이 정산돼요'
+    ]
+  },
+  {
+    version: '2026092006',
+    date: '2026-09-20',
+    items: [
+      '🏅 랭킹 창이 깔끔해졌어요! 💰 재산 · 🎮 미니게임 · ⚔️ 검 · 🔥 소각 중에서 고르면 그 아래에 세부 탭(주간/월간, 배틀/강화/현재검)이 나와요 (💰 재산 랭킹은 준비 중)'
+    ]
+  },
+  {
     version: '2026092005',
     date: '2026-09-20',
     items: [
@@ -4708,8 +4745,6 @@ document.getElementById('swordBattleStartBtn').addEventListener('click', startSw
 document.getElementById('swordBattleRankBtn').addEventListener('click', () => {
   document.getElementById('swordBattleModal').classList.remove('show');
   currentLeaderboardPeriod = 'sword';
-  document.querySelectorAll('.lb-period-tab').forEach(b => b.classList.toggle('active', b.dataset.period === 'sword'));
-  document.getElementById('burnMoneyBtn').style.display = 'none';
   document.getElementById('rankModal').classList.add('show');
   renderRankModal();
   startLeaderboardAutoRefresh();
@@ -4717,8 +4752,6 @@ document.getElementById('swordBattleRankBtn').addEventListener('click', () => {
 document.getElementById('swordRankBtn').addEventListener('click', () => {
   document.getElementById('swordModal').classList.remove('show');
   currentLeaderboardPeriod = 'swordmonthly';
-  document.querySelectorAll('.lb-period-tab').forEach(b => b.classList.toggle('active', b.dataset.period === 'swordmonthly'));
-  document.getElementById('burnMoneyBtn').style.display = 'none';
   document.getElementById('rankModal').classList.add('show');
   renderRankModal();
   startLeaderboardAutoRefresh();
@@ -5675,13 +5708,14 @@ function settleSeason(prevKey, snap) {
   seasonHistory = seasonHistory.slice(0, 24);
   fateCardId = null;
   fateOffer = pickFateOffer();
-  pendingSeasonReport = { key: prevKey, earned, grade: grade.g, titleIcon: title.icon, titleName: title.name, casino: snap.casino, swordBest: snap.swordBest, burned: snap.burned, rows, total };
+  const lateSettle = Date.now() - new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime() > 10 * 60 * 1000; // 1일 0시 직후가 아니라 한참 뒤에 접속해서 정산되는 경우
+  pendingSeasonReport = { late: lateSettle, key: prevKey, earned, grade: grade.g, titleIcon: title.icon, titleName: title.name, casino: snap.casino, swordBest: snap.swordBest, burned: snap.burned, rows, total };
   seasonNeedsSave = true;
 }
 
 function showSeasonReport(r) {
   document.getElementById('seasonTitle').textContent = `🗓️ ${monthLabel(r.key)} 시즌 종료!`;
-  document.getElementById('seasonSub').innerHTML = '월이 바뀌어 시즌이 정산됐어요.<br>돈·사업·검은 초기화되고, 컬렉션·특성·업적·메달은 그대로예요.';
+  document.getElementById('seasonSub').innerHTML = (r.late ? '접속하지 않은 사이 월이 바뀌어서, 접속한 지금 정산했어요.' : '월이 바뀌어 시즌이 정산됐어요.') + '<br>돈·사업·검은 초기화되고, 컬렉션·특성·업적·메달은 그대로예요.';
   document.getElementById('seasonBody').innerHTML = `
     <div class="season-grade">${r.grade}</div>
     <div style="font-size:11px; color:var(--paper-dim); margin-top:-4px; margin-bottom:8px;">시즌 등급 · ${r.titleIcon} ${hofEsc(r.titleName)}</div>
@@ -5931,6 +5965,69 @@ function seasonTick() {
 }
 function lastSeasonReportKey() { return seasonHistory.length ? seasonHistory[0].key : ''; }
 setInterval(seasonTick, 2000);
+
+// ----- 시즌 정산 임박 알림: 배너 + 카운트다운 + 단계별 경고 -----
+// 정산은 매월 1일 0시(기기 시각)에 접속 중이면 즉시, 꺼져 있었다면 다음 접속 때 실행되는데,
+// 켜둔 채 갑자기 초기화돼 놀라지 않도록 3일 전부터 배너, 24시간 전부터 초 단위 카운트다운을 보여주고
+// 1시간 / 10분 / 1분 전에는 알림(10분·1분 전엔 안내 창)을 띄운다. 총 수입 1억 미만(정산 면제)은 표시하지 않는다.
+function getSeasonEndMs() { const n = new Date(); return new Date(n.getFullYear(), n.getMonth() + 1, 1).getTime(); }
+function fmtSeasonLeft(ms) {
+  const sec = Math.max(0, Math.floor(ms / 1000)), p = n => String(n).padStart(2, '0');
+  const d = Math.floor(sec / 86400), h = Math.floor(sec % 86400 / 3600), m = Math.floor(sec % 3600 / 60), x = sec % 60;
+  return d > 0 ? `${d}일 ${h}시간 ${p(m)}분` : `${p(h)}:${p(m)}:${p(x)}`;
+}
+// settleSeason()과 같은 계산으로 "지금 정산되면" 받을 보상을 미리 계산해 보여준다 (상태는 바꾸지 않음). 정산 규칙을 바꾸면 여기도 같이 고칠 것.
+function previewSeasonSettle() {
+  if (totalEarned < SEASON_MIN_TOTAL) return null;
+  const titleIdx = getWealthTitleIndex(), title = wealthTitles[titleIdx];
+  const grade = SEASON_GRADES.find(g => titleIdx >= g.min) || SEASON_GRADES[SEASON_GRADES.length - 1];
+  const baseGain = calcPrestigeGain(), rebirthPts = activeChallenge === 'no_casino' ? baseGain * 2 : baseGain;
+  return { grade: grade.g, title, total: rebirthPts + grade.pts + getHonorSeasonBonusPoints() };
+}
+const SEASON_WARN_STEPS = [ // 큰 값 -> 작은 값 순서
+  { ms: 3600000, id: '1h',  text: '⏰ 시즌 정산까지 1시간! 정산되면 돈·사업·검이 초기화돼요.' },
+  { ms: 600000,  id: '10m', text: '🚨 10분 뒤 시즌 정산! 돈·사업·검이 초기화돼요.', modal: true },
+  { ms: 60000,   id: '1m',  text: '🚨 1분 뒤 시즌 정산이 시작돼요!', modal: true }
+];
+function openSeasonWarn() {
+  const pv = previewSeasonSettle();
+  document.getElementById('seasonWarnBody').innerHTML = `
+    <div>🔄 <b>초기화</b> : 돈 · 사업 · 검</div>
+    <div>✅ <b>그대로</b> : 컬렉션 · 특성 · 업적 · 메달</div>
+    <div>🎁 <b>지금 정산되면</b> : ${pv ? `시즌 등급 <b>${pv.grade}</b> (${pv.title.icon} ${hofEsc(pv.title.name)}) · 보상 <b>+${pv.total}P</b>` : '총 수입 1억 미만이라 이번 정산은 면제돼요'}</div>
+    <div style="color:var(--paper-dim); margin-top:4px;">📴 게임을 꺼 둬도 다음에 접속하는 순간(며칠 늦어도) 똑같이 정산돼요. 정산이 끝나면 보고서 창이 떠요.</div>`;
+  const end = new Date(getSeasonEndMs());
+  document.getElementById('seasonWarnDate').textContent = `${end.getMonth() + 1}월 ${end.getDate()}일 0시에 정산`;
+  document.getElementById('seasonWarnCount').textContent = fmtSeasonLeft(getSeasonEndMs() - Date.now());
+  document.getElementById('seasonWarnModal').classList.add('show');
+}
+function closeSeasonWarn() { document.getElementById('seasonWarnModal').classList.remove('show'); }
+document.getElementById('seasonWarnBar').addEventListener('click', openSeasonWarn);
+document.getElementById('seasonWarnCloseBtn').addEventListener('click', closeSeasonWarn);
+function seasonWarnTick() {
+  if (!seasonUiReady) return;
+  const bar = document.getElementById('seasonWarnBar');
+  const left = getSeasonEndMs() - Date.now();
+  if (!(totalEarned >= SEASON_MIN_TOTAL && left > 0 && left <= 3 * 86400000)) {
+    if (bar.style.display !== 'none') bar.style.display = 'none';
+    if (isModalShown('seasonWarnModal')) closeSeasonWarn();   // 정산이 시작되면 안내 창은 닫고 보고서로 넘어간다
+    return;
+  }
+  bar.style.display = 'block';
+  bar.classList.toggle('hot', left <= 3600000);
+  bar.textContent = left > 86400000 ? `⏳ 시즌 정산까지 ${fmtSeasonLeft(left)} · 눌러서 자세히` : `⏳ 시즌 정산까지 ${fmtSeasonLeft(left)} · 돈·사업·검 초기화`;
+  if (isModalShown('seasonWarnModal')) document.getElementById('seasonWarnCount').textContent = fmtSeasonLeft(left);
+  // 단계별 경고: 지금 시각에 해당하는 가장 가까운 단계 하나만, 시즌마다 한 번씩
+  const mk = getMonthKey(new Date());
+  let hit = null;
+  for (const st of SEASON_WARN_STEPS) if (left <= st.ms) hit = st;
+  if (!hit || localStorage.getItem(`lrSeasonWarn_${mk}_${hit.id}`)) return;
+  SEASON_WARN_STEPS.forEach(st => { if (st.ms >= hit.ms) localStorage.setItem(`lrSeasonWarn_${mk}_${st.id}`, '1'); });
+  showToast(hit.text);
+  if (navigator.vibrate) { try { navigator.vibrate([200, 100, 200]); } catch (e) {} }
+  if (hit.modal) openSeasonWarn();
+}
+setInterval(seasonWarnTick, 1000);
 setTimeout(() => {
   seasonUiReady = true;
   // 시즌 마감이 다가오면 하루에 한 번 미리 알려준다
@@ -6152,8 +6249,112 @@ document.getElementById('achievementCloseBtn').addEventListener('click', () => {
 // ===== 랭크 모달 =====
 let currentLeaderboardPeriod = 'weekly';
 
+// 랭킹 대분류 → 세부 탭. period 값은 기존 랭킹(보드) 이름을 그대로 쓰고, 여기서는 화면 구성만 나눈다.
+//  재산(wealth_*)은 leaderboard 보드가 아니라 서버 함수 wealth_ranking()(saves 테이블의 money/totalEarned 집계)로 가져온다.
+const RANK_CATS = [
+  { id: 'wealth',   subs: [{ period: 'wealth_money',   label: '💰 보유금' },
+                           { period: 'wealth_monthly', label: '📈 월간 수익' }] },
+  { id: 'minigame', subs: [{ period: 'weekly',  label: '📅 주간' },
+                           { period: 'monthly', label: '🗓️ 월간' }] },
+  { id: 'sword',    subs: [{ period: 'sword',        label: '⚔️ 배틀' },
+                           { period: 'swordmonthly', label: '🔨 강화' },
+                           { period: 'swordcurrent', label: '🗡️ 현재검' }] },
+  { id: 'burn',     subs: [{ period: 'burn', label: '🔥 소각' }] }   // 세부 탭이 하나뿐이면 세부 탭 줄을 숨긴다
+];
+const rankLastSub = {};   // 대분류별로 마지막에 보던 세부 탭 기억
+function rankCatOfPeriod(period) { return RANK_CATS.find(c => c.subs.some(s => s.period === period)) || RANK_CATS[1]; }
+function isWealthPeriod(period) { return period === 'wealth_money' || period === 'wealth_monthly'; }
+function wealthKindOf(period) { return period === 'wealth_money' ? 'money' : 'earned'; }
+// ----- 재산 랭킹: 서버 함수(wealth_rank.sql) 호출 -----
+let wealthMissing = false;          // 서버 함수가 아직 설치 안 됐으면 "준비 중" 안내
+const wealthCache = {};
+// 같은 종류를 짧은 시간에 여러 번(내 순위 카드 + 목록) 요청하면 한 번만 조회한다.
+function fetchWealthRank(kind) {
+  if (!db || !currentUser) return Promise.resolve(null);
+  const hit = wealthCache[kind];
+  if (hit && Date.now() - hit.at < 8000) return hit.promise;
+  const promise = (async () => {
+    try {
+      checkPeriodRollover();
+      const { data, error } = await db.rpc('wealth_ranking', { p_kind: kind, p_limit: LEADERBOARD_TOP_N });
+      if (error) throw error;
+      wealthMissing = false;
+      return data && data.ok ? data : null;
+    } catch (e) {
+      if (e && (e.code === 'PGRST202' || e.code === '42883' || /could not find the function|does not exist/i.test(e.message || ''))) wealthMissing = true;
+      else console.error('재산 랭킹 조회 실패:', e);
+      return null;
+    }
+  })();
+  wealthCache[kind] = { at: Date.now(), promise };
+  promise.then(r => { if (r === null && wealthCache[kind] && wealthCache[kind].promise === promise) delete wealthCache[kind]; });
+  return promise;
+}
+const WEALTH_PENDING_MSG = '🚧 재산 랭킹은 준비 중이에요. 조금만 기다려주세요!';
+async function renderWealthCard(period) {
+  const card = document.getElementById('myRankCard');
+  const kind = wealthKindOf(period), isMoney = kind === 'money';
+  card.innerHTML = `
+    <span class="my-rank-icon">${isMoney ? '💰' : '📈'}</span>
+    <div style="flex:1;">
+      <div class="my-rank-name">${isMoney ? '재산 · 보유금' : '재산 · 월간 수익'} <span style="font-size:10px; color:var(--paper-dim); font-weight:normal;">${isMoney ? '(지금 가진 돈 기준)' : '(이번 시즌 총 수입 기준)'}</span></div>
+      <div class="my-rank-sub">${isMoney ? `내 보유금 ${formatWon(money)}원` : `이번 시즌 총 수입 ${formatWon(totalEarned)}원 · 환생하면 0부터 다시 집계돼요`}</div>
+      <div class="my-rank-sub" id="myRankPosition" style="color:var(--gold);">내 순위 불러오는 중...</div>
+    </div>
+  `;
+  if (!currentUser) { document.getElementById('myRankPosition').textContent = '로그인하면 전체 순위를 볼 수 있어요.'; return; }
+  const res = await fetchWealthRank(kind);
+  if (currentLeaderboardPeriod !== period) return;   // 조회하는 동안 다른 탭으로 넘어갔으면 그리지 않는다
+  const el = document.getElementById('myRankPosition');
+  if (!el) return;
+  if (!res) el.textContent = wealthMissing ? '🚧 준비 중이에요. 조금만 기다려주세요!' : '순위를 불러오지 못했어요.';
+  else if (!res.me) el.textContent = '이번 달 집계에 아직 없어요. 잠시 플레이하면 반영돼요 (저장 후 최대 30초).';
+  else el.textContent = `📍 전체 ${res.total.toLocaleString('ko-KR')}명 중 ${res.me.rank.toLocaleString('ko-KR')}위`;
+}
+async function renderWealthList(period) {
+  const lbEl = document.getElementById('leaderboardList');
+  const kind = wealthKindOf(period), icon = kind === 'money' ? '💰' : '📈';
+  lbEl.innerHTML = `<p style="font-size:11px; color:var(--paper-dim);">불러오는 중...</p>`;
+  const res = await fetchWealthRank(kind);
+  if (currentLeaderboardPeriod !== period) return;
+  if (!res) {
+    lbEl.innerHTML = `<p style="font-size:11px; color:var(--paper-dim);">${wealthMissing ? WEALTH_PENDING_MSG : '재산 랭킹을 불러오지 못했어요. 잠시 후 다시 시도해주세요.'}</p>`;
+    return;
+  }
+  if (!res.list.length) {
+    lbEl.innerHTML = `<p style="font-size:11px; color:var(--paper-dim);">아직 이번 달 재산 랭킹 데이터가 없어요.</p>`;
+    return;
+  }
+  const safeColor = c => (typeof c === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(c)) ? c : '';
+  const nameHtml = p => `<span class="lb-name"${safeColor(p.nameColor) ? ` style="color:${safeColor(p.nameColor)};font-weight:bold;"` : ''}>${p.mansionIcon ? hofEsc(p.mansionIcon) + ' ' : ''}${hofEsc(p.name)}</span>`;
+  lbEl.innerHTML = res.list.map(p => `
+    <div class="lb-row${p.uid === currentUser.uid ? ' me' : ''}">
+      <span class="lb-rank">${p.rank}</span>${nameHtml(p)}
+      <span class="lb-tier">${icon} ${formatWon(Number(p.amount))}원</span>
+    </div>`).join('');
+  if (res.me && !res.list.some(p => p.uid === currentUser.uid)) {   // 상위 목록 밖이면 내 순위를 아래에 이어서 보여준다
+    lbEl.insertAdjacentHTML('beforeend', `<div style="text-align:center; font-size:10px; color:var(--paper-dim); margin:4px 0;">⋯</div>
+      <div class="lb-row me"><span class="lb-rank">${res.me.rank}</span><span class="lb-name">${hofEsc(currentUser.name)} (나)</span><span class="lb-tier">${icon} ${formatWon(Number(res.me.amount))}원</span></div>`);
+  }
+  lbEl.insertAdjacentHTML('beforeend', `<p style="font-size:10px; color:var(--paper-dim); margin-top:6px;">이번 달에 접속한 유저만 집계돼요 · 접속 중이면 저장 후 최대 30초 뒤 반영돼요</p>`);
+}
+// 지금 선택된 기간(currentLeaderboardPeriod)에 맞게 대분류 버튼 / 세부 탭 / 소각 버튼을 그린다.
+function renderRankSubTabs() {
+  const cat = rankCatOfPeriod(currentLeaderboardPeriod);
+  rankLastSub[cat.id] = currentLeaderboardPeriod;
+  document.querySelectorAll('#rankCatGrid .rank-cat-btn').forEach(b => b.classList.toggle('active', b.dataset.cat === cat.id));
+  const box = document.getElementById('rankSubTabs');
+  if (cat.subs.length <= 1) { box.style.display = 'none'; box.innerHTML = ''; }
+  else {
+    box.style.display = 'flex';
+    box.innerHTML = cat.subs.map(s => `<button class="lb-period-tab${s.period === currentLeaderboardPeriod ? ' active' : ''}" data-period="${s.period}">${s.label}</button>`).join('');
+  }
+  document.getElementById('burnMoneyBtn').style.display = currentLeaderboardPeriod === 'burn' ? 'block' : 'none';
+}
+
 async function renderRankModal() {
   checkPeriodRollover();
+  renderRankSubTabs();
   renderMyRankCard();
   const noteEl = document.getElementById('rankLoginNote');
   const loginBtn = document.getElementById('rankLoginBtn');
@@ -6174,6 +6375,7 @@ async function renderRankModal() {
 function renderMyRankCard() {
   const card = document.getElementById('myRankCard');
   const periodForRank = currentLeaderboardPeriod;
+  if (isWealthPeriod(currentLeaderboardPeriod)) { renderWealthCard(currentLeaderboardPeriod); return; }
   if (currentLeaderboardPeriod === 'burn') {
     card.innerHTML = `
       <span class="my-rank-icon">🔥</span>
@@ -6241,6 +6443,7 @@ function renderMyRankCard() {
   renderMyRankPosition(periodForRank);
 }
 async function renderMyRankPosition(period) {
+  if (isWealthPeriod(period)) return;   // 재산 탭은 renderWealthCard가 직접 그린다
   const el = document.getElementById('myRankPosition');
   if (!el || !currentUser) { if (el) el.textContent = '로그인하면 전체 순위를 볼 수 있어요.'; return; }
   const info = await fetchMyRankInfo(period);
@@ -6259,12 +6462,13 @@ document.getElementById('burnMoneyBtn').addEventListener('click', () => { initAu
 
 async function renderLeaderboardList() {
   const lbEl = document.getElementById('leaderboardList');
-  const periodLabels = { weekly: '주간', monthly: '월간', burn: '소각', sword: '검배틀', swordmonthly: '검(월간)', swordcurrent: '현재검' };
+  const periodLabels = { weekly: '주간', monthly: '월간', burn: '소각', sword: '검배틀', swordmonthly: '검(월간)', swordcurrent: '현재검', wealth_money: '보유금', wealth_monthly: '월간 수익' };
   const periodLabel = periodLabels[currentLeaderboardPeriod] || '';
   if (!currentUser) {
     lbEl.innerHTML = `<p style="font-size:11px; color:var(--paper-dim);">구글 로그인을 하면 다른 플레이어들과의 ${periodLabel} 랭킹을 볼 수 있어요.</p>`;
     return;
   }
+  if (isWealthPeriod(currentLeaderboardPeriod)) { await renderWealthList(currentLeaderboardPeriod); return; }
   lbEl.innerHTML = `<p style="font-size:11px; color:var(--paper-dim);">불러오는 중...</p>`;
   const list = await fetchLeaderboard(currentLeaderboardPeriod);
   if (list.length === 0) {
@@ -6370,18 +6574,27 @@ async function appendMyRankRowIfOutsideTop(lbEl, period, isBurn) {
   lbEl.appendChild(row);
 }
 
-document.querySelectorAll('.lb-period-tab').forEach(btn => {
-  btn.addEventListener('click', () => {
-    currentLeaderboardPeriod = btn.dataset.period;
-    document.querySelectorAll('.lb-period-tab').forEach(b => b.classList.toggle('active', b === btn));
-    document.getElementById('burnMoneyBtn').style.display = currentLeaderboardPeriod === 'burn' ? 'block' : 'none';
-    renderMyRankCard();
-    renderLeaderboardList();
-    // 탭(기간)이 바뀌면 실시간 구독 대상 board_key도 그 탭에 맞게 다시 걸어준다.
-    if (document.getElementById('rankModal').classList.contains('show')) {
-      subscribeLeaderboardRealtime();
-    }
-  });
+// 랭킹 기간이 바뀔 때(대분류/세부 탭 클릭 공통)
+function selectRankPeriod(period) {
+  currentLeaderboardPeriod = period;
+  renderRankSubTabs();
+  renderMyRankCard();
+  renderLeaderboardList();
+  // 탭(기간)이 바뀌면 실시간 구독 대상 board_key도 그 탭에 맞게 다시 걸어준다.
+  if (document.getElementById('rankModal').classList.contains('show')) {
+    subscribeLeaderboardRealtime();
+  }
+}
+document.getElementById('rankCatGrid').addEventListener('click', (e) => {
+  const btn = e.target.closest('.rank-cat-btn');
+  if (!btn) return;
+  const cat = RANK_CATS.find(c => c.id === btn.dataset.cat);
+  if (!cat || rankCatOfPeriod(currentLeaderboardPeriod) === cat) return;
+  selectRankPeriod(rankLastSub[cat.id] || cat.subs[0].period);
+});
+document.getElementById('rankSubTabs').addEventListener('click', (e) => {
+  const btn = e.target.closest('.lb-period-tab');
+  if (btn) selectRankPeriod(btn.dataset.period);
 });
 
 // ===== 랭킹 실시간 갱신 (Supabase Realtime) =====
@@ -6411,7 +6624,7 @@ function debouncedRefreshLeaderboard() {
 
 function subscribeLeaderboardRealtime() {
   unsubscribeLeaderboardRealtime();
-  if (!db || !currentUser) return;
+  if (!db || !currentUser || isWealthPeriod(currentLeaderboardPeriod)) return;
   const boardKey = getLeaderboardCollectionName(currentLeaderboardPeriod);
   leaderboardChannel = db
     .channel(`leaderboard_${boardKey}`)
@@ -8152,7 +8365,7 @@ function getLeaderboardSortField(period) {
 const LEADERBOARD_TOP_N = 30;
 const LEADERBOARD_FETCH_LIMIT = 100;
 async function fetchLeaderboard(period) {
-  if (!db) return [];
+  if (!db || isWealthPeriod(period)) return [];
   try {
     checkPeriodRollover();
     const colName = getLeaderboardCollectionName(period);
@@ -8181,7 +8394,7 @@ async function fetchLeaderboard(period) {
 const MY_RANK_CACHE_MS = 8000;
 const myRankCache = {};
 function fetchMyRankInfo(period) {
-  if (!currentUser || !db) return Promise.resolve(null);
+  if (!currentUser || !db || isWealthPeriod(period)) return Promise.resolve(null);
   const key = period + '|' + currentUser.uid;
   const hit = myRankCache[key];
   if (hit && Date.now() - hit.at < MY_RANK_CACHE_MS) return hit.promise;
@@ -8290,6 +8503,14 @@ function scheduleGameNotifications() {
       title: '💰 방치수입이 가득 찼어요!', body: '더 늦기 전에 들어와서 수확해가세요.',
       delayMs: 16 * 3600 * 1000
     });
+    // 시즌 정산(매월 1일 0시) 24시간 / 1시간 전 알림. (타이머 한도 때문에 7일 안쪽 것만 예약하고, 백그라운드로 갈 때마다 다시 건다)
+    if (totalEarned >= SEASON_MIN_TOTAL) {
+      const seasonEnd = getSeasonEndMs(), nowMs = Date.now();
+      [[86400000, 'season-24h', '⏳ 시즌 정산까지 24시간!'], [3600000, 'season-1h', '🚨 시즌 정산까지 1시간!']].forEach(([lead, tag, title]) => {
+        const delay = seasonEnd - lead - nowMs;
+        if (delay > 0 && delay < 7 * 86400000) reg.active.postMessage({ type: 'scheduleNotification', tag, title, body: '1일 0시에 돈·사업·검이 초기화돼요. 접속해서 확인해보세요.', delayMs: delay });
+      });
+    }
     // 다음 자정(일일 미션 초기화 시점)에 맞춰 알림
     const now = new Date();
     const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 5, 0);
@@ -8312,7 +8533,7 @@ function updateNotifBtnLabel() {
     btn.textContent = '🔕 알림이 차단돼있어요 (브라우저 설정에서 허용 필요)';
     btn.disabled = true;
   } else {
-    btn.textContent = '🔔 알림 켜기 (방치수입 다 찼을 때 · 매일 미션 초기화 시)';
+    btn.textContent = '🔔 알림 켜기 (방치수입 다 찼을 때 · 매일 미션 초기화 · 시즌 정산 전)';
     btn.disabled = false;
   }
 }
