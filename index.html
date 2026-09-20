@@ -14,7 +14,7 @@
 // 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
 // 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
 (function() {
-  var CURRENT_VERSION = '2026092003';
+  var CURRENT_VERSION = '2026092005';
   try {
     if (sessionStorage.getItem('lrVersionChecked') === CURRENT_VERSION) return;
     fetch(location.pathname + '?_cb=' + Date.now(), { cache: 'no-store' })
@@ -1139,7 +1139,7 @@
       <button class="icon-btn" id="dailyBtn" title="일일 미션">📅<span class="badge" id="dailyPointBadge" style="display:none;"></span></button>
       <button class="icon-btn" id="talentBtn" title="특성">🌳<span class="badge" id="talentPointBadge" style="display:none;"></span></button>
       <button class="icon-btn" id="infiniteUpgradeBtn" title="무한강화">💍</button>
-      <button class="icon-btn" id="prestigeBtn" title="환생">♻️</button>
+      <button class="icon-btn" id="lottoBtn" title="인생 로또">🎟️</button>
       <button class="icon-btn" id="swordBtn" title="검">⚔️</button>
       <button class="icon-btn" id="moreMenuBtn" title="더보기">⋯<span class="badge" id="noticePointBadge" style="display:none;"></span></button>
     </div>
@@ -1434,7 +1434,7 @@
         <button class="close-btn more-menu-item" id="achievementBtn" style="text-align:left;">🏆 업적</button>
         <button class="close-btn more-menu-item" id="nameColorBtn" style="text-align:left;">🎨 이름 색상 뽑기</button>
         <button class="close-btn more-menu-item" id="mansionBtn" style="text-align:left;">🏰 저택 꾸미기</button>
-        <button class="close-btn more-menu-item" id="lottoBtn" style="text-align:left;">🎟️ 인생 로또</button>
+        <button class="close-btn more-menu-item" id="prestigeBtn" style="text-align:left;">♻️ 환생</button>
         <button class="close-btn more-menu-item" id="resetBtn" style="text-align:left;">⟳ 초기화</button>
         <button class="close-btn more-menu-item" id="helpBtn" style="text-align:left;">❓ 도움말</button>
       </div>
@@ -1544,7 +1544,7 @@
         <li>가끔 화면에 <b>🐇 잽싸게 도망다니는 손님</b>이 나타나요. 사라지기 전에 빠르게 탭하면 큰 보너스를 받을 수 있어요</li>
         <li>화면 오른쪽 아래 <b>🚀 부스터</b> 버튼으로 진행 속도를 극대화할 수 있습니다</li>
         <li>상단 <b>📅 일일 미션</b>은 매일 자정마다 새로 갱신돼요. 꼭 챙겨서 보상을 받아보세요</li>
-        <li>헤더의 <b>⋯ 더보기</b> 메뉴에서 배경음악, 업적, 이름 색상 뽑기, 저택 꾸미기 등을 확인할 수 있어요</li>
+        <li>헤더의 <b>⋯ 더보기</b> 메뉴에서 배경음악, 업적, 이름 색상 뽑기, 저택 꾸미기, 환생 등을 확인할 수 있어요</li>
         <li>진행바를 가득 채우면 다음 신분으로 승급합니다</li>
         <li>직장인 단계를 끝까지 채우면 <b>② 상가</b> 거리가 열려서 가게/건물을 차릴 수 있어요</li>
       </ul>
@@ -3683,12 +3683,12 @@ const UI_FEATURES = [
     hint: '저택을 꾸며 재산을 뽐내요 (더보기 메뉴)', used: () => mansionLevel > 0 },
   { id: 'sword',    icon: '⚔️', name: '검', at: 1e9, btns: ['swordBtn'],
     hint: '검을 강화하고 다른 유저와 배틀해요', used: () => swordOwned || swordBestLevel > 0 || swordBattleWins > 0 },
-  { id: 'lotto',    icon: '🎟️', name: '인생 로또', at: 1e14, btns: ['lottoBtn'], where: 'more',
-    hint: '매일 밤 8시 추첨! 1등이 없으면 상금이 계속 이월돼요 (더보기 메뉴)' },
+  { id: 'lotto',    icon: '🎟️', name: '인생 로또', at: 1e12, btns: ['lottoBtn'],
+    hint: '매일 밤 8시 추첨! 1등이 없으면 상금이 계속 이월돼요' },
   { id: 'world',    icon: '🌍', name: '월드 사업', at: WORLD_UNLOCK_THRESHOLD, kind: 'info', open: () => map5Unlocked,
     hint: '세계로 뻗어가는 기업 사업이 열려요' },
-  { id: 'prestige', icon: '♻️', name: '환생·특성', at: 1e16, btns: ['prestigeBtn', 'talentBtn'],
-    hint: '처음부터 다시 시작하는 대신 영구 특성을 얻어요', used: () => rebirthCount > 0 || prestigePoints > 0 }
+  { id: 'prestige', icon: '♻️', name: '환생·특성', at: 1e16, btns: ['prestigeBtn', 'talentBtn'], where: 'more',
+    hint: '처음부터 다시 시작하는 대신 영구 특성을 얻어요 (환생은 더보기 메뉴, 특성은 상단 🌳)', used: () => rebirthCount > 0 || prestigePoints > 0 }
 ];
 
 // 10의 거듭제곱에 가까운 목표를 "10만 / 10억 / 1경"처럼 깔끔하게 표기
@@ -3811,7 +3811,7 @@ function nudgeOnce(key, message, delay) {
 }
 function checkPrestigeNudge() {
   if (!discoveryNudges.prestige && calcPrestigeGain() > 0) {
-    nudgeOnce('prestige', '♻️ 이제 환생할 수 있어요! 처음부터 다시 시작하는 대신 영구적인 특성 포인트를 얻습니다. 위쪽 ♻️ 버튼을 확인해보세요.', 500);
+    nudgeOnce('prestige', '♻️ 이제 환생할 수 있어요! 처음부터 다시 시작하는 대신 영구적인 특성 포인트를 얻습니다. ⋯ 더보기 메뉴의 ♻️ 환생을 확인해보세요.', 500);
   }
 }
 
@@ -3870,10 +3870,24 @@ let isBrandNewPlayer = false;
 // 간주해 배지를 띄우고, 기존 유저가 접속하면 자동으로 한 번 띄워준다.
 const patchNotes = [
   {
+    version: '2026092005',
+    date: '2026-09-20',
+    items: [
+      '🎟️ 인생 로또 해금 조건이 총 수입 1조원으로 낮아졌어요'
+    ]
+  },
+  {
+    version: '2026092004',
+    date: '2026-09-20',
+    items: [
+      '🎟️ 인생 로또 버튼이 상단 헤더로 올라왔어요. 대신 ♻️ 환생은 ⋯ 더보기 메뉴로 옮겼어요'
+    ]
+  },
+  {
     version: '2026092003',
     date: '2026-09-20',
     items: [
-      '🎟️ 인생 로또 오픈! 매일 밤 8시에 추첨하고, 1등이 안 나오면 상금이 100% 이월돼요 (총 수입 100조 달성 시 ⋯ 더보기에 열려요)',
+      '🎟️ 인생 로또 오픈! 매일 밤 8시에 추첨하고, 1등이 안 나오면 상금이 100% 이월돼요 (총 수입 1조 달성 시 상단 🎟️ 버튼이 열려요)',
       '🎫 1~20 중 6개를 직접 고르거나(수동/반자동) 자동으로 살 수 있어요. 1장 1조원, 회차당 1인 최대 10장',
       '👑 1등은 기본 50경 + 판매금 + 이월금, 2등 5경, 3등 1,000조, 4등 100조! 이월이 길어질수록 전광판이 불꽃→번개→무지개로 화려해져요',
       '🎰 밤 8시엔 공 6개가 하나씩 공개되는 추첨 연출이 나오고, 1·2등이 나오면 전 서버에 공지돼요 (👏 축하하기). 매월 마지막 추첨 뒤 이월금은 시즌과 함께 초기화돼요'
