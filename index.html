@@ -14,7 +14,7 @@
 // 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
 // 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
 (function() {
-  var CURRENT_VERSION = '2026092007';
+  var CURRENT_VERSION = '2026092012';
   try {
     if (sessionStorage.getItem('lrVersionChecked') === CURRENT_VERSION) return;
     fetch(location.pathname + '?_cb=' + Date.now(), { cache: 'no-store' })
@@ -1002,6 +1002,7 @@
   .lt-row > .lt-btn { flex: 1; }
   .lt-warn { background: rgba(192,70,60,.15); border: 1px solid var(--danger); border-radius: 10px; padding: 8px 10px; font-size: 12px; margin-bottom: 8px; line-height: 1.5; }
 
+  .lt-ask { background: rgba(232,179,61,.1); border: 1px solid var(--gold-dim); border-radius: 10px; padding: 8px 10px; font-size: 12.5px; margin-bottom: 8px; }
   /* ---------- 볼 / 번호판 ---------- */
   .lt-ball, .lt-num { --bc: var(--lt-c1); --bc2: var(--lt-c1b); }
   .lt-c2 { --bc: var(--lt-c2); --bc2: var(--lt-c2b); } .lt-c3 { --bc: var(--lt-c3); --bc2: var(--lt-c3b); } .lt-c4 { --bc: var(--lt-c4); --bc2: var(--lt-c4b); }
@@ -1688,6 +1689,7 @@
           <div>추첨까지 <span class="lt-countdown" id="ltCountdown">--:--:--</span></div>
           <div>이번 회차 판매 <b id="ltSold">-</b></div>
         </div>
+        <button class="lt-btn ghost" id="ltShareJackpot" hidden style="margin-top:8px; padding:6px 12px; font-size:11.5px;">🔥 잭팟 공유하기</button>
       </section>
       <div class="lt-tabs" id="ltTabs">
         <button class="lt-tab active" data-tab="buy">🎫 구매</button>
@@ -1706,6 +1708,11 @@
         <div class="lt-row">
           <div class="lt-stepper"><button id="ltQtyMinus" aria-label="수량 줄이기">−</button><b id="ltQty">1</b><button id="ltQtyPlus" aria-label="수량 늘리기">+</button></div>
           <button class="lt-btn" id="ltBuyAuto">🎲 자동 구매</button>
+        </div>
+        <div class="lt-ask" id="ltNotifAsk" hidden>
+          <div>🔔 추첨 10분 전에 알려드릴까요?</div>
+          <div class="lt-row" style="margin:6px 0 2px;"><button class="lt-btn" id="ltNotifYes">알림 켜기</button><button class="lt-btn ghost" id="ltNotifNo">나중에</button></div>
+          <div class="lt-note" style="margin:0;">앱/브라우저를 완전히 종료하면 알림이 오지 않을 수 있어요.</div>
         </div>
         <div class="lt-note" id="ltBuyNote"></div>
       </div>
@@ -1731,6 +1738,7 @@
       <div class="lt-result" id="ltShowResult" hidden></div>
       <div class="lt-show-actions">
         <button class="lt-btn ghost" id="ltSkip">⏭ 건너뛰기</button>
+        <button class="lt-btn" id="ltShowShare" hidden>📤 자랑하기</button>
         <button class="lt-btn" id="ltShowClose" hidden>확인</button>
       </div>
     </div>
@@ -1744,6 +1752,7 @@
       <div class="lt-ann-list" id="ltAnnList"></div>
       <div class="lt-ann-prize" id="ltAnnPrize"></div>
       <button class="lt-btn" id="ltAnnCongrats">👏 축하하기 <b id="ltAnnCount">0</b></button>
+      <button class="lt-btn" id="ltAnnShare" hidden>📤 자랑하기</button>
       <button class="lt-btn ghost" id="ltAnnClose">닫기</button>
     </div>
   </div>
@@ -1775,6 +1784,15 @@
       <p id="seasonSub"></p>
       <div id="seasonBody"></div>
       <button class="start-btn" id="seasonNextBtn" style="margin-top:10px;">🎴 새 시즌 운명 카드 고르기</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="deviceConflictModal" style="z-index:400;">
+    <div class="modal-box">
+      <h2>🔀 다른 곳에서 플레이 중이에요</h2>
+      <p style="text-align:left; line-height:1.7;">같은 계정으로 다른 브라우저/기기에서 게임이 먼저 저장됐어요.<br>진행이 서로 덮어써지지 않도록 <b>이 화면의 저장을 멈췄어요.</b></p>
+      <p style="text-align:left; line-height:1.7; color:var(--paper-dim);">아래 버튼을 누르면 최신 기록을 불러와서 이 화면에서 이어서 하고, 이 화면에서 마지막 저장 이후에 진행한 내용은 사라져요. 그러면 반대로 다른 브라우저/기기가 멈춰요.</p>
+      <button class="start-btn" id="deviceConflictBtn" style="margin-top:8px;">최신 기록 불러오고 여기서 계속하기</button>
     </div>
   </div>
 
@@ -2778,6 +2796,16 @@ const SWORD_BATTLE_REGEN_MS = 6 * 60 * 1000;
 let swordBattleTickets = SWORD_BATTLE_MAX_TICKETS;
 let swordBattleTicketsAt = Date.now();
 let lottoAppliedIds = []; // 이미 돈으로 반영한 로또 당첨금 수령 기록 (세이브에 함께 저장 → 튕겨도 두 번 지급/유실 안 됨)
+// 같은 계정을 여러 브라우저/기기에서 켰을 때 서로의 진행을 덮어쓰지 않게 하는 장치.
+// DEVICE_ID: 이 브라우저의 고유 ID (같은 브라우저의 여러 탭은 같은 ID를 써서 기존 탭 동기화 방식 그대로 동작).
+const DEVICE_ID = (() => {
+  const rnd = () => (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : ('d' + Date.now().toString(36) + Math.random().toString(36).slice(2));
+  try { let id = localStorage.getItem('lrDeviceId'); if (!id) { id = rnd(); localStorage.setItem('lrDeviceId', id); } return id; }
+  catch (e) { return rnd(); }
+})();
+let cloudSeenDevice = null;    // 내가 마지막으로 불러오거나 저장한 시점에 클라우드 세이브에 적혀 있던 deviceId
+let cloudSeenKnown = false;    // 위 값을 알고 있는지 (로그인 후 클라우드 불러오기가 끝나야 true)
+let deviceDisplaced = false;   // 다른 기기가 먼저 저장해서 이 화면의 저장을 멈춘 상태
 let swordBattleBusy = false; // 상대를 찾는 중/결과 처리 중일 때 중복 클릭 방지
 function refreshSwordBattleTickets(now) {
   now = now || Date.now();
@@ -3410,6 +3438,7 @@ function addMoney(amount) {
 }
 
 function showLoginGate() {
+  if (window.track && !window.__trkGate) { window.__trkGate = 1; window.track('gate_shown'); }
   progressGateActive = true;
   document.getElementById('loginGateMsg').style.display = 'block';
   document.getElementById('loginCloseBtn').style.display = 'none';
@@ -3780,6 +3809,7 @@ function renderGoalsModal() {
   }).join('');
 }
 function celebrateUiUnlock(list) {
+  if (window.track) list.forEach(f => window.track('feature_unlock', { id: f.id }));
   const names = list.map(f => f.icon + ' ' + f.name).join(', ');
   const moreOnly = list.every(f => f.where === 'more');
   spawnConfettiBurst();
@@ -3890,6 +3920,13 @@ let isBrandNewPlayer = false;
 // 함께 올려준다. lastSeenPatchVersion이 patchNotes[0].version과 다르면 "안 읽은 공지"로
 // 간주해 배지를 띄우고, 기존 유저가 접속하면 자동으로 한 번 띄워준다.
 const patchNotes = [
+  {
+    version: '2026092008',
+    date: '2026-09-20',
+    items: [
+      '🔀 같은 구글 계정을 여러 브라우저/기기에서 켜도 진행이 서로 덮어써지지 않아요. 다른 곳에서 먼저 저장되면 이 화면의 저장을 멈추고, 버튼 하나로 최신 기록을 불러와 이어서 할 수 있어요'
+    ]
+  },
   {
     version: '2026092007',
     date: '2026-09-20',
@@ -5709,6 +5746,7 @@ function settleSeason(prevKey, snap) {
   fateCardId = null;
   fateOffer = pickFateOffer();
   const lateSettle = Date.now() - new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime() > 10 * 60 * 1000; // 1일 0시 직후가 아니라 한참 뒤에 접속해서 정산되는 경우
+  if (window.track) window.track('season_settle', { late: lateSettle ? 1 : 0, g: grade.g });
   pendingSeasonReport = { late: lateSettle, key: prevKey, earned, grade: grade.g, titleIcon: title.icon, titleName: title.name, casino: snap.casino, swordBest: snap.swordBest, burned: snap.burned, rows, total };
   seasonNeedsSave = true;
 }
@@ -5753,6 +5791,7 @@ async function fetchBoardTop(board, n) {
   // fetchLeaderboard와 같은 이유로, DB 정렬을 그대로 믿지 않고 실제 금액으로 다시 정렬한다.
   const docs = await dbGetDocsOrdered(board, 'amount', 30);
   return docs
+    .filter(d => isPlausibleRankEntry(board, d))
     .map(d => ({ uid: d.id, name: d.name || '익명', amount: fromBigStorable(d.amount), nameColor: d.nameColor || null, mansionIcon: d.mansionIcon || '' }))
     .filter(e => e.amount > 0)
     .sort((a, b) => b.amount - a.amount)
@@ -7498,8 +7537,7 @@ async function checkSwordSeasonReward(prevKey) {
   if (!currentUser || !db) return;
   if (claimedSwordSeasonRewards.includes(prevKey)) return;
   try {
-    const docs = await dbGetDocsOrdered(`leaderboard_sword_monthly_${prevKey}`, 'amount', 3);
-    const ids = docs.map(d => d.id);
+    const ids = await topPlausibleIds(`leaderboard_sword_monthly_${prevKey}`, 3);
     const rank = ids.indexOf(currentUser.uid);
     claimedSwordSeasonRewards.push(prevKey);
     if (rank === -1) return;
@@ -7524,8 +7562,7 @@ async function checkWeeklySeasonReward(prevKey) {
   if (!currentUser || !db) return;
   if (claimedSeasonRewards.includes(prevKey)) return;
   try {
-    const docs = await dbGetDocsOrdered(`leaderboard_weekly_${prevKey}`, 'amount', 3);
-    const ids = docs.map(d => d.id);
+    const ids = await topPlausibleIds(`leaderboard_weekly_${prevKey}`, 3);
     const rank = ids.indexOf(currentUser.uid);
     if (rank === -1) return;
     const rewardByRank = [10, 6, 3]; // 1위/2위/3위 특성 포인트 보상
@@ -7548,6 +7585,23 @@ function adjustBet(val) {
   if (el) el.textContent = formatWon(casinoBet) + '원';
 }
 
+// ===== 하우스 엣지 (딜러가 항상 유리) =====
+// 단골 등급/카지노 특성/날씨/운명 카드 보너스는 "이겼을 때 딴 돈"에 곱해지는데, 최대치(약 x1.3)까지 쌓이면 기본 배당이 가진
+// 손해(-3~-5%)를 뒤집어서 오래 할수록 돈이 불어났다. 실제 카지노처럼 어떤 보너스가 붙어도 장기적으로는 딜러가 이기도록,
+// 보너스가 클수록 승률을 조금씩 깎아서 기대수익이 항상 -CASINO_HOUSE_EDGE 이하가 되게 한다.
+// 보너스가 작을 땐 기본 승률 그대로이고, 배당과 화면 표시는 바뀌지 않는다.
+const CASINO_HOUSE_EDGE = 0.03;
+function getCasinoBonusMult() {
+  const vip = getVipTier();
+  return Math.min(1.15, (1 + vip.bonus) * casinoTalentMult) * getWeatherCasinoMult() * getFateCasinoMult();
+}
+// pBase: 기본 승률, winProfit: 이겼을 때 판돈 대비 이익 배율(배당-1), pDraw: 무승부 확률.
+// 기대수익 = p*(winProfit*보너스) - (1-p-pDraw) 가 -HOUSE_EDGE 이하가 되는 최대 승률을 넘지 않게 돌려준다.
+function casinoWinProb(pBase, winProfit, pDraw) {
+  const pMax = (1 - (pDraw || 0) - CASINO_HOUSE_EDGE) / (1 + winProfit * getCasinoBonusMult());
+  return Math.min(pBase, pMax);
+}
+
 function resolveCasinoResult(outcome, bet, winPayout, resEl, subText) {
   initAudio();
   checkDailyRollover();
@@ -7567,7 +7621,7 @@ function resolveCasinoResult(outcome, bet, winPayout, resEl, subText) {
     // VIP 배당 보너스와 도박형 특성 배율을 곱으로 무한정 쌓이게 두면(둘 다 최대일 때
     // 약 +37.5%), 원래 손익분기(또는 근소한 하우스 엣지)로 설계된 게임 일부가 대량
     // 반복 플레이 시 플레이어에게 유리한 쪽으로 뒤집힐 수 있다. 합산 보너스에 상한을 둔다.
-    const combinedCasinoBonus = Math.min(1.15, (1 + vip.bonus) * casinoTalentMult) * getWeatherCasinoMult() * getFateCasinoMult();
+    const combinedCasinoBonus = getCasinoBonusMult();
     const netProfit = Math.floor((winPayout - bet) * combinedCasinoBonus);
     money = applySoftCap(money + bet + netProfit);
     if (netProfit > 0) {
@@ -7615,15 +7669,17 @@ function playRps(choice) {
   money -= casinoBet;
   const opts = ['rock', 'paper', 'scissors'];
   const emoji = { rock: '✊', paper: '✋', scissors: '✌️' };
-  const cpu = opts[Math.floor(Math.random() * 3)];
+  // 결과(승/무/패)를 확률대로 먼저 정하고, 그 결과가 나오는 손을 상대가 낸다 (무승부 확률은 그대로 1/3)
+  const beats = { rock: 'scissors', scissors: 'paper', paper: 'rock' }, beatenBy = { rock: 'paper', scissors: 'rock', paper: 'scissors' };
+  const pWin = casinoWinProb(1 / 3, 0.9, 1 / 3), u = Math.random();
+  let outcome, cpu;
+  if (u < pWin) { outcome = 'win'; cpu = beats[choice]; }
+  else if (u < pWin + 1 / 3) { outcome = 'draw'; cpu = choice; }
+  else { outcome = 'lose'; cpu = beatenBy[choice]; }
   const resEl = document.getElementById('casinoResult');
   resEl.innerHTML = '<div class="casino-suspense">가위바위보!</div>';
   playSound('click');
   setTimeout(() => {
-    let outcome;
-    if (choice === cpu) outcome = 'draw';
-    else if ((choice === 'rock' && cpu === 'scissors') || (choice === 'scissors' && cpu === 'paper') || (choice === 'paper' && cpu === 'rock')) outcome = 'win';
-    else outcome = 'lose';
     // 승/무/패 확률이 정확히 1/3씩이라 배당 2배는 하우스 엣지가 0%였다. 여기에 VIP
     // 보너스나 도박형 특성이 조금만 붙어도 장기적으로 플레이어가 이기는 게임이 되어버려서,
     // 다른 카지노 게임들과 비슷한 수준(-3%대)의 하우스 엣지가 생기도록 배당을 살짝 낮췄다.
@@ -7648,10 +7704,13 @@ function playOddEven(choice) {
   resEl.innerHTML = '<div class="casino-suspense">🎲 굴리는 중...</div>';
   playSound('click');
   setTimeout(() => {
-    const d1 = 1 + Math.floor(Math.random() * 6), d2 = 1 + Math.floor(Math.random() * 6);
+    const outcome = Math.random() < casinoWinProb(0.5, 0.95, 0) ? 'win' : 'lose';
+    const wantOdd = (choice === 'odd') === (outcome === 'win');   // 이 결과가 되려면 눈의 합이 홀수여야 하는가
+    const d1 = 1 + Math.floor(Math.random() * 6);
+    const d2opts = [1, 2, 3, 4, 5, 6].filter(v => ((d1 + v) % 2 === 1) === wantOdd);
+    const d2 = d2opts[Math.floor(Math.random() * d2opts.length)];
     const sum = d1 + d2;
     const isOdd = sum % 2 === 1;
-    const outcome = ((choice === 'odd' && isOdd) || (choice === 'even' && !isOdd)) ? 'win' : 'lose';
     resolveCasinoResult(outcome, casinoBet, Math.floor(casinoBet * 1.95), resEl, `주사위: ${d1} + ${d2} = ${sum} (${isOdd ? '홀' : '짝'})`);
   }, 650);
 }
@@ -7669,7 +7728,14 @@ function playHiCard() {
   setTimeout(() => {
     const ranks = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
     const suits = ['♠️','♥️','♦️','♣️'];
-    const pIdx = Math.floor(Math.random() * 13), dIdx = Math.floor(Math.random() * 13);
+    const pDraw = 1 / 13, pWin = casinoWinProb(6 / 13, 0.9, pDraw), u = Math.random();
+    let pIdx, dIdx;
+    if (u < pWin + pDraw && u >= pWin) { pIdx = dIdx = Math.floor(Math.random() * 13); }   // 무승부: 같은 숫자
+    else {
+      const x = Math.floor(Math.random() * 13); let y;
+      do { y = Math.floor(Math.random() * 13); } while (y === x);   // 서로 다른 두 숫자를 고른 뒤 이기는/지는 쪽에 배정
+      if (u < pWin) { pIdx = Math.max(x, y); dIdx = Math.min(x, y); } else { pIdx = Math.min(x, y); dIdx = Math.max(x, y); }
+    }
     const pCard = ranks[pIdx] + suits[Math.floor(Math.random() * 4)];
     const dCard = ranks[dIdx] + suits[Math.floor(Math.random() * 4)];
     const outcome = pIdx === dIdx ? 'draw' : (pIdx > dIdx ? 'win' : 'lose');
@@ -7702,6 +7768,16 @@ function weightedRandomHorse() {
   for (let i = 0; i < horses.length; i++) { cum += horses[i].prob; if (r <= cum) return i; }
   return horses.length - 1;
 }
+// 내가 건 말이 우승할 확률을 하우스 엣지에 맞게 정하고, 아니면 나머지 말 중에서 원래 확률 비율대로 우승마를 뽑는다.
+function pickRaceWinner(bet) {
+  const h = horses[bet];
+  if (Math.random() < casinoWinProb(h.prob, h.odds - 1, 0)) return bet;
+  const rest = horses.map((x, i) => ({ i, p: x.prob })).filter(o => o.i !== bet);
+  const sum = rest.reduce((a, o) => a + o.p, 0);
+  let r = Math.random() * sum, cum = 0;
+  for (const o of rest) { cum += o.p; if (r <= cum) return o.i; }
+  return rest[rest.length - 1].i;
+}
 let horseRaceInProgress = false;
 function playHorse() {
   if (horseRaceInProgress) return;
@@ -7716,7 +7792,7 @@ function playHorse() {
   playSound('click');
   const raceBtn = document.getElementById('horseRaceBtn');
   if (raceBtn) raceBtn.disabled = true;
-  const winnerIdx = weightedRandomHorse();
+  const winnerIdx = pickRaceWinner(betHorse);
   const durations = horses.map((h, i) => i === winnerIdx ? 1.5 + Math.random() * 0.2 : 1.9 + Math.random() * 0.6);
   horses.forEach((h, i) => {
     const el = document.getElementById('horse-' + i);
@@ -7758,8 +7834,10 @@ function playRoulette(choice) {
   resEl.innerHTML = '<div class="casino-suspense">🎡 돌아가는 중...</div>';
   playSound('click');
   setTimeout(() => {
-    const r = Math.random();
-    const result = r < 0.04 ? 'green' : (r < 0.52 ? 'red' : 'black');
+    const other = choice === 'red' ? 'black' : 'red';
+    let result;
+    if (Math.random() < casinoWinProb(0.48, 1, 0)) result = choice;
+    else result = Math.random() < 0.04 / 0.52 ? 'green' : other;   // 기본 확률에서 그린 4% : 반대 색 48% 비율 유지
     const outcome = choice === result ? 'win' : 'lose';
     const label = result === 'red' ? '🔴 레드' : result === 'black' ? '⚫ 블랙' : '🟢 그린';
     resolveCasinoResult(outcome, casinoBet, casinoBet * 2, resEl, `결과: ${label}`);
@@ -8099,6 +8177,7 @@ function initBackend() {
         onLoginSuccess();
       } else {
         currentUser = null;
+        cloudSeenKnown = false; deviceDisplaced = false;
         updateLoginUI();
         // 로그인 안 된 상태로 확정됐는데, 이미(예: 조작된 로컬 저장으로) 1억원을
         // 넘어있으면 즉시 게이트를 띄운다 — 클릭/틱을 한 번 더 기다릴 필요 없이 바로 막음
@@ -8121,11 +8200,14 @@ function loginWithGoogle() {
 function logout() {
   authSignOut();
   currentUser = null;
+  cloudSeenKnown = false; deviceDisplaced = false;
+  document.getElementById('deviceConflictModal').classList.remove('show');
   updateLoginUI();
   showToast('로그아웃 되었습니다. 이후 진행은 이 기기에만 저장됩니다.');
 }
 
 function onLoginSuccess() {
+  try { if (window.track && !sessionStorage.getItem('lrTrkLogin')) { sessionStorage.setItem('lrTrkLogin', '1'); window.track('login_success'); } } catch (e) { /* 지표는 실패해도 무시 */ }
   updateLoginUI();
   clearLoginGate();
   document.getElementById('loginModal').classList.remove('show');
@@ -8163,16 +8245,65 @@ function saveNickname() {
 }
 document.getElementById('nicknameSaveBtn').addEventListener('click', saveNickname);
 
+// 클라우드 세이브에 적힌 deviceId가 "내가 마지막으로 본/쓴 것"이 아니면, 그 사이 다른 기기가 저장했다는 뜻이다.
+// 그 상태에서 내 (오래된) 진행으로 덮어쓰면 안 되므로 저장을 멈추고 안내 창을 띄운다. 충돌이면 true.
+async function deviceConflictCheck() {
+  if (!currentUser || !db || !cloudSeenKnown || deviceDisplaced) return false;
+  let cur = null;
+  try { cur = await dbGetDoc('saves', currentUser.uid); } catch (e) { return false; }   // 확인 자체가 실패하면 기존처럼 진행
+  const curDevice = cur ? (cur.deviceId || null) : null;
+  if (cur && curDevice !== DEVICE_ID && curDevice !== cloudSeenDevice) { showDeviceConflict(); return true; }
+  return false;
+}
+function showDeviceConflict() {
+  if (deviceDisplaced) return;
+  deviceDisplaced = true;
+  document.getElementById('deviceConflictBtn').disabled = false;
+  document.getElementById('deviceConflictBtn').textContent = '최신 기록 불러오고 여기서 계속하기';
+  document.getElementById('deviceConflictModal').classList.add('show');
+}
+async function resumeFromCloud() {
+  const btn = document.getElementById('deviceConflictBtn');
+  btn.disabled = true; btn.textContent = '불러오는 중...';
+  try {
+    const cloud = await dbGetDoc('saves', currentUser.uid);
+    if (cloud) {
+      applySaveData(cloud, { checkOffline: true });
+      cloudSeenDevice = cloud.deviceId || null;
+      localStorage.setItem('lifeReverseSave', JSON.stringify(buildSaveData()));   // saveGame()의 "뒤처진 탭" 검사를 거치지 않고 로컬도 최신으로 맞춘다
+      try { refreshAllScreens(); } catch (e) { console.error('화면 갱신 실패:', e); }
+    }
+    cloudSeenKnown = true; deviceDisplaced = false;
+    document.getElementById('deviceConflictModal').classList.remove('show');
+    showToast('☁️ 최신 기록을 불러왔어요. 이제 이 화면에서 이어서 저장돼요');
+    if (window.Lotto) window.Lotto.onLogin();   // 저장 못 하고 남아 있던 로또 당첨금 메모가 있으면 복구
+    saveGame({ forceCloud: true });
+  } catch (e) {
+    console.error('최신 기록 불러오기 실패:', e);
+    btn.disabled = false; btn.textContent = '다시 시도';
+  }
+}
+document.getElementById('deviceConflictBtn').addEventListener('click', resumeFromCloud);
+let lastDeviceCheck = 0;
+function deviceCheckSoon() { if (Date.now() - lastDeviceCheck < 5000) return; lastDeviceCheck = Date.now(); deviceConflictCheck(); }
+document.addEventListener('visibilitychange', () => { if (!document.hidden) deviceCheckSoon(); });   // 다른 앱/탭에 갔다 돌아왔을 때 바로 확인
+window.addEventListener('focus', deviceCheckSoon);
+
 async function cloudSaveGame(dataObj, opts) {
   if (!currentUser || !db) return;
   const rethrow = opts && opts.rethrow;
+  if (deviceDisplaced) { if (rethrow) throw new Error('device-displaced'); return; }
   try {
+    // noCheck: 앱이 닫히는 중이라 확인 요청을 기다릴 수 없는 저장은 확인 없이 바로 보낸다.
+    if (!(opts && opts.noCheck) && await deviceConflictCheck()) throw new Error('device-conflict');
     // serverSavedAt: 클라이언트가 조작할 수 없는 "서버가 기록한 저장 시각".
     // Firestore 보안 규칙에서 "직전 저장 대비 경과 시간 × 최대 증가 속도"를
     // 검증할 때 이 값을 기준으로 삼는다 (클라이언트가 보낸 시간은 신뢰하지 않음).
     const payload = { ...sanitizeBigNumbersForFirestore(dataObj), serverSavedAt: dbServerTimestamp() };
     await dbSetDoc('saves', currentUser.uid, payload);
+    cloudSeenDevice = DEVICE_ID;
   } catch (e) {
+    if (e && e.message === 'device-conflict') { if (rethrow) throw e; return; }   // 다른 기기 충돌은 오류가 아니라 안내 창으로 처리
     console.error('클라우드 저장 실패:', e);
     if (rethrow) throw e;
   }
@@ -8180,8 +8311,11 @@ async function cloudSaveGame(dataObj, opts) {
 
 async function cloudLoadGame() {
   if (!currentUser || !db) return;
+  cloudSeenKnown = false;
   try {
     const cloudData = await dbGetDoc('saves', currentUser.uid);
+    cloudSeenDevice = cloudData ? (cloudData.deviceId || null) : null;
+    cloudSeenKnown = true;
     // 버전 불일치 시 클라우드 세이브를 버리고 초기화하던 로직을 주석 처리 - 이제 버전이 달라도 그대로 불러온다.
     const isVersionMismatch = false; /* cloudData && cloudData.gameVersion !== GAME_VERSION; */
     if (cloudData && !isVersionMismatch) {
@@ -8318,7 +8452,7 @@ async function claimReferralRewards() {
 // 보내는 throttle을 뒀었는데, Supabase(Postgres)로 옮긴 뒤로는 그런 제약이 없어서
 // 그냥 매번 즉시(실시간으로) 반영한다.)
 async function syncLeaderboard() {
-  if (!currentUser || !db) return;
+  if (!currentUser || !db || deviceDisplaced) return;
   try {
     checkPeriodRollover();
     // 전체 랭킹은 평생 누적(casinoTotalWinnings) 기준 등급, 주간/월간은 그 기간 동안
@@ -8364,6 +8498,41 @@ function getLeaderboardSortField(period) {
 // (LEADERBOARD_FETCH_LIMIT) 우리가 직접 재정렬한 뒤 그중 상위 N명만 자른다.
 const LEADERBOARD_TOP_N = 30;
 const LEADERBOARD_FETCH_LIMIT = 100;
+
+// ===== 랭킹 값 검증 =====
+// 랭킹판 값은 클라이언트가 직접 써 넣는 값이라 개발자도구로 아무 숫자나 올릴 수 있다. 게임 수식상 나올 수 없는 값은
+// 순위·보상·명예의 전당에서 제외한다. (서버의 ranking_guard.sql 트리거도 같은 한도로 저장 자체를 막는다. 한도를 바꾸면 양쪽 같이.)
+//  검 강화 레벨 최대 20 / 검배틀 누적 승점 2천만(승리 +5점, 티켓 시간당 10장 → 한 달 최대 약 37만) /
+//  미니게임 수익 주간 1e31·월간 1e32 (한 판 이익 ≤ 판돈 ≤ 보유금, 초당 2~3판 × 기간) / 소각 월간 1e32 / 명예의 전당 수입 1e45·카지노 1e32·점수 1e12
+function rankLimitForBoard(board) {
+  if (typeof board !== 'string') return null;
+  if (board.startsWith('leaderboard_sword_monthly_')) return SWORD_MAX_LEVEL;
+  if (board === 'leaderboard_sword') return 2e7;
+  if (board.startsWith('leaderboard_weekly_')) return 1e31;
+  if (board.startsWith('leaderboard_monthly_')) return 1e32;
+  if (board.startsWith('leaderboard_burn_monthly_')) return 1e32;
+  if (board === 'leaderboard_hof_earn') return 1e45;
+  if (board === 'leaderboard_hof_casino') return 1e32;
+  if (board === 'leaderboard_hof_honor') return 1e12;
+  return null;   // 모르는 랭킹판은 검사하지 않는다
+}
+// raw: dbGetDocsOrdered가 돌려준 문서 (amount는 아직 BN: 문자열일 수 있음)
+function isPlausibleRankEntry(board, raw) {
+  const limit = rankLimitForBoard(board);
+  if (limit !== null) {
+    const amt = fromBigStorable(raw.amount);
+    if (!Number.isFinite(amt) || amt < 0 || amt > limit) return false;
+  }
+  if (typeof raw.swordLevel === 'number' && (raw.swordLevel < -1 || raw.swordLevel > SWORD_MAX_LEVEL)) return false;
+  return true;
+}
+// 시즌 보상용: DB 정렬 그대로 상위 n명을 믿지 않고, 불가능한 값을 뺀 뒤 실제 금액으로 다시 정렬해서 상위 n명의 uid를 돌려준다.
+async function topPlausibleIds(board, n) {
+  const docs = await dbGetDocsOrdered(board, 'amount', 30);
+  return docs.filter(d => isPlausibleRankEntry(board, d))
+    .map(d => ({ id: d.id, amount: fromBigStorable(d.amount) }))
+    .sort((a, b) => b.amount - a.amount).slice(0, n).map(d => d.id);
+}
 async function fetchLeaderboard(period) {
   if (!db || isWealthPeriod(period)) return [];
   try {
@@ -8377,7 +8546,7 @@ async function fetchLeaderboard(period) {
     // 있어도 화면에 보이는 순위는 항상 실제 금액 크기 기준으로 정확하게 나온다.
     let docs = await dbGetDocsOrdered(colName, sortField, LEADERBOARD_FETCH_LIMIT);
     if (period === 'swordcurrent') docs = docs.filter(d => typeof d.swordLevel === 'number' && d.swordLevel >= 0);
-    const decoded = docs.map((raw) => ({ uid: raw.id, ...raw, amount: sortField === 'swordLevel' ? (raw.swordLevel || 0) : fromBigStorable(raw.amount) }));
+    const decoded = docs.filter(raw => isPlausibleRankEntry(colName, raw)).map((raw) => ({ uid: raw.id, ...raw, amount: sortField === 'swordLevel' ? (raw.swordLevel || 0) : fromBigStorable(raw.amount) }));
     decoded.sort((a, b) => b.amount - a.amount);
     return decoded.slice(0, LEADERBOARD_TOP_N).map((entry, i) => ({ rank: i + 1, ...entry }));
   } catch (e) {
@@ -8414,7 +8583,7 @@ async function fetchMyRankInfoUncached(period) {
     if (period === 'swordcurrent') docs = docs.filter(d => typeof d.swordLevel === 'number' && d.swordLevel >= 0);
     // fetchLeaderboard와 마찬가지로 타입이 섞인 문서 때문에 정렬 순서를 그대로 믿지 않고,
     // 실제 금액(fromBigStorable)으로 다시 정렬한 뒤 내 순위를 찾는다.
-    const decoded = docs.map((d) => ({ uid: d.id, amount: sortField === 'swordLevel' ? (d.swordLevel || 0) : fromBigStorable(d.amount) }));
+    const decoded = docs.filter(d => isPlausibleRankEntry(colName, d)).map((d) => ({ uid: d.id, amount: sortField === 'swordLevel' ? (d.swordLevel || 0) : fromBigStorable(d.amount) }));
     decoded.sort((a, b) => b.amount - a.amount);
     const idx = decoded.findIndex((d) => d.uid === currentUser.uid);
     return { rank: idx === -1 ? null : idx + 1, total: decoded.length };
@@ -8511,6 +8680,8 @@ function scheduleGameNotifications() {
         if (delay > 0 && delay < 7 * 86400000) reg.active.postMessage({ type: 'scheduleNotification', tag, title, body: '1일 0시에 돈·사업·검이 초기화돼요. 접속해서 확인해보세요.', delayMs: delay });
       });
     }
+    // 로또: 추첨 10분 전 / 결과 발표 알림 (티켓이 있거나 이월이 쌓인 잭팟일 때)
+    if (window.Lotto) window.Lotto.notificationPlan().forEach(n => reg.active.postMessage({ type: 'scheduleNotification', tag: n.tag, title: n.title, body: n.body, delayMs: n.delayMs }));
     // 다음 자정(일일 미션 초기화 시점)에 맞춰 알림
     const now = new Date();
     const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 5, 0);
@@ -8533,7 +8704,7 @@ function updateNotifBtnLabel() {
     btn.textContent = '🔕 알림이 차단돼있어요 (브라우저 설정에서 허용 필요)';
     btn.disabled = true;
   } else {
-    btn.textContent = '🔔 알림 켜기 (방치수입 다 찼을 때 · 매일 미션 초기화 · 시즌 정산 전)';
+    btn.textContent = '🔔 알림 켜기 (방치수입 · 매일 미션 · 시즌 정산 전 · 로또 추첨)';
     btn.disabled = false;
   }
 }
@@ -8543,6 +8714,7 @@ document.getElementById('notifEnableBtn').addEventListener('click', async () => 
     const perm = await Notification.requestPermission();
     updateNotifBtnLabel();
     if (perm === 'granted') {
+      if (window.track) window.track('notif_enabled');
       scheduleGameNotifications();
       showToast('🔔 알림이 켜졌어요! 탭을 완전히 종료하지만 않으면 예약한 시간에 알림이 와요.');
     }
@@ -8578,6 +8750,7 @@ function buildSaveData() {
     swordBattleWins, swordBattleCountToday, swordBattleTickets, swordBattleTicketsAt, lottoAppliedIds,
     swordMonthlyBestLevel, swordReviveCharges, swordColorBoostMonthKey, swordColorBoostMult, claimedSwordSeasonRewards,
     fateCardId, fateOffer, seasonMedals, seasonHistory, claimedMedalSeasons, medalPendingKey, bestSeasonEarned, bestMonthlyCasino, seasonCount,
+    deviceId: DEVICE_ID,
     lastSaveTime: Date.now()
   };
 }
@@ -8586,6 +8759,7 @@ let lastCloudSaveTime = 0;
 const CLOUD_SAVE_MIN_INTERVAL = 30000; // 클라우드 저장은 최소 30초 간격으로만 (세션 종료 시엔 강제 저장)
 
 function saveGame(opts) {
+  if (deviceDisplaced) return;   // 다른 기기가 먼저 저장한 상태에서는 이 화면이 저장(로컬 포함)하지 않는다
   const forceCloud = opts && opts.forceCloud;
   const data = buildSaveData();
 
@@ -8619,14 +8793,14 @@ function saveGame(opts) {
     const now = Date.now();
     if (forceCloud || now - lastCloudSaveTime > CLOUD_SAVE_MIN_INTERVAL) {
       lastCloudSaveTime = now;
-      cloudSaveGame(data);
+      cloudSaveGame(data, { noCheck: !!(opts && opts.noCheck) });
     }
   }
 }
 
 // 세션이 끝나는 시점(앱 전환/탭 숨김/페이지 종료)에 클라우드로 한 번 확실히 저장
 function saveOnSessionEnd() {
-  saveGame({ forceCloud: true });
+  saveGame({ forceCloud: true, noCheck: true });   // 앱이 닫히거나 백그라운드로 가는 중이라 확인 요청 없이 바로 저장
   // 카지노 연승 등으로 랭킹 동기화가 60초 제한에 걸려 밀려 있었다면, 세션이 끝나기 전에 마지막 값을 확실히 반영
 }
 document.addEventListener('visibilitychange', () => {
@@ -8896,6 +9070,76 @@ document.getElementById('offlineOkBtn').addEventListener('click', () => {
   document.getElementById('offlineModal').classList.remove('show');
 });
 
+// =====================================================================
+// 📊 지표 수집: 어디서 이탈하고 얼마나 돌아오는지 보기 위한 가벼운 이벤트 (서버: analytics.sql)
+//   - 기기 ID(브라우저 고유 랜덤값)와 이벤트 이름/간단한 숫자 값만 보낸다. 이름·이메일·재화 값은 보내지 않는다.
+//   - 브라우저의 "추적 안 함(Do Not Track)" 설정이 켜져 있거나 localStorage.lrNoTrack = '1' 이면 아무것도 보내지 않는다.
+//   - 모아서 20초마다(또는 15건 쌓이면) 한 번에 보내고, 실패하면 다음에 다시 보낸다. 서버 함수가 없으면 조용히 멈춘다.
+// =====================================================================
+const Analytics = (() => {
+  const QKEY = 'lrAnalyticsQ', FIRST_KEY = 'lrFirstSeen';
+  const optOut = () => { try { return navigator.doNotTrack === '1' || localStorage.getItem('lrNoTrack') === '1'; } catch (e) { return false; } };
+  const sid = 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);   // 이 접속(페이지 로드) 하나를 가리키는 ID
+  let q = [];
+  try { q = JSON.parse(localStorage.getItem(QKEY) || '[]') || []; } catch (e) { q = []; }
+  let flushing = false, pauseUntil = 0, lastCasino = null;
+  const persist = () => { try { localStorage.setItem(QKEY, JSON.stringify(q.slice(-200))); } catch (e) { /* 저장 실패해도 계속 */ } };
+  const bucket = () => Math.max(0, Math.floor(Math.log10(Math.max(1, Number(totalEarned) || 1))));   // 총 수입의 자릿수(진행도)
+  function track(e, p) {
+    if (optOut()) return;
+    q.push({ e, d: DEVICE_ID, s: sid, t: Date.now(), p: p || {} });
+    if (q.length > 200) q.splice(0, q.length - 200);
+    persist();
+    if (q.length >= 15) flush();
+  }
+  async function flush() {
+    if (flushing || !q.length || !db || Date.now() < pauseUntil || optOut()) return;
+    flushing = true;
+    const batch = q.slice(0, 40), now = Date.now();
+    try {
+      const { error } = await db.rpc('track_events', { p_events: batch.map(x => ({ e: x.e, d: x.d, s: x.s, ago: Math.max(0, now - x.t), p: x.p })) });
+      if (error) throw error;
+      q.splice(0, batch.length); persist();
+      if (q.length) setTimeout(flush, 500);
+    } catch (err) {
+      const missing = !!err && (err.code === 'PGRST202' || err.code === '42883' || /could not find the function|does not exist/i.test(err.message || ''));
+      pauseUntil = Date.now() + (missing ? 30 * 60000 : 60000);
+      if (missing) { q.length = 0; persist(); }   // 서버 함수가 아직 없으면 이벤트를 쌓아두지 않는다
+    } finally { flushing = false; }
+  }
+  function ping() {   // 화면이 보이는 동안 1분마다 → 접속 1회당 플레이 시간
+    if (document.hidden) return;
+    const cp = typeof casinoPlaysCount === 'number' ? casinoPlaysCount : 0, delta = lastCasino === null ? 0 : Math.max(0, cp - lastCasino);
+    lastCasino = cp;
+    track('ping', { te: bucket(), cp: delta });
+  }
+  function appOpen() {
+    let first = 0, day = 0;
+    try {
+      let f = Number(localStorage.getItem(FIRST_KEY));
+      if (!f) { f = Date.now(); localStorage.setItem(FIRST_KEY, String(f)); first = 1; }
+      day = Math.floor((Date.now() - f) / 86400000);
+    } catch (e) { /* 저장소를 못 쓰면 0으로 */ }
+    track('app_open', { f: first, day, te: bucket() });
+  }
+  function init() {
+    const on = (id, ev, fn) => { const el = document.getElementById(id); if (el) el.addEventListener(ev, fn); };
+    on('shareCardBtn', 'click', () => track('share_click', { k: 'record' }));
+    on('inviteFriendBtn', 'click', () => track('invite_click', { k: 'open' }));
+    on('inviteShareBtn', 'click', () => track('invite_click', { k: 'share' }));
+    on('inviteCopyBtn', 'click', () => track('invite_click', { k: 'copy' }));
+    on('rankOpenBtn', 'click', () => track('rank_open'));
+    document.addEventListener('visibilitychange', () => { if (document.hidden) flush(); });
+    setInterval(flush, 20000);
+    setInterval(ping, 60000);
+    setTimeout(appOpen, 1500);   // 세이브를 불러온 뒤의 진행도(te)를 담기 위해 잠깐 뒤에
+  }
+  init();
+  return { track, flush, ping, _q: () => q };
+})();
+window.Analytics = Analytics;
+window.track = Analytics.track;
+
 // ===== 초기화 실행 전에 로또 모듈 등록 =====
 // =====================================================================
 // 🎟️ 로또: 매일 밤 8시 이월형 추첨
@@ -9036,6 +9280,8 @@ const Lotto = (() => {
       sel.clear(); autoSel.clear();
       tone(660, .08, 'triangle'); tone(880, .1, 'triangle');
       toast(`🎟️ ${list.length}장 구매! (-${fmtKRW(cost)})`);
+      if (window.track) window.track('lotto_buy', { n: list.length });
+      try { if ('Notification' in window && Notification.permission === 'granted') scheduleGameNotifications(); } catch (e) { /* 알림 예약 실패는 무시 */ }
       await refresh();
     } catch (e) {
       console.error('[로또] 구매 실패', e);
@@ -9127,12 +9373,13 @@ const Lotto = (() => {
     if (!S) {
       $('ltJackpot').textContent = missing ? '준비 중이에요' : '불러오는 중…';
       $('ltCarry').textContent = missing ? '🛠️ 로또 서버를 준비하고 있어요' : '\u00a0';
-      $('ltCountdown').textContent = '--:--:--'; $('ltSold').textContent = '-';
+      $('ltCountdown').textContent = '--:--:--'; $('ltSold').textContent = '-'; $('ltShareJackpot').hidden = true;
       return;
     }
     const c = cfg(), sold = S.sold, days = S.carry_days;
     $('ltJackpot').textContent = fmtKRW(c.base1 + BigInt(S.carry) + BigInt(sold) * c.price);
     $('ltSold').textContent = sold + '장';
+    $('ltShareJackpot').hidden = !(days >= 3);   // 이월이 3일 이상 쌓였을 때만 잭팟 공유
     $('ltCarry').textContent = days > 0 ? `🔥 이월 ${days}일째 · 1등 당첨자 없음` : '✨ 새 잭팟 시작';
     const remain = S.draw_at - serverNow(), s = Math.max(0, Math.floor(remain / 1000));
     const cd = $('ltCountdown'); cd.textContent = `${pad2(Math.floor(s / 3600))}:${pad2(Math.floor(s % 3600 / 60))}:${pad2(s % 60)}`;
@@ -9161,6 +9408,10 @@ const Lotto = (() => {
     else if (activeChallenge === 'no_casino') warn = '🎯 카지노 금지 챌린지 중에는 티켓을 살 수 없어요.';
     $('ltBuyWarn').innerHTML = warn ? `<div class="lt-warn">${warn}</div>` : '';
     $('ltBuyNote').innerHTML = `1장 <b>${fmtKRW(c.price)}</b> · 회차당 1인 최대 ${c.max}장 (이번 회차 <b>${mine}/${c.max}</b>장) · 밤 8시가 지나면 다음 회차로 넘어가요. 당첨금은 추첨 연출이 끝나면 바로 지급돼요.`;
+    // 티켓을 산 뒤에 한 번만: 추첨 10분 전 알림을 켤지 물어본다
+    let canAsk = false;
+    try { canAsk = !!currentUser && 'Notification' in window && Notification.permission === 'default' && mine > 0 && !localStorage.getItem('lottoNotifAsked'); } catch (e) { /* 알림 미지원 */ }
+    $('ltNotifAsk').hidden = !canAsk;
   }
   function paintMine() {
     if (!S) { $('ltMine').innerHTML = '<div class="lt-dim">서버에서 불러오는 중이에요…</div>'; return; }
@@ -9261,7 +9512,7 @@ const Lotto = (() => {
     $('ltShowRound').textContent = md(res.round) + ' 밤 8시 추첨';
     const balls = $('ltShowBalls'); balls.innerHTML = '';
     const slots = Array.from({ length: PICK }, () => { const b = document.createElement('div'); b.className = 'lt-ball empty'; b.textContent = '?'; balls.appendChild(b); return b; });
-    $('ltShowCand').innerHTML = ''; $('ltShowResult').hidden = true; $('ltSkip').hidden = false; $('ltShowClose').hidden = true;
+    $('ltShowCand').innerHTML = ''; $('ltShowResult').hidden = true; $('ltSkip').hidden = false; $('ltShowClose').hidden = true; $('ltShowShare').hidden = true;
     try {
       setSub('잠시 후 추첨을 시작합니다'); await wait(1100);
       for (let c = 3; c >= 1 && !skipped; c--) { setSub(String(c), true); tone(420 + (4 - c) * 60, .16, 'square', .04); await wait(800); }
@@ -9287,6 +9538,7 @@ const Lotto = (() => {
       setSub('🎊 추첨 완료!');
       if (res.top.length) await announce(res);        // 1·2등이 서버 어딘가에서 나왔다면 전 서버 공지
       renderShowResult(res);
+      $('ltShowShare').hidden = myTotal(res) <= 0n; $('ltShowShare').onclick = () => shareWin(res);   // 당첨됐으면 자랑하기
       const best = Math.min(99, ...res.mine.filter(t => t.rank).map(t => t.rank));
       if (best === 3 || best === 4) { confetti(best === 3 ? 2 : 1); tone(784, .2, 'triangle'); tone(1046, .3, 'triangle'); }
       $('ltSkip').hidden = true; $('ltShowClose').hidden = false;
@@ -9305,6 +9557,7 @@ const Lotto = (() => {
       $('ltAnnTitle').textContent = mineWin ? `🎉 내가 ${best}등 당첨!!` : `${RANK_ICON[best]} ${best}등 당첨자 탄생!`;
       $('ltAnnList').innerHTML = ws.slice(0, 4).map(w => `<div class="${w.uid === myUid() ? 'me' : ''}">${w.uid === myUid() ? '⭐ 나' : w.name}님</div>`).join('') + (ws.length > 4 ? `<div class="lt-dim">외 ${ws.length - 4}명</div>` : '');
       $('ltAnnPrize').textContent = fmtKRW(ws[0].prize);
+      $('ltAnnShare').hidden = !mineWin; $('ltAnnShare').onclick = () => shareWin(res);
       let total = clapCache[res.round] || 0; $('ltAnnCount').textContent = total.toLocaleString('ko-KR');
       fireworks(best === 1 ? 9000 : 5000); confetti(best === 1 ? 4 : 3);
       [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => tone(f, .25, 'triangle', .07), i * 140));
@@ -9339,11 +9592,79 @@ const Lotto = (() => {
       // 연출을 본(또는 지나간) 회차의 미수령 당첨금을 지급
       if (S.rounds.some(r => r.round <= seen && r.mine.some(t => t.rank > 0 && !t.claimed))) {
         const total = await claim(seen);
-        if (total > 0n) { toast(`🎉 로또 당첨금 +${fmtKRW(total)} 지급!`); playSound('coin'); spawnConfettiBurst(); }
+        if (total > 0n) { toast(`🎉 로또 당첨금 +${fmtKRW(total)} 지급!`); playSound('coin'); spawnConfettiBurst(); if (window.track) window.track('lotto_win'); }
         await refresh();
       }
     } catch (e) { console.error('[로또] 결과 처리 오류', e); }
     finally { showing = false; paintAll(); }
+  }
+
+  // ---------- 앱을 꺼 둔 채로 오는 알림 ----------
+  // 브라우저/서비스워커가 살아 있는 동안 정해진 시각에 알림을 띄우는 방식이라(완전 종료하면 못 받을 수 있음)
+  // 서버 푸시는 아니다. 실제 예약은 scheduleGameNotifications()가 하고, 여기서는 "무엇을 언제"만 계산해서 넘긴다.
+  function notificationPlan() {
+    if (!S || !enabled()) return [];
+    const remain = S.draw_at - serverNow(), c = cfg(), out = [];
+    const mine = S.mine.length, days = S.carry_days;
+    const jackpot = fmtKRW(c.base1 + BigInt(S.carry) + BigInt(S.sold) * c.price);
+    if (remain > 600000 + 30000 && (mine > 0 || days >= 2)) {   // 티켓이 있거나, 이월이 쌓인 잭팟이면 10분 전에 알림
+      out.push({ tag: 'lotto-10m', delayMs: remain - 600000,
+        title: mine > 0 ? '🎟️ 10분 뒤 로또 추첨!' : `🔥 이월 ${days}일째! 오늘 밤 8시 추첨`,
+        body: mine > 0 ? `내 티켓 ${mine}장 · 현재 잭팟 ${jackpot}` : `현재 잭팟 ${jackpot} — 티켓 사러 오세요` });
+    }
+    if (remain > 0 && mine > 0) out.push({ tag: 'lotto-result', delayMs: remain + 30000, title: '🎰 로또 추첨 결과가 나왔어요!', body: '내 티켓 결과를 확인해보세요.' });
+    return out;
+  }
+
+  // ---------- 자랑하기 (공유 카드) ----------
+  function fitFont(x, text, maxW, px) { let sz = px; for (; sz > 20; sz -= 2) { x.font = `bold ${sz}px sans-serif`; if (x.measureText(text).width <= maxW) break; } x.font = `bold ${sz}px sans-serif`; }
+  function buildCard(kind, d) {
+    const cv = document.createElement('canvas'); cv.width = 800; cv.height = 1000;
+    const x = cv.getContext('2d'), g = x.createLinearGradient(0, 0, 0, 1000);
+    if (kind === 'jackpot') { g.addColorStop(0, '#3c1409'); g.addColorStop(1, '#0b0503'); } else { g.addColorStop(0, '#3a2a08'); g.addColorStop(1, '#0b0a08'); }
+    x.fillStyle = g; x.fillRect(0, 0, 800, 1000);
+    x.strokeStyle = '#e8b33d'; x.lineWidth = 6; x.strokeRect(24, 24, 752, 952);
+    x.textAlign = 'center'; x.fillStyle = '#e8c26a'; x.font = 'bold 40px sans-serif'; x.fillText('🎟️ 인생 로또', 400, 110);
+    x.font = '150px sans-serif';
+    if (kind === 'win') {
+      x.fillText(RANK_ICON[d.rank], 400, 330);
+      x.fillStyle = '#fff'; x.font = 'bold 76px sans-serif'; x.fillText(`${d.rank}등 당첨!`, 400, 450);
+      x.fillStyle = '#e8c26a'; fitFont(x, '+' + d.total, 700, 96); x.fillText('+' + d.total, 400, 580);
+      x.fillStyle = '#cfc7b8'; x.font = '30px sans-serif'; x.fillText(`${md(d.round)} 밤 8시 추첨`, 400, 660);
+      x.fillStyle = '#fff'; x.font = 'bold 40px sans-serif'; x.fillText(`${d.name}님`, 400, 730);
+    } else {
+      x.fillText('🔥', 400, 330);
+      x.fillStyle = '#fff'; x.font = 'bold 72px sans-serif'; x.fillText(`이월 ${d.days}일째!`, 400, 450);
+      x.fillStyle = '#ffb347'; fitFont(x, d.jackpot, 700, 96); x.fillText(d.jackpot, 400, 580);
+      x.fillStyle = '#cfc7b8'; x.font = '30px sans-serif'; x.fillText('1등이 없으면 상금이 100% 이월돼요', 400, 660); x.fillText('오늘 밤 8시 추첨', 400, 710);
+    }
+    x.fillStyle = '#9a9284'; x.font = '26px sans-serif'; x.fillText('인생역전 랜드스케이프 · 같이 해요', 400, 900);
+    x.fillStyle = '#6b6355'; x.font = '22px sans-serif'; x.fillText(location.host + location.pathname, 400, 940);
+    return cv;
+  }
+  async function shareCanvas(cv, text, filename) {
+    const link = `${location.origin}${location.pathname}${currentUser ? '?ref=' + currentUser.uid : ''}`;   // 내 초대 링크가 붙어서 친구가 들어오면 초대 보상
+    const blob = await new Promise(res => cv.toBlob(res, 'image/png'));
+    if (!blob) { toast('카드 생성에 실패했어요.'); return; }
+    const data = { title: '인생역전 랜드스케이프', text: `${text}\n${link}`, files: [new File([blob], filename, { type: 'image/png' })] };
+    if (navigator.canShare && navigator.canShare(data)) { try { await navigator.share(data); } catch (e) { /* 취소 시 무시 */ } return; }
+    if (navigator.share) { try { await navigator.share({ title: data.title, text: data.text }); } catch (e) { /* 취소 시 무시 */ } return; }   // 이미지 공유가 안 되면 글+링크만
+    const url = URL.createObjectURL(blob), a = document.createElement('a');   // 공유 기능이 아예 없으면 다운로드
+    a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    toast('🖼️ 카드 이미지를 저장했어요! 공유해보세요.');
+  }
+  function shareWin(res) {
+    const wins = res.mine.filter(t => t.rank > 0);
+    if (!wins.length) return;
+    const rank = Math.min(...wins.map(t => t.rank)), total = fmtKRW(myTotal(res));
+    if (window.track) window.track('share_click', { k: 'lotto_win' });
+    return shareCanvas(buildCard('win', { rank, total, round: res.round, name: (currentUser && currentUser.name) || '플레이어' }), `나 인생 로또 ${rank}등 당첨! ${total} 🎉 같이 해요`, 'life-lotto-win.png');
+  }
+  function shareJackpot() {
+    if (!S) return;
+    const c = cfg(), jackpot = fmtKRW(c.base1 + BigInt(S.carry) + BigInt(S.sold) * c.price);
+    if (window.track) window.track('share_click', { k: 'lotto_jackpot' });
+    return shareCanvas(buildCard('jackpot', { days: S.carry_days, jackpot }), `🔥 인생 로또 잭팟 ${jackpot}! (이월 ${S.carry_days}일째) 오늘 밤 8시 추첨, 같이 해요`, 'life-lotto-jackpot.png');
   }
 
   // ---------- 진입점 ----------
@@ -9367,7 +9688,12 @@ const Lotto = (() => {
     }
     if (!enabled()) return;
     if (!S) { if (!fetching && Date.now() >= retryAt) refresh(); return; }
-    if (S.draw_at - serverNow() <= -jitter && !settling && Date.now() >= settleAfter) settleAndRefresh();
+    const remainMs = S.draw_at - serverNow();
+    if (S.mine.length && remainMs > 0 && remainMs <= 600000) {     // 티켓이 있으면 추첨 10분 전에 한 번 알려준다 (회차마다)
+      let seen = null; try { seen = localStorage.getItem('lottoPre10_' + S.round); if (!seen) localStorage.setItem('lottoPre10_' + S.round, '1'); } catch (e) { seen = '1'; }
+      if (!seen) toast(`🎟️ 10분 뒤 로또 추첨! 내 티켓 ${S.mine.length}장`);
+    }
+    if (remainMs <= -jitter && !settling && Date.now() >= settleAfter) settleAndRefresh();
   }
 
   // ---------- 이벤트 연결 ----------
@@ -9398,6 +9724,16 @@ const Lotto = (() => {
       clapCache[r] = (clapCache[r] || 0) + 1; paintHist(); tone(900, .08, 'triangle', .05);
       try { const d = await rpc('lotto_congrats', { p_round: r, p_add: 1 }); clapCache[r] = d.total; paintHist(); } catch (err) { /* 무시 */ }
     });
+    $('ltShareJackpot').onclick = shareJackpot;
+    $('ltNotifYes').onclick = async () => {
+      try { localStorage.setItem('lottoNotifAsked', '1'); } catch (e) { /* 무시 */ }
+      try {
+        const perm = await Notification.requestPermission();
+        if (perm === 'granted') { if (window.track) window.track('notif_enabled'); scheduleGameNotifications(); updateNotifBtnLabel(); toast('🔔 추첨 10분 전에 알려드릴게요!'); }
+      } catch (e) { /* 권한 요청 실패는 무시 */ }
+      paintBuy();
+    };
+    $('ltNotifNo').onclick = () => { try { localStorage.setItem('lottoNotifAsked', '1'); } catch (e) { /* 무시 */ } paintBuy(); };
     $('ltSkip').onclick = skipShow;
     $('ltClose').onclick = close;
     $('ltMute').textContent = muted ? '🔇' : '🔊';
@@ -9407,7 +9743,7 @@ const Lotto = (() => {
     setInterval(tick, 1000);
   }
   init();
-  return { open, close, onLogin, refresh, _t: { state: () => S, tick, setSpeed: v => { SPEED = v; }, fmtKRW, processRounds } };
+  return { open, close, onLogin, refresh, notificationPlan, _t: { setS: v => { S = v; }, shareWin, shareJackpot, buildCard, state: () => S, tick, setSpeed: v => { SPEED = v; }, fmtKRW, processRounds } };
 })();
 window.Lotto = Lotto;
 
