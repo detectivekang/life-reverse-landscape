@@ -14,7 +14,7 @@
 // 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
 // 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
 (function() {
-  var CURRENT_VERSION = '2026092012';
+  var CURRENT_VERSION = '2026092013';
   try {
     if (sessionStorage.getItem('lrVersionChecked') === CURRENT_VERSION) return;
     fetch(location.pathname + '?_cb=' + Date.now(), { cache: 'no-store' })
@@ -1638,7 +1638,7 @@
   <div class="modal-overlay" id="swordModal">
     <div class="modal-box">
       <h2>⚔️ 검 강화</h2>
-      <p style="font-size:12px; color:var(--paper-dim); margin-top:-4px;">평범한 나뭇가지를 강화해서 전설의 무기로 키워보세요. 최대 +20강까지 가능하지만, 레벨이 오를수록 성공 확률은 낮아지고 실패하면 검이 파괴될 수도 있어요. (되돌리기 능력을 보유하고 있으면 파괴가 자동으로 막혀요) 검 랭킹은 매달 초기화돼요.</p>
+      <p style="font-size:12px; color:var(--paper-dim); margin-top:-4px;">평범한 나뭇가지를 강화해서 전설의 무기로 키워보세요. 최대 +20강까지 가능하지만, 레벨이 오를수록 성공 확률은 낮아지고 실패하면 검이 파괴될 수도 있어요. (되돌리기 능력을 보유하고 있으면 파괴가 자동으로 막혀요) 검 랭킹·현재검 랭킹은 <b>메인 검</b> 기준이고, 매달 초기화돼요.<br>🗃️ 아래 보관함에 예비 검을 하나 더 넣어두면, 메인 검이 깨져도 바로 교체해서 이어갈 수 있어요. 메인·보관 둘 다 +20강을 채우면 하나로 합쳐서 <b>+21강 전설검</b>을 만들 수 있어요!</p>
       <div style="margin:14px 0; text-align:center; background:var(--bg-panel); border-radius:10px; padding:16px 14px;">
         <div id="swordIcon" style="font-size:48px;">❔</div>
         <div id="swordName" style="margin-top:6px; font-size:15px; color:var(--gold); font-weight:bold;">검이 없어요</div>
@@ -1647,8 +1647,18 @@
       </div>
       <button class="start-btn" id="swordEnhanceBtn" style="display:none;">⚒️ 강화하기</button>
       <button class="start-btn" id="swordCraftBtn" style="display:none; background:var(--bg-panel); color:var(--gold); border:1px solid var(--gold);">🎲 검 뽑기</button>
+      <button class="start-btn" id="swordFuseBtn" style="display:none; background:linear-gradient(135deg,#5b3bd6,#8a4fe0); border:1px solid #c9a6ff;">🌌 전설 합성 (+21강)</button>
       <button class="start-btn" id="openSwordBattleBtn" style="margin-top:8px; background:var(--bg-panel); color:var(--gold); border:1px solid var(--gold);">🤺 검 배틀하기</button>
       <button class="close-btn" id="swordRankBtn" style="margin-top:8px;">🏅 검 랭킹 보기 (월간)</button>
+
+      <div id="swordStorageBox" style="margin-top:14px; text-align:center; background:var(--bg-panel); border-radius:10px; padding:14px;">
+        <div style="font-size:12px; color:var(--paper-dim); margin-bottom:6px;">🗃️ 보관함 (예비 검 1자루 · 강화 불가, 메인과 교체해서 써요)</div>
+        <div id="swordStoreIcon" style="font-size:36px;">❔</div>
+        <div id="swordStoreName" style="margin-top:4px; font-size:13px; color:var(--gold); font-weight:bold;">보관함이 비어있어요</div>
+        <button class="start-btn" id="swordSwapBtn" style="margin-top:10px; display:none;">🔄 메인 ↔ 보관 교체</button>
+        <button class="start-btn" id="swordStoreCraftBtn" style="margin-top:10px; display:none; background:var(--bg-panel); color:var(--gold); border:1px solid var(--gold);">🎲 검 뽑기 (보관함에 넣기)</button>
+      </div>
+
       <button class="close-btn" id="swordCloseBtn" style="margin-top:10px;">닫기</button>
     </div>
   </div>
@@ -2777,7 +2787,8 @@ const SWORD_STAGES = [
   { name: '포세이돈의 서리 파도 검', cost: 1310720000000, success: 20, maintain: 47, destroy: 33 },
   { name: '크로노스의 시공 베기 검', cost: 2621440000000, success: 15, maintain: 50, destroy: 35 },
   { name: '종말의 카오스 아포칼립스 검', cost: 5242880000000, success: 10, maintain: 53, destroy: 37 },
-  { name: '창세의 전지전능한 데미우르고스 검', cost: 10485760000000, success: 5, maintain: 56, destroy: 39 }
+  { name: '창세의 전지전능한 데미우르고스 검', cost: 10485760000000, success: 5, maintain: 56, destroy: 39 },
+  { name: '두 전설이 하나 된 궁극의 융합검' } // +21강: 강화가 아니라 fuseLegendarySword()의 합성으로만 얻는다 (cost/success 없음)
 ];
 
 // ===== 검 배틀 (강화 레벨만으로 승패를 가르는 미니게임) =====
@@ -2993,22 +3004,30 @@ const SWORD_LEVEL_TIERS = [
   { max: 17, icon: '✨⚔️' },
   { max: 18, icon: '✨⚔️✨' },
   { max: 19, icon: '🌟⚔️🌟' },
-  { max: 20, icon: '👑⚔️👑' }
+  { max: 20, icon: '👑⚔️👑' },
+  { max: 21, icon: '🌌👑⚔️👑🌌' } // (합성으로만 도달하는 +21강)
 ];
 
 let swordOwned = false; // 검을 보유 중인지 (예전 재질 랜덤 방식은 제거하고 단일 무기 라인으로 변경)
 let swordLevel = 0;
+// ===== 검 보관함 =====
+// "메인(swordOwned/swordLevel)" 하나만 있으면 그게 깨졌을 때 대안이 없어서, 보관함에 예비 검 1자루를 더 둘 수 있게 했다.
+// 강화/배틀/현재검 랭킹은 전부 기존처럼 "메인" 변수만 보고 동작하고(교체=swapSwordSlots가 두 변수쌍을 서로 맞바꿀 뿐),
+// 보관 중인 검은 그 자체로는 강화할 수 없다 — 쓰려면 먼저 메인과 교체해야 한다.
+let swordStoreOwned = false;
+let swordStoreLevel = 0;
+const LEGENDARY_SWORD_LEVEL = SWORD_MAX_LEVEL + 1; // 메인+보관 둘 다 +20강일 때 합성으로만 만들 수 있는 +21강 전설 등급
 let swordBestLevel = 0;   // 지금까지 도달한 최고 강화 레벨 (기록용)
 let swordBreakCount = 0;  // 지금까지 파괴로 잃은 검 개수 (기록용)
 
 function getSwordTierIcon(level) { return (SWORD_LEVEL_TIERS.find(t => level <= t.max) || SWORD_LEVEL_TIERS[SWORD_LEVEL_TIERS.length - 1]).icon; }
-function getSwordDisplayName() {
-  if (!swordOwned) return '검 없음';
-  return `+${swordLevel} ${SWORD_STAGES[swordLevel].name}`;
+function getSwordDisplayName(owned = swordOwned, level = swordLevel) {
+  if (!owned) return '검 없음';
+  return `+${level} ${SWORD_STAGES[level].name}`;
 }
-function getSwordIcon() {
-  if (!swordOwned) return '❔';
-  return getSwordTierIcon(swordLevel);
+function getSwordIcon(owned = swordOwned, level = swordLevel) {
+  if (!owned) return '❔';
+  return getSwordTierIcon(level);
 }
 function craftNewSword() {
   swordOwned = true;
@@ -3017,6 +3036,45 @@ function craftNewSword() {
   playSound('coin');
   showToast(`${getSwordTierIcon(0)} 새 검 등장: ${getSwordDisplayName()}!`);
   syncLeaderboard();
+}
+// 보관함에 새 검을 뽑아 넣는다 (메인 뽑기와 동일하게 무료). 메인 뽑기(craftNewSword)는 그대로 두고 손대지 않는다.
+function craftStorageSword() {
+  if (swordStoreOwned) return; // 버튼이 숨어 있어야 정상이지만 이중 클릭 방지로 한 번 더 확인
+  swordStoreOwned = true;
+  swordStoreLevel = 0;
+  renderSwordPanel();
+  playSound('coin');
+  showToast(`🗃️ 보관함에 새 검을 넣었어요: ${getSwordDisplayName(true, 0)}`);
+  saveGame({ forceCloud: true });
+}
+// 메인 ↔ 보관 교체. 강화/배틀/현재검 랭킹이 보는 값은 항상 "메인"이므로, 교체만으로 어느 검을 굴릴지 바꿀 수 있다.
+function swapSwordSlots() {
+  if (!swordOwned && !swordStoreOwned) { showToast('⚔️ 교체할 검이 없어요!'); return; }
+  [swordOwned, swordStoreOwned] = [swordStoreOwned, swordOwned];
+  [swordLevel, swordStoreLevel] = [swordStoreLevel, swordLevel];
+  renderSwordPanel();
+  playSound('coin');
+  showToast(`🔄 검을 교체했어요! 메인: ${getSwordDisplayName()}`);
+  syncLeaderboard({ forceSync: true }); // 현재검 랭킹·검배틀 매칭용 레벨이 바뀌었으니 바로 반영
+  saveGame({ forceCloud: true });
+}
+// 메인·보관 둘 다 +20강일 때만 가능: 두 자루를 합쳐 +21강 전설검 하나로 만들고, 보관함은 빈다.
+function fuseLegendarySword() {
+  if (!(swordOwned && swordLevel === SWORD_MAX_LEVEL && swordStoreOwned && swordStoreLevel === SWORD_MAX_LEVEL)) {
+    showToast('🌌 메인과 보관함에 모두 +20강 검이 있어야 합성할 수 있어요!');
+    return;
+  }
+  swordLevel = LEGENDARY_SWORD_LEVEL;
+  swordBestLevel = Math.max(swordBestLevel, swordLevel);
+  swordMonthlyBestLevel = Math.max(swordMonthlyBestLevel, swordLevel);
+  swordStoreOwned = false;
+  swordStoreLevel = 0;
+  playSound('levelUp');
+  showSwordLegendaryFx();
+  mascotSay(['🌌 두 자루의 전설이 하나로 합쳐졌다!! +21강 궁극의 무기 탄생!!']);
+  syncLeaderboard({ forceSync: true });
+  renderSwordPanel();
+  saveGame({ forceCloud: true });
 }
 function enhanceSword() {
   if (!swordOwned) { showToast('⚔️ 먼저 검을 만들어주세요!'); return; }
@@ -3082,16 +3140,37 @@ function renderSwordPanel() {
   document.getElementById('swordReviveChargesText').textContent = swordReviveCharges;
   const enhanceBtn = document.getElementById('swordEnhanceBtn');
   const craftBtn = document.getElementById('swordCraftBtn');
+  const fuseBtn = document.getElementById('swordFuseBtn');
+  // 세 버튼은 같은 자리에서 하나만 보인다(display:none인 버튼은 자리를 차지하지 않으므로, 상태가
+  // 바뀌어도(강화 중 → 파괴 → 뽑기 등) 항상 같은 위치에 버튼이 뜬다 — 급하게 누르다 다른 걸 누르는 사고 방지).
   if (swordOwned && swordLevel < SWORD_MAX_LEVEL) {
     const nextStage = SWORD_STAGES[swordLevel + 1];
     enhanceBtn.style.display = '';
     enhanceBtn.textContent = `⚒️ 강화하기 (${formatWon(nextStage.cost)}원 · 성공률 ${nextStage.success}%)`;
-  } else {
+    craftBtn.style.display = 'none';
+    fuseBtn.style.display = 'none';
+  } else if (!swordOwned) {
+    // 검이 파괴되었거나(또는 아직 만들지 않아) 없을 때만 새로 만들기 버튼을 보여준다.
     enhanceBtn.style.display = 'none';
+    craftBtn.style.display = '';
+    fuseBtn.style.display = 'none';
+  } else {
+    // 메인이 최고 강화(+20강 이상, 전설 포함) 상태: 평소엔 이 자리가 비어 있다가,
+    // 보관함도 +20강이 준비됐을 때만 합성 버튼이 나타난다.
+    enhanceBtn.style.display = 'none';
+    craftBtn.style.display = 'none';
+    fuseBtn.style.display = (swordLevel === SWORD_MAX_LEVEL && swordStoreOwned && swordStoreLevel === SWORD_MAX_LEVEL) ? '' : 'none';
   }
-  // 검이 파괴되었거나(또는 아직 만들지 않아) 없을 때만 새로 만들기 버튼을 보여준다.
-  craftBtn.style.display = swordOwned ? 'none' : '';
+  renderSwordStoragePanel();
   renderSwordBattlePanel();
+}
+function renderSwordStoragePanel() {
+  const iconEl = document.getElementById('swordStoreIcon');
+  if (!iconEl) return;
+  iconEl.textContent = getSwordIcon(swordStoreOwned, swordStoreLevel);
+  document.getElementById('swordStoreName').textContent = getSwordDisplayName(swordStoreOwned, swordStoreLevel);
+  document.getElementById('swordSwapBtn').style.display = (swordOwned || swordStoreOwned) ? '' : 'none';
+  document.getElementById('swordStoreCraftBtn').style.display = swordStoreOwned ? 'none' : '';
 }
 
 // ===== 저택 꾸미기 (순수 과시용 소비처, 레벨 상한 없음) =====
@@ -3920,6 +3999,14 @@ let isBrandNewPlayer = false;
 // 함께 올려준다. lastSeenPatchVersion이 patchNotes[0].version과 다르면 "안 읽은 공지"로
 // 간주해 배지를 띄우고, 기존 유저가 접속하면 자동으로 한 번 띄워준다.
 const patchNotes = [
+  {
+    version: '2026092013',
+    date: '2026-09-20',
+    items: [
+      '🗃️ 검 보관함 추가! 검 강화 창 아래쪽에서 예비 검 1자루를 더 보관할 수 있어요. 메인 검이 깨져도 보관함 검과 교체해서 바로 이어갈 수 있어요',
+      '🌌 메인·보관함 검이 둘 다 +20강이면 하나로 합성해서 +21강 전설검을 만들 수 있어요. 현재검 랭킹·검배틀은 항상 메인 검 기준이에요'
+    ]
+  },
   {
     version: '2026092008',
     date: '2026-09-20',
@@ -4766,6 +4853,9 @@ document.getElementById('swordCloseBtn').addEventListener('click', () => {
   document.getElementById('swordModal').classList.remove('show');
 });
 document.getElementById('swordEnhanceBtn').addEventListener('click', () => { initAudio(); enhanceSword(); });
+document.getElementById('swordFuseBtn').addEventListener('click', () => { initAudio(); fuseLegendarySword(); });
+document.getElementById('swordSwapBtn').addEventListener('click', () => { initAudio(); swapSwordSlots(); });
+document.getElementById('swordStoreCraftBtn').addEventListener('click', () => { initAudio(); craftStorageSword(); });
 document.getElementById('swordCraftBtn').addEventListener('click', () => { initAudio(); craftNewSword(); });
 document.getElementById('openSwordBattleBtn').addEventListener('click', () => {
   initAudio();
@@ -7514,7 +7604,7 @@ function checkPeriodRollover() {
   if (monthlyPeriodKey !== mk) {
     const prevMk = monthlyPeriodKey;
     // 초기화하기 전에 지난 시즌 성적을 스냅샷으로 남겨둔다(정산 보고서·명예의 전당 기록용)
-    const snap = { casino: monthlyWinnings, burned: burnedMonthly, swordBest: Math.max(swordMonthlyBestLevel, swordOwned ? swordLevel : 0) };
+    const snap = { casino: monthlyWinnings, burned: burnedMonthly, swordBest: Math.max(swordMonthlyBestLevel, swordOwned ? swordLevel : 0, swordStoreOwned ? swordStoreLevel : 0) };
     monthlyPeriodKey = mk;
     monthlyWinnings = 0;
     burnedMonthly = 0;
@@ -7523,6 +7613,8 @@ function checkPeriodRollover() {
       settleSeason(prevMk, snap);
       swordOwned = false;
       swordLevel = 0;
+      swordStoreOwned = false;
+      swordStoreLevel = 0;
       swordMonthlyBestLevel = 0;
       renderSwordPanel();
       // 지난달 랭킹 메달·검 랭킹 보상은 로그인/네트워크가 준비되면(바로 못 하면 나중에 다시) 확인한다.
@@ -7928,6 +8020,24 @@ function spawnConfettiBurst(count, icons) {
     app.appendChild(c);
     setTimeout(() => c.remove(), 1900);
   }
+}
+function showSwordLegendaryFx() {
+  const app = document.getElementById('app');
+  const icons = ['🌌', '👑', '⚔️', '✨', '💫'];
+  let i = 0;
+  const burstTimer = setInterval(() => {
+    spawnConfettiBurst(70, icons);
+    playSound('levelUp');
+    i++;
+    if (i >= 6) clearInterval(burstTimer);
+  }, 240);
+  app.classList.add('sword-shake');
+  setTimeout(() => app.classList.remove('sword-shake'), 1400);
+  const banner = document.createElement('div');
+  banner.className = 'sword-max-banner';
+  banner.innerHTML = `🌌 +${LEGENDARY_SWORD_LEVEL}강 전설 합성! 🌌<br>두 자루가 하나로!!`;
+  app.appendChild(banner);
+  setTimeout(() => banner.remove(), 2700);
 }
 function showSwordMaxBanner() {
   const app = document.getElementById('app');
@@ -8506,7 +8616,7 @@ const LEADERBOARD_FETCH_LIMIT = 100;
 //  미니게임 수익 주간 1e31·월간 1e32 (한 판 이익 ≤ 판돈 ≤ 보유금, 초당 2~3판 × 기간) / 소각 월간 1e32 / 명예의 전당 수입 1e45·카지노 1e32·점수 1e12
 function rankLimitForBoard(board) {
   if (typeof board !== 'string') return null;
-  if (board.startsWith('leaderboard_sword_monthly_')) return SWORD_MAX_LEVEL;
+  if (board.startsWith('leaderboard_sword_monthly_')) return LEGENDARY_SWORD_LEVEL;
   if (board === 'leaderboard_sword') return 2e7;
   if (board.startsWith('leaderboard_weekly_')) return 1e31;
   if (board.startsWith('leaderboard_monthly_')) return 1e32;
@@ -8523,7 +8633,7 @@ function isPlausibleRankEntry(board, raw) {
     const amt = fromBigStorable(raw.amount);
     if (!Number.isFinite(amt) || amt < 0 || amt > limit) return false;
   }
-  if (typeof raw.swordLevel === 'number' && (raw.swordLevel < -1 || raw.swordLevel > SWORD_MAX_LEVEL)) return false;
+  if (typeof raw.swordLevel === 'number' && (raw.swordLevel < -1 || raw.swordLevel > LEGENDARY_SWORD_LEVEL)) return false;
   return true;
 }
 // 시즌 보상용: DB 정렬 그대로 상위 n명을 믿지 않고, 불가능한 값을 뺀 뒤 실제 금액으로 다시 정렬해서 상위 n명의 uid를 돌려준다.
@@ -8749,6 +8859,7 @@ function buildSaveData() {
     swordOwned, swordLevel, swordBestLevel, swordBreakCount,
     swordBattleWins, swordBattleCountToday, swordBattleTickets, swordBattleTicketsAt, lottoAppliedIds,
     swordMonthlyBestLevel, swordReviveCharges, swordColorBoostMonthKey, swordColorBoostMult, claimedSwordSeasonRewards,
+    swordStoreOwned, swordStoreLevel,
     fateCardId, fateOffer, seasonMedals, seasonHistory, claimedMedalSeasons, medalPendingKey, bestSeasonEarned, bestMonthlyCasino, seasonCount,
     deviceId: DEVICE_ID,
     lastSaveTime: Date.now()
@@ -8865,6 +8976,9 @@ function applySaveData(data, opts) {
   lottoAppliedIds = Array.isArray(data.lottoAppliedIds) ? data.lottoAppliedIds.slice(-30) : [];
   swordMonthlyBestLevel = data.swordMonthlyBestLevel || 0;
   swordReviveCharges = data.swordReviveCharges || 0;
+  swordStoreOwned = !!data.swordStoreOwned;
+  swordStoreLevel = Number.isFinite(data.swordStoreLevel) ? Math.max(0, Math.min(LEGENDARY_SWORD_LEVEL, data.swordStoreLevel)) : 0;
+  if (!swordStoreOwned) swordStoreLevel = 0;
   swordColorBoostMonthKey = data.swordColorBoostMonthKey || '';
   swordColorBoostMult = data.swordColorBoostMult || 1;
   claimedSwordSeasonRewards = data.claimedSwordSeasonRewards || [];
