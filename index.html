@@ -14,7 +14,7 @@
 // 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
 // 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
 (function() {
-  var CURRENT_VERSION = '2026092014';
+  var CURRENT_VERSION = '2026092013';
   try {
     if (sessionStorage.getItem('lrVersionChecked') === CURRENT_VERSION) return;
     fetch(location.pathname + '?_cb=' + Date.now(), { cache: 'no-store' })
@@ -3803,21 +3803,21 @@ const UI_VETERAN_TOTAL = 1e6; // 이 필드가 없던 기존 세이브 중 이 �
 let uiUnlocks = {};
 const UI_FEATURES = [
   { id: 'daily',    icon: '📅', name: '일일 미션', at: 1e5, btns: ['dailyBtn'],
-    hint: '매일 자정에 미션 3개가 새로 나와요. 미션을 깨면 돈이나 부스터 같은 보상을 바로 받을 수 있으니, 하루도 거르지 말고 들러서 챙겨가세요!', used: () => dailyMissionsCompletedTotal > 0 },
+    hint: '매일 새 미션을 깨고 보상을 받아요', used: () => dailyMissionsCompletedTotal > 0 },
   { id: 'shops',    icon: '🏬', name: '상가', at: 5e6, kind: 'info', open: () => map2Unlocked,
     hint: '가게를 열어 자동 수익을 키워요. 행운의 거리와 컬렉션도 함께 열려요' },
   { id: 'infinite', icon: '💍', name: '무한강화', at: 1e7, btns: ['infiniteUpgradeBtn'],
-    hint: '한 번 사면 끝인 일반 아이템과 달리, 여긴 돈만 있으면 레벨 제한 없이 계속 살 수 있어요. 초당 수입을 아주 조금씩이지만 영구히 끌어올려주는 곳이에요.', used: () => infiniteUpgradeLevel > 0 },
+    hint: '돈을 들여 수익을 조금씩, 끝없이 키워요', used: () => infiniteUpgradeLevel > 0 },
   { id: 'mansion',  icon: '🏰', name: '저택', at: 1e8, btns: ['mansionBtn'], where: 'more',
-    hint: '내 저택을 단계별로 꾸며서 재산을 뽐낼 수 있어요. 저택을 꾸밀수록 랭킹 등 여러 곳에 표시되는 내 아이콘도 함께 화려해져요. ⋯ 더보기 메뉴에서 언제든 확인할 수 있어요.', used: () => mansionLevel > 0 },
+    hint: '저택을 꾸며 재산을 뽐내요 (더보기 메뉴)', used: () => mansionLevel > 0 },
   { id: 'sword',    icon: '⚔️', name: '검', at: 1e9, btns: ['swordBtn'],
-    hint: '나뭇가지 검을 뽑아서 강화해보세요. 강화할수록 성공 확률은 낮아지고 실패하면 검이 깨질 수 있으니, 보관함에 예비 검도 하나 만들어두면 좋아요. 강해진 검으로 다른 유저와 배틀도 할 수 있어요.', used: () => swordOwned || swordBestLevel > 0 || swordBattleWins > 0 },
+    hint: '검을 강화하고 다른 유저와 배틀해요', used: () => swordOwned || swordBestLevel > 0 || swordBattleWins > 0 },
   { id: 'lotto',    icon: '🎟️', name: '인생 로또', at: 1e12, btns: ['lottoBtn'],
-    hint: '번호 6개를 골라 티켓을 사고 매일 밤 8시 추첨 결과를 확인해보세요. 1등 당첨자가 없으면 상금이 다음 날로 그대로 이월돼서 잭팟이 계속 불어나요!' },
+    hint: '매일 밤 8시 추첨! 1등이 없으면 상금이 계속 이월돼요' },
   { id: 'world',    icon: '🌍', name: '월드 사업', at: WORLD_UNLOCK_THRESHOLD, kind: 'info', open: () => map5Unlocked,
     hint: '세계로 뻗어가는 기업 사업이 열려요' },
   { id: 'prestige', icon: '♻️', name: '환생·특성', at: 1e16, btns: ['prestigeBtn', 'talentBtn'], where: 'more',
-    hint: '지금까지 모은 돈과 사업은 초기화되지만, 그 대신 영구히 남는 특성 포인트를 받아요. 그 포인트로 🌳 특성을 올리면 다음 판이 훨씬 수월해져요. (환생은 ⋯ 더보기 메뉴, 특성은 상단 🌳 버튼)', used: () => rebirthCount > 0 || prestigePoints > 0 }
+    hint: '처음부터 다시 시작하는 대신 영구 특성을 얻어요 (환생은 더보기 메뉴, 특성은 상단 🌳)', used: () => rebirthCount > 0 || prestigePoints > 0 }
 ];
 
 // 10의 거듭제곱에 가까운 목표를 "10만 / 10억 / 1경"처럼 깔끔하게 표기
@@ -3899,18 +3899,11 @@ function celebrateUiUnlock(list) {
       const el = document.getElementById(id);
       if (!el) return;
       el.classList.add('ui-new');
-      el.addEventListener('click', () => {
-        el.classList.remove('ui-new');
-        setTimeout(() => mascotSay(`${f.icon} ${f.name} 다시 알려줄게! ${f.hint}`), 350); // 해금 순간을 놓쳤을 유저를 위해, 처음 눌러볼 때 한 번 더 설명
-      }, { once: true });
+      el.addEventListener('click', () => el.classList.remove('ui-new'), { once: true });
     });
   });
-  let delay = 700;
-  list.forEach(f => {
-    const line = `${f.icon} ${f.name}이(가) 열렸어! ${f.hint}`;
-    setTimeout(() => mascotSay(line), delay);
-    delay += Math.min(9000, Math.max(4200, line.length * 100)) + 500; // 여러 개가 한꺼번에 풀려도 겹치지 않고 하나씩 순서대로 말해준다
-  });
+  const f0 = list[0];
+  setTimeout(() => mascotSay(`${f0.icon} ${f0.name}이(가) 열렸어! ${f0.hint}`), 700);
 }
 // silent=true 는 세이브를 불러올 때처럼 축하 연출 없이 조용히 상태만 맞추는 용도
 function checkUiUnlocks(silent) {
@@ -3993,9 +3986,7 @@ function mascotSay(lines) {
   speech.textContent = text;
   bubble.classList.add('show');
   clearTimeout(bubble._timer);
-  const showMs = Math.min(9000, Math.max(4200, text.length * 100)); // 설명이 길어졌으니 글자 수에 맞춰 노출 시간도 늘어난다
-  bubble._timer = setTimeout(() => bubble.classList.remove('show'), showMs);
-  return showMs;
+  bubble._timer = setTimeout(() => bubble.classList.remove('show'), 4200);
 }
 document.getElementById('mascotBubble').addEventListener('click', () => {
   document.getElementById('mascotBubble').classList.remove('show');
@@ -4008,13 +3999,6 @@ let isBrandNewPlayer = false;
 // 함께 올려준다. lastSeenPatchVersion이 patchNotes[0].version과 다르면 "안 읽은 공지"로
 // 간주해 배지를 띄우고, 기존 유저가 접속하면 자동으로 한 번 띄워준다.
 const patchNotes = [
-  {
-    version: '2026092014',
-    date: '2026-09-20',
-    items: [
-      '💬 새 기능이 열릴 때 캐릭터가 어떤 기능인지 조금 더 자세히 설명해줘요. 여러 개가 한꺼번에 열리면 하나씩 순서대로 말해주고, 처음 눌러볼 때도 한 번 더 짚어줘요'
-    ]
-  },
   {
     version: '2026092013',
     date: '2026-09-20',
@@ -4065,7 +4049,7 @@ const patchNotes = [
     date: '2026-09-20',
     items: [
       '🎟️ 인생 로또 오픈! 매일 밤 8시에 추첨하고, 1등이 안 나오면 상금이 100% 이월돼요 (총 수입 1조 달성 시 상단 🎟️ 버튼이 열려요)',
-      '🎫 1~20 중 6개를 직접 고르거나(수동/반자동) 자동으로 살 수 있어요. 1장 1조원, 회차당 1인 최대 10장',
+      '🎫 1~20 중 6개를 직접 고르거나(수동/반자동) 자동으로 살 수 있어요. 1장 1조원, 회차당 1인 최대 50장',
       '👑 1등은 기본 50경 + 판매금 + 이월금, 2등 5경, 3등 1,000조, 4등 100조! 이월이 길어질수록 전광판이 불꽃→번개→무지개로 화려해져요',
       '🎰 밤 8시엔 공 6개가 하나씩 공개되는 추첨 연출이 나오고, 1·2등이 나오면 전 서버에 공지돼요 (👏 축하하기). 매월 마지막 추첨 뒤 이월금은 시즌과 함께 초기화돼요'
     ]
@@ -9274,7 +9258,7 @@ window.track = Analytics.track;
 // =====================================================================
 // 🎟️ 로또: 매일 밤 8시 이월형 추첨
 //   - 서버(Supabase) 함수: lotto.sql (lotto_get_state / lotto_buy / lotto_settle / lotto_claim / lotto_congrats)
-//   - 추첨·당첨금 계산·한도(회차당 10장)·중복 수령 방지는 전부 서버가 맡고,
+//   - 추첨·당첨금 계산·한도(회차당 50장)·중복 수령 방지는 전부 서버가 맡고,
 //     이 코드는 화면/연출과 "돈 증감(구매 차감, 당첨금 지급)"만 처리한다.
 //   - 돈(money)은 카지노처럼 money에만 더하고 totalEarned에는 더하지 않는다 (랭킹/환생 점수 왜곡 방지).
 // =====================================================================
@@ -9283,7 +9267,7 @@ const Lotto = (() => {
   const $ = id => document.getElementById(id);
   const PICK = 6, POOL = 20, JITTER_MAX = 2500;
   const RANK_ICON = { 1: '👑', 2: '🥈', 3: '🥉', 4: '🎫' };
-  const DEF_CFG = { price: '1000000000000', base1: '500000000000000000', p2: '50000000000000000', p3: '1000000000000000', p4: '100000000000000', max: 10 };
+  const DEF_CFG = { price: '1000000000000', base1: '500000000000000000', p2: '50000000000000000', p3: '1000000000000000', p4: '100000000000000', max: 50 };
 
   let S = null;                 // 서버에서 받은 마지막 상태 (lotto_get_state)
   let offset = 0;               // 서버 시각 - 내 기기 시각 (ms). 기기 시계를 바꿔도 카운트다운/추첨 시각은 서버 기준
