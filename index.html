@@ -3459,20 +3459,77 @@ const GLOBAL_INCOME_THROTTLE = 0.25;
 // 천문학적으로 튀어서, 주간 랭킹 1위가 "항하사"(10^56 단위) 같은 말이 안 되는 수치까지
 // 찍히는 문제가 생겼다.
 // 그래서 게임이 자체적으로 정한 "최고 칭호" 달성 기준(총 수입 1e20원)을 SOFT_CAP_START로
-// 두고, 그 지점을 넘어선 값부터는 아래 공식으로 증가율을 강하게 눌러버린다.
-// 공식: cap 이하는 그대로, cap을 넘으면 cap * (raw/cap)^SOFT_CAP_EXPONENT.
-// 예) exponent 0.08이면, raw가 10배 커질 때마다 결과값은 약 1.2배만 커진다(사실상 거의 정지).
+// 두고, 그 지점을 넘어선 값부터는 단계별 곡선(SOFT_CAP_TIERS)으로 증가율을 눌러준다.
+// 공식(각 단계): 단계 시작값 * (raw/단계 시작 raw)^exp. 1해 미만은 그대로.
 // money/totalEarned(addMoney 경로)에는 계속 이 함수를 적용한다. 카지노 순수익
 // (casinoTotalWinnings/weeklyWinnings/monthlyWinnings, 랭킹 표시용 값)은 모든 유저의
 // 순위가 전부 "해원"에서 뭉개져 보이는 문제 때문에 캡을 뺐다. 판돈(money)이 위 캡으로
 // 묶여 있어서 순수익은 지수적으로 폭발하지 않고 플레이한 만큼 누적으로만 늘어난다.
 // cap 이하인 값(대다수의 정상 플레이)은 100% 그대로 동작해서 초반 체감에
 // 전혀 영향이 없다.
-const SOFT_CAP_START = 1e20; // = earn_max_title 업적 기준과 동일
-const SOFT_CAP_EXPONENT = 0.08;
-function applySoftCap(raw) {
+// ---- [개편] 단계형 소프트캡 ----
+// 예전 방식의 문제: "보유금(이미 눌린 값) + 번 돈"을 매 틱마다 다시 눌러서, 보유금이 1해(1e20)에
+// 닿으면 지수를 얼마로 하든 거기서 꽉 막혔다(눌린 값이 다시 눌리는 구조라 사실상 벽).
+// 지금 방식: 보유금을 "원래 벌었을 값(raw)"으로 되돌린 뒤 번 돈을 더하고 다시 누른다
+// (softAdd). 그래서 번 만큼 꾸준히 오르되, 구간이 올라갈수록 같은 돈을 벌어도 덜 오른다.
+// 단계는 보유금 기준이고, 각 단계의 exp가 작을수록 강하게 누른다. (1이면 캡 없음)
+//   1해~ : exp 0.85  /  1자~ : exp 0.65  /  1양~ : exp 0.45
+// 단계 경계에서 값이 끊기지 않게 이어지고, 1해 미만은 예전과 100% 같다.
+// 숫자만 바꿔서 난이도를 조절할 수 있다. (exp를 키우면 완화, 줄이면 강화)
+const SOFT_CAP_TIERS = [
+  { start: 1e20, exp: 0.85 }, // 1해
+  { start: 1e24, exp: 0.65 }, // 1자
+  { start: 1e28, exp: 0.45 }  // 1양
+];
+const SOFT_CAP_START = SOFT_CAP_TIERS[0].start;
+const SOFT_CAP_SANITY_MAX = 1e30; // 불러올 때 이 값 넘는 보유금은 조작/오류로 보고 자른다 (정상 플레이로는 못 닿는 값)
+// 각 단계가 시작되는 지점의 raw 값을 미리 계산해둔다 (이전 단계 곡선을 따라 올라온 값)
+const SOFT_CAP_RAW_START = (() => {
+  const raws = [SOFT_CAP_TIERS[0].start];
+  for (let i = 1; i < SOFT_CAP_TIERS.length; i++) {
+    const prev = SOFT_CAP_TIERS[i - 1];
+    raws.push(raws[i - 1] * Math.pow(SOFT_CAP_TIERS[i].start / prev.start, 1 / prev.exp));
+  }
+  return raws;
+})();
+// 보유금(눌린 값) → raw(원래 벌었을 값)
+function softCapToRaw(bal) {
+  if (!isFinite(bal) || bal <= SOFT_CAP_START) return bal;
+  let i = 0;
+  while (i + 1 < SOFT_CAP_TIERS.length && bal >= SOFT_CAP_TIERS[i + 1].start) i++;
+  return SOFT_CAP_RAW_START[i] * Math.pow(bal / SOFT_CAP_TIERS[i].start, 1 / SOFT_CAP_TIERS[i].exp);
+}
+// raw → 보유금(눌린 값)
+function softCapFromRaw(raw) {
   if (!isFinite(raw) || raw <= SOFT_CAP_START) return raw;
-  return SOFT_CAP_START * Math.pow(raw / SOFT_CAP_START, SOFT_CAP_EXPONENT);
+  let i = 0;
+  while (i + 1 < SOFT_CAP_RAW_START.length && raw >= SOFT_CAP_RAW_START[i + 1]) i++;
+  return SOFT_CAP_TIERS[i].start * Math.pow(raw / SOFT_CAP_RAW_START[i], SOFT_CAP_TIERS[i].exp);
+}
+// 보유금 bal에 amount를 번 만큼 더한 새 보유금. (amount <= 0이면 그냥 더하고 뺀다)
+function softAdd(bal, amount) {
+  if (!isFinite(amount) || amount <= 0) return bal + (isFinite(amount) ? amount : 0);
+  if (!isFinite(bal)) return bal;
+  if (bal + amount <= SOFT_CAP_START) return bal + amount; // 1해 미만: 예전과 동일
+  const raw = softCapToRaw(bal);
+  if (bal > SOFT_CAP_START && amount < raw * 1e-9) {
+    // 아주 작은 증가량은 차이를 빼면 오차가 커서, 현재 구간의 기울기로 바로 계산한다.
+    let i = 0;
+    while (i + 1 < SOFT_CAP_TIERS.length && bal >= SOFT_CAP_TIERS[i + 1].start) i++;
+    return bal + SOFT_CAP_TIERS[i].exp * (bal / raw) * amount;
+  }
+  return softCapFromRaw(raw + amount);
+}
+// money에 번 돈을 넣고, 실제로 들어온 금액을 돌려준다.
+function creditMoney(amount) {
+  const before = money;
+  money = softAdd(money, amount);
+  return money - before;
+}
+// 저장본에서 읽은 보유금/총수입 정리: 이미 눌린 값이라 다시 누르지 않는다(불러올 때마다 깎이는 걸 방지).
+function sanitizeBalance(v) {
+  if (!isFinite(v) || v < 0) return 0;
+  return Math.min(v, SOFT_CAP_SANITY_MAX);
 }
 
 function getClickValue() {
@@ -3511,8 +3568,8 @@ function addMoney(amount) {
     showLoginGate();
     return;
   }
-  money = applySoftCap(money + amount);
-  totalEarned = applySoftCap(totalEarned + amount);
+  money = softAdd(money, amount);
+  totalEarned = softAdd(totalEarned, amount);
   checkStageAdvance();
   flashMoney();
   if (!currentUser && totalEarned >= LOGIN_REQUIRED_THRESHOLD) {
@@ -4003,6 +4060,15 @@ let isBrandNewPlayer = false;
 // 함께 올려준다. lastSeenPatchVersion이 patchNotes[0].version과 다르면 "안 읽은 공지"로
 // 간주해 배지를 띄우고, 기존 유저가 접속하면 자동으로 한 번 띄워준다.
 const patchNotes = [
+  {
+    version: '2026100201',
+    date: '2026-10-02',
+    items: [
+      '⚖️ 소프트캡을 단계형으로 바꿨어요. 이제 1해원에서 돈이 멈추지 않고, 계속 늘어나요',
+      '📉 1해원 → 1자원 → 1양원을 넘을 때마다 같은 돈을 벌어도 조금씩 덜 오르는 방식이에요 (1해원 미만은 그대로예요)',
+      '🔧 1해원 근처에서 막혀 있던 분도 접속하면 바로 다시 벌려요. 보유 재산은 그대로예요'
+    ]
+  },
   {
     version: '2026100101',
     date: '2026-10-01',
@@ -5792,7 +5858,7 @@ function chooseFate(id) {
   if (!f || !fateOffer.includes(id)) return;
   fateCardId = id;
   fateOffer = [];
-  if (f.startMoney) money = applySoftCap(money + f.startMoney);
+  if (f.startMoney) creditMoney(f.startMoney);
   if (f.startRevive) { swordReviveCharges += f.startRevive; renderSwordPanel(); }
   if (f.startPoints) { prestigePoints += f.startPoints; updateTalentPointBadge(); }
   let challengeStarted = false;
@@ -7215,8 +7281,7 @@ const randomEvents = [
         if (r < 0.05) pct = 0.5 + Math.random() * 0.3;
         else if (r < 0.3) pct = 0.1 + Math.random() * 0.1;
         else pct = Math.random() * 0.05;
-        const gain = Math.floor(money * pct);
-        money += gain;
+        const gain = Math.floor(creditMoney(Math.floor(money * pct)));
         return gain > 0 ? `🎉 +${formatWon(gain)}원 당첨!` : '꽝... 다음 기회에.';
       }
       return '복권을 버렸습니다.';
@@ -7229,7 +7294,7 @@ const randomEvents = [
     resolve: (pick) => {
       if (pick === 'A') {
         const amt = Math.floor(money * 0.2);
-        if (Math.random() < 0.5) { money += amt; return `📈 대박! +${formatWon(amt)}원`; }
+        if (Math.random() < 0.5) { const got = Math.floor(creditMoney(amt)); return `📈 대박! +${formatWon(got)}원`; }
         money -= amt; return `📉 쪽박... -${formatWon(amt)}원`;
       }
       return '수상해서 거절했습니다. 현명한 선택입니다.';
@@ -7242,7 +7307,7 @@ const randomEvents = [
     resolve: (pick) => {
       if (pick === 'A') {
         const amt = Math.floor(money * 0.15);
-        if (Math.random() < 0.6) { money += amt; return `🤝 사업이 잘 됐습니다! +${formatWon(amt)}원`; }
+        if (Math.random() < 0.6) { const got = Math.floor(creditMoney(amt)); return `🤝 사업이 잘 됐습니다! +${formatWon(got)}원`; }
         money -= amt; return `😢 사업이 망했습니다... -${formatWon(amt)}원`;
       }
       return '정중히 거절했습니다.';
@@ -7303,7 +7368,7 @@ function evCtx() {
 }
 function evText(map, ctx) { return map[ctx.tier] || map.default || ''; }
 function evWon(n) { return formatWon(n) + '원'; }
-function evGain(n) { const g = Math.max(0, Math.floor(n)); money += g; return g; }
+function evGain(n) { const g = Math.max(0, Math.floor(n)); return Math.floor(creditMoney(g)); }
 function evLoss(n) { const l = Math.max(0, Math.min(Math.floor(n), Math.floor(money))); money -= l; return l; }
 function lottoCost(ctx) { return Math.max(1e5, Math.floor(ctx.unit * 2)); }
 
@@ -7761,7 +7826,7 @@ function adjustBet(val) {
 // 손해(-3~-5%)를 뒤집어서 오래 할수록 돈이 불어났다. 실제 카지노처럼 어떤 보너스가 붙어도 장기적으로는 딜러가 이기도록,
 // 보너스가 클수록 승률을 조금씩 깎아서 기대수익이 항상 -CASINO_HOUSE_EDGE 이하가 되게 한다.
 // 보너스가 작을 땐 기본 승률 그대로이고, 배당과 화면 표시는 바뀌지 않는다.
-const CASINO_HOUSE_EDGE = 0.03;
+const CASINO_HOUSE_EDGE = 0.05; // 조절용: 클수록 플레이어 승률이 낮아진다 (예전 0.03)
 function getCasinoBonusMult() {
   const vip = getVipTier();
   return Math.min(1.15, (1 + vip.bonus) * casinoTalentMult) * getWeatherCasinoMult() * getFateCasinoMult();
@@ -7794,7 +7859,7 @@ function resolveCasinoResult(outcome, bet, winPayout, resEl, subText) {
     // 반복 플레이 시 플레이어에게 유리한 쪽으로 뒤집힐 수 있다. 합산 보너스에 상한을 둔다.
     const combinedCasinoBonus = getCasinoBonusMult();
     const netProfit = Math.floor((winPayout - bet) * combinedCasinoBonus);
-    money = applySoftCap(money + bet + netProfit);
+    money = softAdd(money + bet, netProfit); // 돌려받는 판돈은 그대로, 딴 돈(순수익)만 소프트캡 적용
     if (netProfit > 0) {
       checkPeriodRollover();
       casinoTotalWinnings = casinoTotalWinnings + netProfit;
@@ -9044,8 +9109,8 @@ window.addEventListener('storage', (e) => {
 
 function applySaveData(data, opts) {
   opts = opts || {};
-  money = applySoftCap(fromBigStorable(data.money) || 0);
-  totalEarned = applySoftCap(fromBigStorable(data.totalEarned) || 0);
+  money = sanitizeBalance(fromBigStorable(data.money) || 0);
+  totalEarned = sanitizeBalance(fromBigStorable(data.totalEarned) || 0);
   stageIndex = data.stageIndex || 0;
   baseClickValue = data.baseClickValue || 1;
   infiniteUpgradeLevel = data.infiniteUpgradeLevel || 0;
@@ -9445,7 +9510,7 @@ const Lotto = (() => {
   const PENDING = () => 'lottoPending_' + currentUser.uid;
   function applyClaim(c) {                       // 같은 수령(id)은 절대 두 번 반영하지 않는다
     if (lottoAppliedIds.includes(c.id)) return false;
-    money = applySoftCap(money + Number(c.amount));
+    creditMoney(Number(c.amount));
     lottoAppliedIds.push(c.id); if (lottoAppliedIds.length > 30) lottoAppliedIds.shift();
     saveGame(); render(); flashMoney();
     return true;
