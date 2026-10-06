@@ -14,7 +14,7 @@
 // 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
 // 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
 (function() {
-  var CURRENT_VERSION = '2026100606';
+  var CURRENT_VERSION = '2026100607';
   try {
     if (sessionStorage.getItem('lrVersionChecked') === CURRENT_VERSION) return;
     fetch(location.pathname + '?_cb=' + Date.now(), { cache: 'no-store' })
@@ -2135,7 +2135,7 @@ let voidEquipped = [];  // 장착한 유물 id (최대 3칸, 장착하면 효과
 let voidBossTimeLeft = 0; // 보스 남은 시간(초). 저장하지 않는다.
 // 공허 리뉴얼(2026-10-06) 때 모든 유저의 공허 진행도를 1회 초기화하기 위한 버전. 저장본의 값이 이보다 작으면 불러올 때 1번만 초기화한다.
 // 또 한 번 전체 초기화가 필요하면 이 숫자를 올리면 된다.
-const VOID_RESET_VERSION = 1;
+const VOID_RESET_VERSION = 2; // 1: 공허 리뉴얼 / 2: 클릭 수입 연동 제거(밸런스 조정)
 let voidResetVersion = VOID_RESET_VERSION; // 새 게임은 이미 최신 버전으로 시작
 let jobLevels5 = [];
 let stallProgress5 = [];
@@ -2666,8 +2666,10 @@ function renderWeatherBadge() {
 const voidEnemyEmojis = ['👻', '🕸️', '🌑', '🦇'];
 const VOID_BOSS_EVERY = 5;
 function getVoidDamage() {
-  // 상점 강화 + 본편 클릭 수입의 아주 일부를 살짝 반영해서, 본편이 성장할수록 여기도 약간은 편해지게 한다.
-  return Math.floor((10 + voidDamageLevel * 5 + Math.floor(getClickValue() * 0.05)) * getVoidRelicDamageMult());
+  // 본편 클릭 수입은 반영하지 않는다. 예전엔 클릭 수입의 5%를 더했는데, 본편을 오래 한 유저는 첫 공격부터
+  // 수천만 피해가 나와 몇 번 만에 100웨이브 근처까지 가버렸다. 이제 모두가 기본 공격력 10에서 시작해서
+  // 차원 상점 강화와 유물로만 성장한다 (그래서 랭킹도 공정하게 겨룰 수 있다).
+  return Math.floor((10 + voidDamageLevel * 5) * getVoidRelicDamageMult());
 }
 function getVoidUpgradeCost(level) {
   const lv = level === undefined ? voidDamageLevel : level;
@@ -4763,6 +4765,14 @@ let isBrandNewPlayer = false;
 // 함께 올려준다. lastSeenPatchVersion이 patchNotes[0].version과 다르면 "안 읽은 공지"로
 // 간주해 배지를 띄우고, 기존 유저가 접속하면 자동으로 한 번 띄워준다.
 const patchNotes = [
+  {
+    version: '2026100607',
+    date: '2026-10-06',
+    items: [
+      '⚖️ 공허 밸런스를 조정했어요! 본편을 오래 한 유저는 첫 공격부터 수천만 피해가 나와서 순식간에 100웨이브 근처까지 가버렸어요. 이제 공허 공격력에 본편 클릭 수입이 반영되지 않고, 모두가 기본 공격력 10에서 시작해 차원 상점 강화와 유물로만 성장해요',
+      '🌌 공정한 출발을 위해 모든 유저의 공허가 1웨이브부터 다시 시작돼요 (웨이브·최고 기록·차원 조각·상점 강화·유물 초기화, 검 강화 아이템과 되돌리기는 그대로). 공허 랭킹의 이전 기록도 함께 정리돼요'
+    ]
+  },
   {
     version: '2026100606',
     date: '2026-10-06',
@@ -9521,7 +9531,7 @@ async function claimReferralRewards() {
 // voidRankDirty가 켜져 있으면 10초마다 한 번 올리고(로그인 전이면 로그인 후에), 전체 동기화 때도 함께 올라간다.
 async function writeVoidRankDoc() {
   if (!currentUser || !db || deviceDisplaced) return false;
-  if (!map6Unlocked || voidBestWave <= 0) return false;
+  if (!map6Unlocked) return false; // 최고 웨이브가 0으로 초기화된 경우에도 덮어써서 예전 기록이 보드에 남지 않게 한다
   await dbSetDoc(`leaderboard_void_monthly_${monthlyPeriodKey}`, currentUser.uid, {
     name: currentUser.name, updatedAt: Date.now(), amount: voidBestWave,
     nameColor: nameColor ? nameColor.color : null, mansionIcon: getMansionTier().icon
@@ -9650,7 +9660,7 @@ async function fetchLeaderboard(period) {
       const seasonStart = getSeasonStartMs();
       docs = docs.filter(d => typeof d.swordLevel === 'number' && d.swordLevel >= 0 && typeof d.updatedAt === 'number' && d.updatedAt >= seasonStart);
     }
-    const decoded = docs.filter(raw => isPlausibleRankEntry(colName, raw)).map((raw) => ({ uid: raw.id, ...raw, amount: sortField === 'swordLevel' ? (raw.swordLevel || 0) : fromBigStorable(raw.amount) }));
+    const decoded = docs.filter(raw => isPlausibleRankEntry(colName, raw)).map((raw) => ({ uid: raw.id, ...raw, amount: sortField === 'swordLevel' ? (raw.swordLevel || 0) : fromBigStorable(raw.amount) })).filter(e => period !== 'void' || e.amount > 0);
     decoded.sort((a, b) => b.amount - a.amount);
     return decoded.slice(0, LEADERBOARD_TOP_N).map((entry, i) => ({ rank: i + 1, ...entry }));
   } catch (e) {
@@ -9690,7 +9700,7 @@ async function fetchMyRankInfoUncached(period) {
     }
     // fetchLeaderboard와 마찬가지로 타입이 섞인 문서 때문에 정렬 순서를 그대로 믿지 않고,
     // 실제 금액(fromBigStorable)으로 다시 정렬한 뒤 내 순위를 찾는다.
-    const decoded = docs.filter(d => isPlausibleRankEntry(colName, d)).map((d) => ({ uid: d.id, amount: sortField === 'swordLevel' ? (d.swordLevel || 0) : fromBigStorable(d.amount) }));
+    const decoded = docs.filter(d => isPlausibleRankEntry(colName, d)).map((d) => ({ uid: d.id, amount: sortField === 'swordLevel' ? (d.swordLevel || 0) : fromBigStorable(d.amount) })).filter(e => period !== 'void' || e.amount > 0);
     decoded.sort((a, b) => b.amount - a.amount);
     const idx = decoded.findIndex((d) => d.uid === currentUser.uid);
     return { rank: idx === -1 ? null : idx + 1, total: decoded.length };
@@ -9984,7 +9994,7 @@ function applySaveData(data, opts) {
   // 공허 리뉴얼 1회 초기화: 저장본이 아직 이 버전을 거치지 않았다면 공허 진행도를 처음부터 다시 시작한다.
   if ((Number(data.voidResetVersion) || 0) < VOID_RESET_VERSION) {
     resetVoidProgress();
-    setTimeout(() => { try { showToast('🌌 공허 리뉴얼! 공허 진행도가 1웨이브부터 새로 시작돼요. 10웨이브마다 선물이 있어요 🎁'); } catch (e) {} }, 2500);
+    setTimeout(() => { try { showToast('🌌 공허 밸런스 조정! 공허 진행도가 1웨이브부터 다시 시작해요. 10웨이브마다 선물이 있어요 🎁'); } catch (e) {} }, 2500);
   }
   voidResetVersion = VOID_RESET_VERSION;
   if (map6Unlocked && voidEnemyMaxHp <= 0) startVoidWave(1);
