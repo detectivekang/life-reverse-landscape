@@ -14,7 +14,7 @@
 // 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
 // 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
 (function() {
-  var CURRENT_VERSION = '2026100609';
+  var CURRENT_VERSION = '2026100610';
   try {
     if (sessionStorage.getItem('lrVersionChecked') === CURRENT_VERSION) return;
     fetch(location.pathname + '?_cb=' + Date.now(), { cache: 'no-store' })
@@ -4909,6 +4909,13 @@ let isBrandNewPlayer = false;
 // 간주해 배지를 띄우고, 기존 유저가 접속하면 자동으로 한 번 띄워준다.
 const patchNotes = [
   {
+    version: '2026100610',
+    date: '2026-10-06',
+    items: [
+      '🐛 +21강 검의 "각성 도전" 버튼을 눌러도 아무 반응이 없던 버그를 고쳤어요. 이제 보관함의 +20강 검을 제물로 각성할 수 있어요'
+    ]
+  },
+  {
     version: '2026100609',
     date: '2026-10-06',
     items: [
@@ -5883,6 +5890,7 @@ document.getElementById('swordItemRow').addEventListener('click', (e) => {
   toggleSwordBoost(b.dataset.boost);
 });
 document.getElementById('swordFuseBtn').addEventListener('click', () => { initAudio(); fuseLegendarySword(); });
+document.getElementById('swordAwakenBtn').addEventListener('click', () => { initAudio(); awakenSword(); });
 document.getElementById('swordSwapBtn').addEventListener('click', () => { initAudio(); swapSwordSlots(); });
 document.getElementById('swordStoreCraftBtn').addEventListener('click', () => { initAudio(); craftStorageSword(); });
 document.getElementById('swordCraftBtn').addEventListener('click', () => { initAudio(); craftNewSword(); });
