@@ -14,7 +14,7 @@
 // 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
 // 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
 (function() {
-  var CURRENT_VERSION = '2026100607';
+  var CURRENT_VERSION = '2026100608';
   try {
     if (sessionStorage.getItem('lrVersionChecked') === CURRENT_VERSION) return;
     fetch(location.pathname + '?_cb=' + Date.now(), { cache: 'no-store' })
@@ -908,6 +908,17 @@
   .rank-cat-btn { background: #2A241D; border: 1px solid #3a332a; border-radius: 10px; color: var(--paper-dim); font-size: 12.5px; padding: 10px 4px; text-align: center; cursor: pointer; white-space: nowrap; }
   .rank-cat-btn.active { background: var(--gold); color: var(--ink); font-weight: bold; border-color: var(--gold); }
   .rank-cat-btn[data-cat="void"] { grid-column: span 2; }
+  /* 검 각성 단계별 색상 (1~5 하늘 / 6~10 보라 / 11~15 분홍 / 16~20 무지개) */
+  .awk { font-weight: bold; }
+  .awk-t1 { color: #5ee7ff; text-shadow: 0 0 6px rgba(94,231,255,.55); }
+  .awk-t2 { color: #b388ff; text-shadow: 0 0 7px rgba(179,136,255,.6); }
+  .awk-t3 { color: #ff6ad5; text-shadow: 0 0 8px rgba(255,106,213,.65); }
+  .awk-t4 { background: linear-gradient(90deg,#ff5e5e,#ffd35e,#5eff9b,#5ee7ff,#b388ff,#ff6ad5,#ff5e5e); background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; animation: awkShift 3s linear infinite; }
+  @keyframes awkShift { to { background-position: 200% 0; } }
+  .lb-row.awk-row-t1 { box-shadow: inset 3px 0 0 #5ee7ff; }
+  .lb-row.awk-row-t2 { box-shadow: inset 3px 0 0 #b388ff; }
+  .lb-row.awk-row-t3 { box-shadow: inset 3px 0 0 #ff6ad5; }
+  .lb-row.awk-row-t4 { box-shadow: inset 3px 0 0 #ffd35e; background: linear-gradient(90deg, rgba(255,211,94,.10), transparent 60%); }
   .leaderboard-list { display: flex; flex-direction: column; gap: 5px; max-height: 32vh; overflow-y: auto; text-align: left; }
   .lb-row { display: flex; align-items: center; gap: 8px; background: #2A241D; border: 1px solid #3a332a; border-radius: 8px; padding: 6px 10px; font-size: 11px; }
   .lb-row.me { border-color: var(--gold); background: #35301f; }
@@ -1668,12 +1679,12 @@
   <div class="modal-overlay" id="swordModal">
     <div class="modal-box">
       <h2>⚔️ 검 강화</h2>
-      <p style="font-size:12px; color:var(--paper-dim); margin-top:-4px;">평범한 나뭇가지를 강화해서 전설의 무기로 키워보세요. 최대 +20강까지 가능하지만, 레벨이 오를수록 성공 확률은 낮아지고 실패하면 검이 파괴될 수도 있어요. (되돌리기 능력을 보유하고 있으면 파괴가 자동으로 막혀요) 검 랭킹·현재검 랭킹은 <b>메인 검</b> 기준이고, 매달 초기화돼요.<br>🗃️ 아래 보관함에 예비 검을 하나 더 넣어두면, 메인 검이 깨져도 바로 교체해서 이어갈 수 있어요. 메인·보관 둘 다 +20강을 채우면 하나로 합쳐서 <b>+21강 전설검</b>을 만들 수 있어요!</p>
+      <p style="font-size:12px; color:var(--paper-dim); margin-top:-4px;">평범한 나뭇가지를 강화해서 전설의 무기로 키워보세요. 최대 +20강까지 가능하지만, 레벨이 오를수록 성공 확률은 낮아지고 실패하면 검이 파괴될 수도 있어요. (되돌리기 능력을 보유하고 있으면 파괴가 자동으로 막혀요) 검 랭킹·현재검 랭킹은 <b>메인 검</b> 기준이고, 매달 초기화돼요.<br>🗃️ 아래 보관함에 예비 검을 하나 더 넣어두면, 메인 검이 깨져도 바로 교체해서 이어갈 수 있어요. 메인·보관 둘 다 +20강을 채우면 하나로 합쳐서 <b>+21강 전설검</b>을 만들 수 있어요!<br>🌌 +21강 전설검은 보관함의 <b>+20강 검을 제물</b>로 바쳐 <b>각성</b>시킬 수 있어요 (최대 20단계). 실패하면 제물만 사라지고 +21강 검은 그대로예요.</p>
       <div style="margin:14px 0; text-align:center; background:var(--bg-panel); border-radius:10px; padding:16px 14px;">
         <div id="swordIcon" style="font-size:48px;">❔</div>
         <div id="swordName" style="margin-top:6px; font-size:15px; color:var(--gold); font-weight:bold;">검이 없어요</div>
-        <div style="font-size:11px; color:var(--paper-dim); margin-top:8px;">최고 기록 +<span id="swordBestLevel">0</span>강 · 파괴된 검 <span id="swordBreakCount">0</span>자루</div>
-        <div style="font-size:11px; color:var(--paper-dim); margin-top:4px;">이번 달 최고 +<span id="swordMonthlyBestLevel">0</span>강 · 🛡️ 되돌리기 <span id="swordReviveChargesText" style="color:var(--gold);">0</span>회 보유</div>
+        <div style="font-size:11px; color:var(--paper-dim); margin-top:8px;">최고 기록 <span id="swordBestLevel">+0강</span> · 파괴된 검 <span id="swordBreakCount">0</span>자루</div>
+        <div style="font-size:11px; color:var(--paper-dim); margin-top:4px;">이번 달 최고 <span id="swordMonthlyBestLevel">+0강</span> · 🛡️ 되돌리기 <span id="swordReviveChargesText" style="color:var(--gold);">0</span>회 보유</div>
       </div>
       <div id="swordItemBox" style="margin:0 0 10px; text-align:center; background:var(--bg-panel); border-radius:10px; padding:10px;">
         <div style="font-size:12px; color:var(--paper-dim); margin-bottom:6px;">🎒 강화 아이템 · 누르면 <b>다음 강화 1회</b>에만 적용돼요 (다시 누르면 해제)</div>
@@ -1683,6 +1694,8 @@
       <button class="start-btn" id="swordEnhanceBtn" style="display:none;">⚒️ 강화하기</button>
       <button class="start-btn" id="swordCraftBtn" style="display:none; background:var(--bg-panel); color:var(--gold); border:1px solid var(--gold);">🎲 검 뽑기</button>
       <button class="start-btn" id="swordFuseBtn" style="display:none; background:linear-gradient(135deg,#5b3bd6,#8a4fe0); border:1px solid #c9a6ff;">🌌 전설 합성 (+21강)</button>
+      <button class="start-btn" id="swordAwakenBtn" style="display:none; background:linear-gradient(135deg,#0e7490,#7c3aed); border:1px solid #67e8f9;">🌌 각성</button>
+      <div id="swordAwakenInfo" style="display:none; font-size:11.5px; color:var(--paper-dim); text-align:center; margin:6px 0 2px; line-height:1.6;"></div>
       <button class="start-btn" id="openSwordBattleBtn" style="margin-top:8px; background:var(--bg-panel); color:var(--gold); border:1px solid var(--gold);">🤺 검 배틀하기</button>
       <button class="close-btn" id="swordRankBtn" style="margin-top:8px;">🏅 검 랭킹 보기 (월간)</button>
 
@@ -1702,7 +1715,7 @@
   <div class="modal-overlay" id="swordBattleModal">
     <div class="modal-box">
       <h2>🤺 검 배틀</h2>
-      <p style="font-size:12px; color:var(--paper-dim); margin-top:-4px;">내 검의 강화 레벨로 무작위 상대와 대결해요. 레벨 차이가 클수록 승률도 크게 갈리고, 레벨이 같으면 50:50이에요. 이기면 승점 +5, 지면 승점 -5(0점 밑으로는 안 내려가요). 배틀은 최대 10회까지 모아둘 수 있고, 6분마다 1회씩 자동으로 충전돼요.</p>
+      <p style="font-size:12px; color:var(--paper-dim); margin-top:-4px;">내 검의 강화 레벨로 무작위 상대와 대결해요. 레벨 차이가 클수록 승률도 크게 갈리고, 레벨이 같으면 50:50이에요. 각성 1단계는 레벨 +1로 계산해요 (예: +21강 각성 3단계 = 실질 +24강). 이기면 승점 +5, 지면 승점 -5(0점 밑으로는 안 내려가요). 배틀은 최대 10회까지 모아둘 수 있고, 6분마다 1회씩 자동으로 충전돼요.</p>
       <div style="margin:14px 0; text-align:center; background:var(--bg-panel); border-radius:10px; padding:16px 14px;">
         <div style="font-size:12px; color:var(--paper-dim);">내 검: <b id="swordBattleMyName" style="color:var(--gold);">검이 없어요</b></div>
         <div style="font-size:12px; color:var(--paper-dim); margin-top:4px;">이번 시즌 승점 <b id="swordBattleWinsText" style="color:var(--gold);">0</b>점</div>
@@ -3473,6 +3486,7 @@ const SWORD_STAGES = [
 ];
 
 // ===== 검 배틀 (강화 레벨만으로 승패를 가르는 미니게임) =====
+// (각성한 검은 +21강 + 각성 단계를 "실질 레벨"로 쳐서, 같은 표로 비교한다. 예: 각성 3단계 = 24)
 // 확률표 기준: 레벨 차이 1당 "상대가 이길 확률"이 5%p씩 줄어들고, 레벨이 같으면 50:50.
 // (레벨 차이 10 이상이면 상대가 이길 확률 0%로 고정 = 내가 사실상 무조건 승리)
 // 내가 이길 확률은 100 - (상대가 이길 확률) 로 계산한다.
@@ -3582,7 +3596,7 @@ async function findSwordBattleOpponent() {
       const docs = await dbGetDocsOrdered('leaderboard_sword', 'updatedAt', 50);
       const candidates = docs
         .filter(d => d.id !== currentUser.uid && typeof d.swordLevel === 'number' && d.swordLevel >= 0)
-        .map(d => ({ uid: d.id, name: d.name || '이름 없는 검객', level: d.swordLevel, battleScore: d.amount || 0, isReal: true }));
+        .map(d => ({ uid: d.id, name: d.name || '이름 없는 검객', level: Math.min(SWORD_MAX_POWER, d.swordLevel), battleScore: d.amount || 0, isReal: true }));
       if (candidates.length > 0) return candidates[Math.floor(Math.random() * candidates.length)];
     } catch (e) {
       console.error('검배틀 상대 조회 실패:', e);
@@ -3630,9 +3644,9 @@ async function startSwordBattle() {
   if (resultEl) resultEl.textContent = '⚔️ 상대를 찾는 중...';
   try {
     const opponent = await findSwordBattleOpponent();
-    const myWinChance = getSwordBattleWinChance(swordLevel, opponent.level);
+    const myWinChance = getSwordBattleWinChance(getSwordPower(swordLevel, swordAwaken), opponent.level); // 각성 단계도 레벨 +1씩으로 계산한 실질 레벨로 비교
     const won = Math.random() * 100 < myWinChance;
-    const oppName = `+${opponent.level} ${SWORD_STAGES[opponent.level].name}`;
+    const oppName = `${swordPowerHtml(opponent.level)} ${getSwordPowerName(opponent.level)}`;
     const oppTag = opponent.isReal ? '실제 유저' : 'AI 상대 · 대결 가능한 다른 유저가 아직 없어요';
     if (won) {
       swordBattleWins += 5;
@@ -3666,7 +3680,7 @@ async function startSwordBattle() {
 function renderSwordBattlePanel() {
   const myNameEl = document.getElementById('swordBattleMyName');
   if (!myNameEl) return;
-  myNameEl.textContent = swordOwned ? getSwordDisplayName() : '검이 없어요';
+  myNameEl.innerHTML = swordOwned ? getSwordDisplayHtml() : '검이 없어요';
   document.getElementById('swordBattleWinsText').textContent = swordBattleWins.toLocaleString('ko-KR');
   const waitMs = getSwordBattleNextChargeMs(); // 내부에서 충전분도 같이 반영한다
   const countText = getSwordBattleCountText();
@@ -3718,21 +3732,60 @@ let swordLevel = 0;
 let swordStoreOwned = false;
 let swordStoreLevel = 0;
 const LEGENDARY_SWORD_LEVEL = SWORD_MAX_LEVEL + 1; // 메인+보관 둘 다 +20강일 때 합성으로만 만들 수 있는 +21강 전설 등급
+// ===== 검 각성 =====
+// +21강 전설검 + 제물(보관함의 +20강 검 1자루)로 1단계씩 올린다. 성공하든 실패하든 제물은 사라지고, 실패해도 +21강 검은 그대로다.
+// 랭킹·검배틀은 "실질 레벨(power)" 하나로 비교한다: 일반 검은 +레벨 그대로, +21강은 21 + 각성 단계(최대 41).
+// 그래서 랭킹 DB의 sword_level / amount 컬럼에 power를 그대로 넣으면 따로 컬럼을 늘릴 필요가 없다.
+const SWORD_AWAKEN_MAX = 20;
+const SWORD_AWAKEN_RATES = [100, 100, 100, 100, 100,  50, 50, 50, 50, 50,  30, 30, 30, 30, 30,  25, 20, 15, 10, 5]; // index 0 = 1단계 성공률(%)
+const SWORD_MAX_POWER = LEGENDARY_SWORD_LEVEL + SWORD_AWAKEN_MAX; // 41
+let swordAwaken = 0;      // 메인 검의 각성 단계 (+21강일 때만 의미 있음)
+let swordStoreAwaken = 0; // 보관함 검의 각성 단계
+const SWORD_AWAKEN_TIERS = [
+  { max: 5,  cls: 'awk-t1', icon: '💠', swordIcon: '💠🌌⚔️🌌💠' },
+  { max: 10, cls: 'awk-t2', icon: '🔮', swordIcon: '🔮🌌⚔️🌌🔮' },
+  { max: 15, cls: 'awk-t3', icon: '🌠', swordIcon: '🌠🌌⚔️🌌🌠' },
+  { max: 20, cls: 'awk-t4', icon: '🌈', swordIcon: '🌈🌌⚔️🌌🌈' }
+];
+function getAwakenTier(a) { return SWORD_AWAKEN_TIERS.find(x => a <= x.max) || SWORD_AWAKEN_TIERS[SWORD_AWAKEN_TIERS.length - 1]; }
+function clampAwaken(a) { return Math.max(0, Math.min(SWORD_AWAKEN_MAX, Math.floor(Number(a)) || 0)); }
+function getSwordPower(level, awaken) { return level >= LEGENDARY_SWORD_LEVEL ? LEGENDARY_SWORD_LEVEL + clampAwaken(awaken) : level; }
+function getMySwordPower() { return swordOwned ? getSwordPower(swordLevel, swordAwaken) : -1; }
+function getSwordPowerAwaken(p) { return p > LEGENDARY_SWORD_LEVEL ? Math.min(SWORD_AWAKEN_MAX, p - LEGENDARY_SWORD_LEVEL) : 0; }
+// 순수 텍스트 / 색이 들어간 HTML 두 가지 표기 (랭킹·결과창은 HTML)
+function formatSwordPower(p) { const a = getSwordPowerAwaken(p); return a ? `+${LEGENDARY_SWORD_LEVEL}강 각성 ${a}단계` : `+${p}강`; }
+function swordPowerHtml(p) {
+  const a = getSwordPowerAwaken(p);
+  if (!a) return `+${p}강`;
+  const tier = getAwakenTier(a);
+  return `+${LEGENDARY_SWORD_LEVEL}강 <span class="awk ${tier.cls}">${tier.icon} 각성 ${a}단계</span>`;
+}
+function getSwordPowerName(p) { const lv = Math.max(0, Math.min(LEGENDARY_SWORD_LEVEL, p)); return SWORD_STAGES[lv] ? SWORD_STAGES[lv].name : ''; }
+function awkRowClass(p) { const a = getSwordPowerAwaken(p); return a ? ` awk-row awk-row-${getAwakenTier(a).cls.slice(4)}` : ''; }
 let swordBestLevel = 0;   // 지금까지 도달한 최고 강화 레벨 (기록용)
 let swordBreakCount = 0;  // 지금까지 파괴로 잃은 검 개수 (기록용)
 
 function getSwordTierIcon(level) { return (SWORD_LEVEL_TIERS.find(t => level <= t.max) || SWORD_LEVEL_TIERS[SWORD_LEVEL_TIERS.length - 1]).icon; }
-function getSwordDisplayName(owned = swordOwned, level = swordLevel) {
+function getSwordDisplayName(owned = swordOwned, level = swordLevel, awaken = swordAwaken) {
   if (!owned) return '검 없음';
-  return `+${level} ${SWORD_STAGES[level].name}`;
+  const a = level >= LEGENDARY_SWORD_LEVEL ? clampAwaken(awaken) : 0;
+  return `+${level} ${SWORD_STAGES[level].name}${a ? ` · 각성 ${a}단계` : ''}`;
 }
-function getSwordIcon(owned = swordOwned, level = swordLevel) {
+function getSwordDisplayHtml(owned = swordOwned, level = swordLevel, awaken = swordAwaken) {
+  if (!owned) return '검 없음';
+  const a = level >= LEGENDARY_SWORD_LEVEL ? clampAwaken(awaken) : 0;
+  const tier = a ? getAwakenTier(a) : null;
+  return `+${level} ${SWORD_STAGES[level].name}${a ? ` <span class="awk ${tier.cls}">· ${tier.icon} 각성 ${a}단계</span>` : ''}`;
+}
+function getSwordIcon(owned = swordOwned, level = swordLevel, awaken = swordAwaken) {
   if (!owned) return '❔';
+  if (level >= LEGENDARY_SWORD_LEVEL && clampAwaken(awaken) > 0) return getAwakenTier(clampAwaken(awaken)).swordIcon;
   return getSwordTierIcon(level);
 }
 function craftNewSword() {
   swordOwned = true;
   swordLevel = 0;
+  swordAwaken = 0;
   renderSwordPanel();
   playSound('coin');
   showToast(`${getSwordTierIcon(0)} 새 검 등장: ${getSwordDisplayName()}!`);
@@ -3743,6 +3796,7 @@ function craftStorageSword() {
   if (swordStoreOwned) return; // 버튼이 숨어 있어야 정상이지만 이중 클릭 방지로 한 번 더 확인
   swordStoreOwned = true;
   swordStoreLevel = 0;
+  swordStoreAwaken = 0;
   renderSwordPanel();
   playSound('coin');
   showToast(`🗃️ 보관함에 새 검을 넣었어요: ${getSwordDisplayName(true, 0)}`);
@@ -3753,6 +3807,7 @@ function swapSwordSlots() {
   if (!swordOwned && !swordStoreOwned) { showToast('⚔️ 교체할 검이 없어요!'); return; }
   [swordOwned, swordStoreOwned] = [swordStoreOwned, swordOwned];
   [swordLevel, swordStoreLevel] = [swordStoreLevel, swordLevel];
+  [swordAwaken, swordStoreAwaken] = [swordStoreAwaken, swordAwaken];
   renderSwordPanel();
   playSound('coin');
   showToast(`🔄 검을 교체했어요! 메인: ${getSwordDisplayName()}`);
@@ -3768,12 +3823,62 @@ function fuseLegendarySword() {
   swordLevel = LEGENDARY_SWORD_LEVEL;
   swordBestLevel = Math.max(swordBestLevel, swordLevel);
   swordMonthlyBestLevel = Math.max(swordMonthlyBestLevel, swordLevel);
+  swordAwaken = 0;
   swordStoreOwned = false;
   swordStoreLevel = 0;
+  swordStoreAwaken = 0;
   playSound('levelUp');
   showSwordLegendaryFx();
   mascotSay(['🌌 두 자루의 전설이 하나로 합쳐졌다!! +21강 궁극의 무기 탄생!!']);
   syncLeaderboard({ forceSync: true });
+  renderSwordPanel();
+  saveGame({ forceCloud: true });
+}
+// 각성: 메인이 +21강이고 보관함에 +20강 검이 있을 때, 그 검을 제물로 바쳐 한 단계 올린다.
+function getSwordAwakenRate(stage) { return SWORD_AWAKEN_RATES[stage - 1] || 0; }
+function canAwakenSword() {
+  return swordOwned && swordLevel === LEGENDARY_SWORD_LEVEL && swordAwaken < SWORD_AWAKEN_MAX
+    && swordStoreOwned && swordStoreLevel === SWORD_MAX_LEVEL;
+}
+function showSwordAwakenFx(stage) {
+  const app = document.getElementById('app');
+  const tier = getAwakenTier(stage);
+  const bursts = stage >= 16 ? 5 : stage >= 11 ? 3 : stage >= 6 ? 2 : 1;
+  for (let i = 0; i < bursts; i++) setTimeout(() => spawnConfettiBurst(30 + stage * 4, [tier.icon, '🌌', '✨', '💫', '⚔️']), i * 240);
+  if (stage >= 6 || stage % 5 === 0) { app.classList.add('sword-shake'); setTimeout(() => app.classList.remove('sword-shake'), 900); }
+  const banner = document.createElement('div');
+  banner.className = 'sword-max-banner';
+  banner.innerHTML = stage >= SWORD_AWAKEN_MAX ? `🌈 각성 ${stage}단계 완성! 🌈<br>신화의 영역에 도달!!` : `${tier.icon} 각성 ${stage}단계 성공! ${tier.icon}`;
+  app.appendChild(banner);
+  setTimeout(() => banner.remove(), 2400);
+}
+function awakenSword() {
+  if (!swordOwned || swordLevel !== LEGENDARY_SWORD_LEVEL) { showToast('🌌 메인 검이 +21강 전설검일 때만 각성할 수 있어요!'); return; }
+  if (swordAwaken >= SWORD_AWAKEN_MAX) { showToast('🌈 이미 각성 최고 단계예요!'); return; }
+  if (!(swordStoreOwned && swordStoreLevel === SWORD_MAX_LEVEL)) { showToast(`🗃️ 제물로 바칠 +${SWORD_MAX_LEVEL}강 검이 보관함에 있어야 해요!`); return; }
+  const next = swordAwaken + 1;
+  const rate = getSwordAwakenRate(next);
+  if (!confirm(`보관함의 +${SWORD_MAX_LEVEL}강 검을 제물로 바쳐 각성 ${next}단계에 도전할까요?\n\n성공률 ${rate}%\n성공하든 실패하든 제물은 사라져요. (실패해도 +21강 검은 그대로예요)`)) return;
+  // 제물은 결과와 상관없이 먼저 소모한다 (새로고침으로 결과를 무르는 것 방지: 바로 아래에서 저장)
+  swordStoreOwned = false;
+  swordStoreLevel = 0;
+  swordStoreAwaken = 0;
+  if (Math.random() * 100 < rate) {
+    swordAwaken = next;
+    const power = getSwordPower(swordLevel, swordAwaken);
+    swordBestLevel = Math.max(swordBestLevel, power);
+    swordMonthlyBestLevel = Math.max(swordMonthlyBestLevel, power);
+    playSound('levelUp');
+    showSwordAwakenFx(next);
+    if (next >= SWORD_AWAKEN_MAX) mascotSay(['🌈🌈🌈 각성 20단계!! 전설 위의 전설이 탄생했어요!! 🌈🌈🌈']);
+    else if (next % 5 === 0 || next >= 16) mascotSay([`🌌 각성 ${next}단계 성공!! 이 검은 이제 신의 영역이에요!`, `${getAwakenTier(next).icon} 각성 ${next}단계라니... 소름 돋았어요!`]);
+    else showToast(`🌌 각성 성공! 각성 ${next}단계`);
+    syncLeaderboard({ forceSync: true });
+  } else {
+    playSound('swordBreak');
+    mascotSay([`💥 각성 ${next}단계 실패... 제물로 바친 +${SWORD_MAX_LEVEL}강 검이 사라졌어요. 그래도 +21강 검은 무사해요!`]);
+    showToast(`💥 각성 실패... 제물만 사라졌어요 (+21강 검은 그대로)`);
+  }
   renderSwordPanel();
   saveGame({ forceCloud: true });
 }
@@ -3829,6 +3934,7 @@ function enhanceSword() {
       mascotSay([`💥 검이 산산조각났어요... +${swordLevel}강까지 갔었는데 아쉬워요.`, `💥 콰장창! 검이 부서졌어요. 다시 도전해봐요!`]);
       swordOwned = false;
       swordLevel = 0;
+      swordAwaken = 0;
       syncLeaderboard();
     }
   }
@@ -3838,10 +3944,10 @@ function renderSwordPanel() {
   const iconEl = document.getElementById('swordIcon');
   if (!iconEl) return;
   iconEl.textContent = getSwordIcon();
-  document.getElementById('swordName').textContent = swordOwned ? getSwordDisplayName() : '검이 없어요';
-  document.getElementById('swordBestLevel').textContent = swordBestLevel;
+  document.getElementById('swordName').innerHTML = swordOwned ? getSwordDisplayHtml() : '검이 없어요';
+  document.getElementById('swordBestLevel').innerHTML = swordPowerHtml(swordBestLevel);
   document.getElementById('swordBreakCount').textContent = swordBreakCount;
-  document.getElementById('swordMonthlyBestLevel').textContent = swordMonthlyBestLevel;
+  document.getElementById('swordMonthlyBestLevel').innerHTML = swordPowerHtml(swordMonthlyBestLevel);
   document.getElementById('swordReviveChargesText').textContent = swordReviveCharges;
   renderSwordItemRow();
   const enhanceBtn = document.getElementById('swordEnhanceBtn');
@@ -3870,14 +3976,39 @@ function renderSwordPanel() {
     craftBtn.style.display = 'none';
     fuseBtn.style.display = (swordLevel === SWORD_MAX_LEVEL && swordStoreOwned && swordStoreLevel === SWORD_MAX_LEVEL) ? '' : 'none';
   }
+  // 각성 버튼/안내: 메인이 +21강일 때만 나온다
+  const awakenBtn = document.getElementById('swordAwakenBtn');
+  const awakenInfo = document.getElementById('swordAwakenInfo');
+  if (awakenBtn && awakenInfo) {
+    let info = '';
+    awakenBtn.style.display = 'none';
+    if (swordOwned && swordLevel === LEGENDARY_SWORD_LEVEL) {
+      if (swordAwaken >= SWORD_AWAKEN_MAX) {
+        info = '🌈 각성 최고 단계(20단계) 달성!';
+      } else {
+        const next = swordAwaken + 1, rate = getSwordAwakenRate(next);
+        info = `🌌 각성 ${swordAwaken}/${SWORD_AWAKEN_MAX}단계 · 다음 단계 성공률 ${rate}%`;
+        if (canAwakenSword()) {
+          awakenBtn.style.display = '';
+          awakenBtn.textContent = `🌌 각성 ${next}단계 도전 (성공률 ${rate}% · 보관함 +${SWORD_MAX_LEVEL}강 제물)`;
+        } else {
+          info += ` · 보관함에 제물로 쓸 +${SWORD_MAX_LEVEL}강 검이 필요해요`;
+        }
+      }
+    } else if (swordOwned && swordStoreOwned && swordStoreLevel === LEGENDARY_SWORD_LEVEL) {
+      info = '🌌 보관함의 +21강 검과 메인을 교체하면 각성할 수 있어요';
+    }
+    awakenInfo.style.display = info ? '' : 'none';
+    awakenInfo.textContent = info;
+  }
   renderSwordStoragePanel();
   renderSwordBattlePanel();
 }
 function renderSwordStoragePanel() {
   const iconEl = document.getElementById('swordStoreIcon');
   if (!iconEl) return;
-  iconEl.textContent = getSwordIcon(swordStoreOwned, swordStoreLevel);
-  document.getElementById('swordStoreName').textContent = getSwordDisplayName(swordStoreOwned, swordStoreLevel);
+  iconEl.textContent = getSwordIcon(swordStoreOwned, swordStoreLevel, swordStoreAwaken);
+  document.getElementById('swordStoreName').innerHTML = getSwordDisplayHtml(swordStoreOwned, swordStoreLevel, swordStoreAwaken);
   document.getElementById('swordSwapBtn').style.display = (swordOwned || swordStoreOwned) ? '' : 'none';
   document.getElementById('swordStoreCraftBtn').style.display = swordStoreOwned ? 'none' : '';
 }
@@ -4765,6 +4896,16 @@ let isBrandNewPlayer = false;
 // 함께 올려준다. lastSeenPatchVersion이 patchNotes[0].version과 다르면 "안 읽은 공지"로
 // 간주해 배지를 띄우고, 기존 유저가 접속하면 자동으로 한 번 띄워준다.
 const patchNotes = [
+  {
+    version: '2026100608',
+    date: '2026-10-06',
+    items: [
+      '🌌 검 각성 시스템이 생겼어요! +21강 전설검을 메인에 두고 보관함에 +20강 검을 넣으면, 그 검을 제물로 바쳐 각성할 수 있어요. 각성은 1단계부터 20단계까지 있고, 성공하든 실패하든 제물은 사라지지만 +21강 검은 그대로 남아요 (파괴되지 않아요)',
+      '🎲 각성 성공률: 1~5단계 100% · 6~10단계 50% · 11~15단계 30% · 16단계 25% · 17단계 20% · 18단계 15% · 19단계 10% · 20단계 5%',
+      '🌈 각성한 검은 랭킹·검 창에서 색이 달라져요 (1~5단계 하늘색 · 6~10단계 보라색 · 11~15단계 분홍색 · 16~20단계 무지개색). 검 랭킹은 이번 달 최고 각성 단계까지 포함해서 순위를 매겨요',
+      '🤺 검 배틀 승률도 바뀌었어요! 각성 1단계는 검 레벨 +1로 계산해요 (예: +21강 각성 3단계 = 실질 +24강). 레벨 1 차이마다 승률이 5%p씩 갈리는 기존 규칙은 그대로예요'
+    ]
+  },
   {
     version: '2026100607',
     date: '2026-10-06',
@@ -6728,7 +6869,7 @@ function showSeasonReport(r) {
     <div style="font-size:11px; color:var(--paper-dim); margin-top:-4px; margin-bottom:8px;">시즌 등급 · ${r.titleIcon} ${hofEsc(r.titleName)}</div>
     <div class="season-row"><span>시즌 총 수입</span><b>${formatWon(r.earned)}원</b></div>
     <div class="season-row"><span>월간 카지노 수익</span><b>${formatWon(r.casino)}원</b></div>
-    <div class="season-row"><span>검 최고 강화</span><b>+${r.swordBest}강</b></div>
+    <div class="season-row"><span>검 최고 강화</span><b>${swordPowerHtml(r.swordBest)}</b></div>
     ${r.burned > 0 ? `<div class="season-row"><span>소각한 돈</span><b>${formatWon(r.burned)}원</b></div>` : ''}
     <div style="margin:10px 0 4px; font-size:12px; color:var(--gold); font-weight:bold;">🎁 정산 보상</div>
     ${r.rows.map(x => `<div class="season-row"><span>${x.label}</span><b>${x.val}</b></div>`).join('')}
@@ -6748,7 +6889,7 @@ document.getElementById('seasonNextBtn').addEventListener('click', () => {
 // ----- 시즌 랭킹 메달 -----
 const HOF_SEASON_BOARDS = [
   { cat: 'casino', icon: '🎰', title: '카지노왕', board: k => `leaderboard_monthly_${k}`,       fmt: v => formatWon(v) + '원' },
-  { cat: 'sword',  icon: '⚔️', title: '검성',     board: k => `leaderboard_sword_monthly_${k}`, fmt: v => '+' + v + '강' },
+  { cat: 'sword',  icon: '⚔️', title: '검성',     board: k => `leaderboard_sword_monthly_${k}`, fmt: v => swordPowerHtml(v) },
   { cat: 'burn',   icon: '🔥', title: '소각왕',   board: k => `leaderboard_burn_monthly_${k}`,  fmt: v => formatWon(v) + '원' },
   { cat: 'void',   icon: '🌌', title: '공허왕',   board: k => `leaderboard_void_monthly_${k}`,  fmt: v => v.toLocaleString('ko-KR') + '웨이브' }
 ];
@@ -6927,7 +7068,7 @@ function renderHofMine(box) {
     <div class="hof-card"><h4>📜 내 역대 기록</h4>
       <div class="hof-line"><span>💰</span><span class="who">최고 시즌 수입</span><span class="val">${formatWon(bestSeasonEarned)}원</span></div>
       <div class="hof-line"><span>🎰</span><span class="who">최고 월간 카지노 수익</span><span class="val">${formatWon(Math.max(bestMonthlyCasino, monthlyWinnings))}원</span></div>
-      <div class="hof-line"><span>🗡️</span><span class="who">최고 검 강화</span><span class="val">+${swordBestLevel}강</span></div>
+      <div class="hof-line"><span>🗡️</span><span class="who">최고 검 강화</span><span class="val">${swordPowerHtml(swordBestLevel)}</span></div>
       <div class="hof-line"><span>♻️</span><span class="who">환생 횟수 / 참여 시즌</span><span class="val">${rebirthCount}회 / ${seasonCount}시즌</span></div>
     </div>
     <div class="hof-card"><h4>🗓️ 시즌별 성적</h4>${hist}</div>`;
@@ -7429,8 +7570,8 @@ function renderMyRankCard() {
     card.innerHTML = `
       <span class="my-rank-icon">🗡️</span>
       <div style="flex:1;">
-        <div class="my-rank-name">검 랭킹 <span style="font-size:10px; color:var(--paper-dim); font-weight:normal;">(이번 달 최고 강화 레벨 기준)</span></div>
-        <div class="my-rank-sub">이번 달 최고 +${swordMonthlyBestLevel}강 · 매달 초기화 · 1~3위 보상 지급</div>
+        <div class="my-rank-name">검 랭킹 <span style="font-size:10px; color:var(--paper-dim); font-weight:normal;">(이번 달 최고 강화·각성 기준)</span></div>
+        <div class="my-rank-sub">이번 달 최고 ${swordPowerHtml(swordMonthlyBestLevel)} · 매달 초기화 · 1~3위 보상 지급</div>
         <div class="my-rank-sub" id="myRankPosition" style="color:var(--gold);">내 순위 불러오는 중...</div>
       </div>
     `;
@@ -7536,10 +7677,10 @@ async function renderLeaderboardList() {
   }
   if (currentLeaderboardPeriod === 'swordmonthly') {
     lbEl.innerHTML = list.map(p => `
-      <div class="lb-row${p.uid === currentUser.uid ? ' me' : ''}">
+      <div class="lb-row${p.uid === currentUser.uid ? ' me' : ''}${awkRowClass(p.amount || 0)}">
         <span class="lb-rank">${p.rank}</span>
         <span class="lb-name"${p.nameColor ? ` style="color:${p.nameColor};font-weight:bold;"` : ''}>${p.mansionIcon ? p.mansionIcon + ' ' : ''}${p.name}</span>
-        <span class="lb-tier">🗡️ +${p.amount || 0}강</span>
+        <span class="lb-tier">🗡️ ${swordPowerHtml(p.amount || 0)}</span>
       </div>
     `).join('');
     if (!list.some(p => p.uid === currentUser.uid)) appendMyRankRowIfOutsideTop(lbEl, 'swordmonthly', false);
@@ -7548,12 +7689,11 @@ async function renderLeaderboardList() {
   if (currentLeaderboardPeriod === 'swordcurrent') {
     lbEl.innerHTML = list.map(p => {
       const lv = p.swordLevel || 0;
-      const swordName = SWORD_STAGES[lv] ? SWORD_STAGES[lv].name : '';
       return `
-      <div class="lb-row${p.uid === currentUser.uid ? ' me' : ''}">
+      <div class="lb-row${p.uid === currentUser.uid ? ' me' : ''}${awkRowClass(lv)}">
         <span class="lb-rank">${p.rank}</span>
         <span class="lb-name"${p.nameColor ? ` style="color:${p.nameColor};font-weight:bold;"` : ''}>${p.mansionIcon ? p.mansionIcon + ' ' : ''}${p.name}</span>
-        <span class="lb-tier">🗡️ +${lv}강 ${swordName}</span>
+        <span class="lb-tier">🗡️ ${swordPowerHtml(lv)} ${getSwordPowerName(lv)}</span>
       </div>
     `;
     }).join('');
@@ -7601,9 +7741,9 @@ async function appendMyRankRowIfOutsideTop(lbEl, period, isBurn) {
   } else if (period === 'sword') {
     row.innerHTML = `<span class="lb-rank">${info.rank}</span><span class="lb-name">${currentUser.name} (나)</span><span class="lb-tier">⚔️ ${swordBattleWins.toLocaleString('ko-KR')}점</span>`;
   } else if (period === 'swordmonthly') {
-    row.innerHTML = `<span class="lb-rank">${info.rank}</span><span class="lb-name">${currentUser.name} (나)</span><span class="lb-tier">🗡️ +${swordMonthlyBestLevel}강</span>`;
+    row.innerHTML = `<span class="lb-rank">${info.rank}</span><span class="lb-name">${currentUser.name} (나)</span><span class="lb-tier">🗡️ ${swordPowerHtml(swordMonthlyBestLevel)}</span>`;
   } else if (period === 'swordcurrent') {
-    row.innerHTML = `<span class="lb-rank">${info.rank}</span><span class="lb-name">${currentUser.name} (나)</span><span class="lb-tier">${getSwordDisplayName()}</span>`;
+    row.innerHTML = `<span class="lb-rank">${info.rank}</span><span class="lb-name">${currentUser.name} (나)</span><span class="lb-tier">${getSwordDisplayHtml()}</span>`;
   } else {
     const myAmount = period === 'weekly' ? weeklyWinnings : monthlyWinnings;
     row.innerHTML = `<span class="lb-rank">${info.rank}</span><span class="lb-name">${currentUser.name} (나)</span><span class="lb-tier">${formatWon(myAmount)}원</span>`;
@@ -8522,7 +8662,7 @@ function checkPeriodRollover() {
   if (monthlyPeriodKey !== mk) {
     const prevMk = monthlyPeriodKey;
     // 초기화하기 전에 지난 시즌 성적을 스냅샷으로 남겨둔다(정산 보고서·명예의 전당 기록용)
-    const snap = { casino: monthlyWinnings, burned: burnedMonthly, swordBest: Math.max(swordMonthlyBestLevel, swordOwned ? swordLevel : 0, swordStoreOwned ? swordStoreLevel : 0) };
+    const snap = { casino: monthlyWinnings, burned: burnedMonthly, swordBest: Math.max(swordMonthlyBestLevel, swordOwned ? getSwordPower(swordLevel, swordAwaken) : 0, swordStoreOwned ? getSwordPower(swordStoreLevel, swordStoreAwaken) : 0) };
     monthlyPeriodKey = mk;
     monthlyWinnings = 0;
     burnedMonthly = 0;
@@ -8551,8 +8691,10 @@ function checkPeriodRollover() {
 function resetSeasonScopedData() {
   swordOwned = false;
   swordLevel = 0;
+  swordAwaken = 0;
   swordStoreOwned = false;
   swordStoreLevel = 0;
+  swordStoreAwaken = 0;
   swordMonthlyBestLevel = 0;
   swordBattleWins = 0; // 검배틀 랭킹(승점)도 새 시즌부터 다시 0에서 시작
   nameColor = null;    // 이름 색상도 새 시즌부터 기본(무색)으로
@@ -8579,7 +8721,7 @@ function prevMonthKey(mk) {
 }
 function forceSeasonCatchUp(mk) {
   const prevKey = prevMonthKey(mk);
-  const snap = { casino: monthlyWinnings, burned: burnedMonthly, swordBest: Math.max(swordMonthlyBestLevel, swordOwned ? swordLevel : 0, swordStoreOwned ? swordStoreLevel : 0) };
+  const snap = { casino: monthlyWinnings, burned: burnedMonthly, swordBest: Math.max(swordMonthlyBestLevel, swordOwned ? getSwordPower(swordLevel, swordAwaken) : 0, swordStoreOwned ? getSwordPower(swordStoreLevel, swordStoreAwaken) : 0) };
   if (prevKey) { try { settleSeason(prevKey, snap); } catch (e) { console.error('시즌 정산 중 오류(나머지 초기화는 계속 진행):', e); } }
   monthlyWinnings = 0;
   burnedMonthly = 0;
@@ -9563,13 +9705,14 @@ async function syncLeaderboard() {
     await dbSetDoc(`leaderboard_monthly_${monthlyPeriodKey}`, currentUser.uid, { name, updatedAt, tierName: monthlyTier.name, tierIcon: monthlyTier.icon, amount: toBigStorable(monthlyWinnings), nameColor: nameColorHex, mansionIcon });
     // 검배틀 랭킹(승점) 매치메이킹용 문서: 상대 검색은 검 레벨(swordLevel) 기준이라
     // 이 컬렉션은 시즌과 무관하게 계속 재사용한다(matchmaking pool).
-    await dbSetDoc('leaderboard_sword', currentUser.uid, { name, updatedAt, amount: swordBattleWins, nameColor: nameColorHex, mansionIcon, swordLevel: swordOwned ? swordLevel : -1 });
+    // sword_level / 월간 amount에는 각성 단계를 포함한 "실질 레벨(최대 41)"이 들어간다. 서버 트리거가 21까지만 허용하면 여기서 거절될 수 있어서, 이 두 줄이 실패해도 나머지 랭킹은 계속 동기화한다.
+    try { await dbSetDoc('leaderboard_sword', currentUser.uid, { name, updatedAt, amount: swordBattleWins, nameColor: nameColorHex, mansionIcon, swordLevel: getMySwordPower() }); } catch (e) { console.warn('검 현재레벨 동기화 실패(서버 한도 확인 필요):', e); }
     // [변경] 검배틀 랭킹(승점) 순위 표시는 매달 초기화되도록 월별 컬렉션에 별도로 기록한다.
     // (예전엔 leaderboard_sword 하나를 전체기간 누적으로 계속 써서, 새 시즌이 와도
     // 지난 시즌 승점이 그대로 순위에 남아있는 문제가 있었음)
     await dbSetDoc(`leaderboard_sword_battle_${monthlyPeriodKey}`, currentUser.uid, { name, updatedAt, amount: swordBattleWins, nameColor: nameColorHex, mansionIcon });
     // 검 랭킹(월간, 이번 달 최고 강화 레벨 기준)
-    await dbSetDoc(`leaderboard_sword_monthly_${monthlyPeriodKey}`, currentUser.uid, { name, updatedAt, amount: swordMonthlyBestLevel, nameColor: nameColorHex, mansionIcon });
+    try { await dbSetDoc(`leaderboard_sword_monthly_${monthlyPeriodKey}`, currentUser.uid, { name, updatedAt, amount: swordMonthlyBestLevel, nameColor: nameColorHex, mansionIcon }); } catch (e) { console.warn('검 월간 랭킹 동기화 실패(서버 한도 확인 필요):', e); }
     // 공허 랭킹(이번 시즌 최고 웨이브)
     if (await writeVoidRankDoc()) voidRankDirty = false;
     // 명예의 전당(역대 전설) 기록은 값이 바뀐 때만 따로 기록한다
@@ -9606,7 +9749,7 @@ const LEADERBOARD_FETCH_LIMIT = 100;
 //  미니게임 수익 주간 1e31·월간 1e32 (한 판 이익 ≤ 판돈 ≤ 보유금, 초당 2~3판 × 기간) / 소각 월간 1e32 / 공허 최고 웨이브 1000 / 명예의 전당 수입 1e45·카지노 1e32·점수 1e12
 function rankLimitForBoard(board) {
   if (typeof board !== 'string') return null;
-  if (board.startsWith('leaderboard_sword_monthly_')) return LEGENDARY_SWORD_LEVEL;
+  if (board.startsWith('leaderboard_sword_monthly_')) return SWORD_MAX_POWER; // +21강 + 각성 20단계 = 41
   if (board === 'leaderboard_sword') return 2e7;
   if (board.startsWith('leaderboard_sword_battle_')) return 2e7; // 검배틀 랭킹도 시즌(월)별로 나뉘었지만 승점 한도는 동일
   if (board.startsWith('leaderboard_weekly_')) return 1e31;
@@ -9625,7 +9768,7 @@ function isPlausibleRankEntry(board, raw) {
     const amt = fromBigStorable(raw.amount);
     if (!Number.isFinite(amt) || amt < 0 || amt > limit) return false;
   }
-  if (typeof raw.swordLevel === 'number' && (raw.swordLevel < -1 || raw.swordLevel > LEGENDARY_SWORD_LEVEL)) return false;
+  if (typeof raw.swordLevel === 'number' && (raw.swordLevel < -1 || raw.swordLevel > SWORD_MAX_POWER)) return false;
   return true;
 }
 // 시즌 보상용: DB 정렬 그대로 상위 n명을 믿지 않고, 불가능한 값을 뺀 뒤 실제 금액으로 다시 정렬해서 상위 n명의 uid를 돌려준다.
@@ -9866,7 +10009,7 @@ function buildSaveData() {
     swordOwned, swordLevel, swordBestLevel, swordBreakCount,
     swordBattleWins, swordBattleSeasonKey, swordBattleCountToday, swordBattleTickets, swordBattleTicketsAt, lottoAppliedIds,
     swordMonthlyBestLevel, swordReviveCharges, swordBoostItems, swordBoostArmed, swordColorBoostMonthKey, swordColorBoostMult, claimedSwordSeasonRewards,
-    swordStoreOwned, swordStoreLevel,
+    swordStoreOwned, swordStoreLevel, swordAwaken, swordStoreAwaken,
     fateCardId, fateOffer, seasonMedals, seasonHistory, claimedMedalSeasons, medalPendingKey, bestSeasonEarned, bestMonthlyCasino, seasonCount, seasonResetKey,
     deviceId: DEVICE_ID,
     lastSaveTime: Date.now()
@@ -10006,6 +10149,7 @@ function applySaveData(data, opts) {
   // 예전 저장을 불러올 때도 검을 잃어버리지 않도록 둘 다 확인한다.
   swordOwned = (data.swordOwned !== undefined) ? data.swordOwned : !!data.swordMaterial;
   swordLevel = data.swordLevel || 0;
+  swordAwaken = (swordOwned && swordLevel === LEGENDARY_SWORD_LEVEL) ? clampAwaken(data.swordAwaken) : 0;
   swordBestLevel = data.swordBestLevel || 0;
   swordBreakCount = data.swordBreakCount || 0;
   swordBattleWins = data.swordBattleWins || 0;
@@ -10029,6 +10173,7 @@ function applySaveData(data, opts) {
   swordStoreOwned = !!data.swordStoreOwned;
   swordStoreLevel = Number.isFinite(data.swordStoreLevel) ? Math.max(0, Math.min(LEGENDARY_SWORD_LEVEL, data.swordStoreLevel)) : 0;
   if (!swordStoreOwned) swordStoreLevel = 0;
+  swordStoreAwaken = (swordStoreOwned && swordStoreLevel === LEGENDARY_SWORD_LEVEL) ? clampAwaken(data.swordStoreAwaken) : 0;
   swordColorBoostMonthKey = data.swordColorBoostMonthKey || '';
   swordColorBoostMult = data.swordColorBoostMult || 1;
   claimedSwordSeasonRewards = data.claimedSwordSeasonRewards || [];
