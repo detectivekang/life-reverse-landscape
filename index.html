@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="manifest" href="./manifest.json">
 <meta name="theme-color" content="#1c1712">
+<meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'self'">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -14,7 +15,7 @@
 // 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
 // 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
 (function() {
-  var CURRENT_VERSION = '2026100611';
+  var CURRENT_VERSION = '2026100616';
   try {
     if (sessionStorage.getItem('lrVersionChecked') === CURRENT_VERSION) return;
     fetch(location.pathname + '?_cb=' + Date.now(), { cache: 'no-store' })
@@ -1130,7 +1131,7 @@
 <!-- ===== 로그인/클라우드 저장용 SDK (Firebase - 구글 로그인) =====
      구글 로그인이 실제로 작동하려면 이 파일이 https 도메인에 호스팅되어 있어야 합니다.
      file:// 로 직접 열면 팝업 로그인이 차단되거나 동작하지 않을 수 있습니다. -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js" integrity="sha384-Rj26LVGvoeRVR6+mwQmFfcR3QOBEwT+ZmuCWpuiqeTzJpCs0ER4ITAWGb4Hiy3Ok" crossorigin="anonymous"></script>
 </head>
 <body>
 <!-- ===== 배경음악 (맵별 트랙) =====
@@ -2115,6 +2116,7 @@ function burnMoney() {
   money = 0;
   burnedTotal += amount;
   burnedMonthly += amount;
+  saveGame(); // 태운 직후 저장 — 새로고침으로 돈을 되돌리면서 소각 랭킹만 올리는 꼼수 방지
   showToast(`🔥 ${formatWon(amount)}원을 화끈하게 태워버렸습니다!`);
   playSound('burn');
   render();
@@ -2145,12 +2147,64 @@ let voidSimLog = null;         // 오프라인 시뮬레이션 동안 얻은 것
 let voidBestWave = 0;   // 지금까지 클리어한 가장 높은 웨이브. 이 기록을 넘기는 "첫 클리어"에서만 아이템·돈 보상이 나온다.
 let voidUpgrades = { auto: 0, autoSpd: 0, crit: 0, shard: 0, find: 0, time: 0 }; // 차원 상점 추가 강화 레벨 (공격력은 voidDamageLevel)
 let voidEquipped = [];  // 장착한 유물 id (최대 3칸, 장착하면 효과 2배)
-let voidBossTimeLeft = 0; // 보스 남은 시간(초). 저장하지 않는다.
+let voidBossTimeLeft = 0; // 보스 남은 시간(초). 새로고침해도 시간이 리셋되지 않도록 저장한다.
 // 공허 리뉴얼(2026-10-06) 때 모든 유저의 공허 진행도를 1회 초기화하기 위한 버전. 저장본의 값이 이보다 작으면 불러올 때 1번만 초기화한다.
 // 또 한 번 전체 초기화가 필요하면 이 숫자를 올리면 된다.
 const VOID_RESET_VERSION = 2; // 1: 공허 리뉴얼 / 2: 클릭 수입 연동 제거(밸런스 조정)
 let voidResetVersion = VOID_RESET_VERSION; // 새 게임은 이미 최신 버전으로 시작
 // 차원 상점 비용 조정(2026-10-06) 때 기존 강화에 쓴 조각을 1회 전액 환불하기 위한 버전. 저장본의 값이 이보다 작으면 불러올 때 1번만 환불한다.
+// ===== 로컬 저장 무결성(서명) =====
+// 개발자도구로 localStorage의 저장 JSON만 고쳐서 돈·레벨을 올리는 가장 흔한 조작을 막는다.
+// 저장할 때 내용의 서명(_sig)을 붙이고, 불러올 때 맞지 않으면 "변조 의심"으로 표시한다.
+// 변조 의심 상태에서는 클라우드 저장·랭킹 등록을 하지 않는다. (로그인 후 클라우드 기록을 불러오면 해제된다)
+// ※ 코드가 공개돼 있어 완벽한 방어는 아니다. 일반적인 편집을 막는 허들이다.
+let saveTamperFlag = false;
+const SAVE_SIG_SALT = 'lr#7Hq!2vXk9$Zp4';
+function canonJson(v) {
+  if (Array.isArray(v)) return '[' + v.map(canonJson).join(',') + ']';
+  if (v && typeof v === 'object') return '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + canonJson(v[k])).join(',') + '}';
+  return JSON.stringify(v);
+}
+function cyrb53(str, seed) {
+  let h1 = 0xdeadbeef ^ (seed || 0), h2 = 0x41c6ce57 ^ (seed || 0);
+  for (let i = 0; i < str.length; i++) {
+    const ch = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return 4294967296 * (2097151 & h2) + (h1 >>> 0);
+}
+// JSON을 한 번 왕복시킨 뒤(undefined/NaN 처리 통일) 키를 정렬해 서명하므로 키 순서가 바뀌어도 같은 값이 나온다.
+function signSaveObj(obj) {
+  const clean = JSON.parse(JSON.stringify(obj));
+  delete clean._sig;
+  return cyrb53(canonJson(clean) + SAVE_SIG_SALT).toString(36);
+}
+function stringifySigned(data) {
+  const o = JSON.parse(JSON.stringify(data));
+  o._sig = signSaveObj(o);
+  return JSON.stringify(o);
+}
+// true = 정상 / false = 변조 의심. 서명이 아예 없는 옛 저장본은, 서명 저장을 한 번이라도 한 기기가 아니면 그대로 받아들인다.
+function verifyLocalSave(obj) {
+  if (!obj || typeof obj !== 'object') return true;
+  if (typeof obj._sig !== 'string') {
+    try { return localStorage.getItem('lifeReverseSigSeen') !== '1'; } catch (e) { return true; }
+  }
+  try { return signSaveObj(obj) === obj._sig; } catch (e) { return false; }
+}
+function writeLocalSave(obj) {
+  localStorage.setItem('lifeReverseSave', stringifySigned(obj));
+  localStorage.setItem('lifeReverseSigSeen', '1');
+}
+// 변조 의심 상태에서 서버(저장·랭킹)에 값이 올라가지 않게 하는 공용 검사.
+function isServerWriteBlocked(collectionName) {
+  if (!saveTamperFlag) return false;
+  const n = String(collectionName || '');
+  return n === 'saves' || n.indexOf('leaderboard') === 0;
+}
 let voidShopResetKey = '';        // 상점 강화 초기화를 마지막으로 쓴 시즌(월) 키 — 시즌당 1회
 let claimedVoidSeasonRewards = []; // 공허 랭킹 시즌 보상을 이미 받은 시즌(월) 목록 (중복 지급 방지)
 const VOID_SHOP_REFUND_VERSION = 1;
@@ -2702,9 +2756,10 @@ function getVoidUpgradeCost(level) {
   const lv = level === undefined ? voidDamageLevel : level;
   return Math.floor(12 * Math.pow(1.035, lv));
 }
+const VOID_HP_GROWTH = 1.12; // 웨이브마다 적 체력 증가율 (예전 1.18은 후반 벽이 너무 가팔라 낮춤)
 function getVoidEnemyMaxHpForWave(wave) {
   const isBoss = wave % VOID_BOSS_EVERY === 0;
-  const base = 40 * Math.pow(1.18, wave - 1);
+  const base = 40 * Math.pow(VOID_HP_GROWTH, wave - 1);
   return Math.floor(isBoss ? base * 4 : base);
 }
 function getVoidRewardForWave(wave) {
@@ -3676,6 +3731,7 @@ async function applySwordBattleResultToOpponent(opponent, iWon) {
 async function startSwordBattle() {
   initAudio();
   if (swordBattleBusy) return;
+  if (saveTamperFlag) { showToast('⚠️ 저장 데이터 검증에 실패해서 지금은 검 배틀을 할 수 없어요. 로그인 후 새로고침하면 클라우드 기록으로 복구돼요'); return; }
   const resultEl = document.getElementById('swordBattleResult');
   ensureSwordBattleSeason();
   if (!swordOwned) { showToast('⚔️ 먼저 검을 만들어주세요!'); return; }
@@ -3700,7 +3756,7 @@ async function startSwordBattle() {
       swordBattleWins += 5;
       playSound('levelUp');
       spawnConfettiBurst();
-      if (resultEl) resultEl.innerHTML = `<div style="color:var(--gold); font-weight:bold;">🎉 ${opponent.name}(${oppName})님을 이겼습니다! (승률 ${Math.round(myWinChance)}%)</div><div style="font-size:11px; color:var(--paper-dim); margin-top:2px;">${oppTag}</div>`;
+      if (resultEl) resultEl.innerHTML = `<div style="color:var(--gold); font-weight:bold;">🎉 ${escapeHtml(opponent.name)}(${oppName})님을 이겼습니다! (승률 ${Math.round(myWinChance)}%)</div><div style="font-size:11px; color:var(--paper-dim); margin-top:2px;">${oppTag}</div>`;
       showToast(`🎉 검 배틀 승리! 승점 +5`);
       syncLeaderboard({ forceSync: true });
       applySwordBattleResultToOpponent(opponent, true);
@@ -3711,7 +3767,7 @@ async function startSwordBattle() {
       // 실제로 승률이 50%를 넘어야(=상대보다 검 레벨이 높아야) 장기적으로 승점이 쌓인다.
       swordBattleWins = Math.max(0, swordBattleWins - 5);
       playSound('swordFail');
-      if (resultEl) resultEl.innerHTML = `<div style="color:var(--danger);">😢 ${opponent.name}(${oppName})님에게 졌습니다... (승률 ${Math.round(myWinChance)}%)</div><div style="font-size:11px; color:var(--paper-dim); margin-top:2px;">${oppTag}</div>`;
+      if (resultEl) resultEl.innerHTML = `<div style="color:var(--danger);">😢 ${escapeHtml(opponent.name)}(${oppName})님에게 졌습니다... (승률 ${Math.round(myWinChance)}%)</div><div style="font-size:11px; color:var(--paper-dim); margin-top:2px;">${oppTag}</div>`;
       showToast(`😢 검 배틀 패배... 승점 -5`);
       syncLeaderboard({ forceSync: true });
       applySwordBattleResultToOpponent(opponent, false);
@@ -3987,6 +4043,9 @@ function enhanceSword() {
     }
   }
   renderSwordPanel();
+  // 결과가 나온 같은 순간에 저장한다. 안 그러면 파괴·실패 직후 새로고침/앱 종료로 비용과 검을 되돌리는 꼼수가 가능했다.
+  // (파괴·되돌리기 발동처럼 되돌리기 아까운 순간은 클라우드에도 바로 올린다)
+  saveGame(!swordOwned || usedBoost || roll >= rates.success + rates.maintain ? { forceCloud: true } : undefined);
 }
 function renderSwordPanel() {
   const iconEl = document.getElementById('swordIcon');
@@ -4944,6 +5003,42 @@ let isBrandNewPlayer = false;
 // 함께 올려준다. lastSeenPatchVersion이 patchNotes[0].version과 다르면 "안 읽은 공지"로
 // 간주해 배지를 띄우고, 기존 유저가 접속하면 자동으로 한 번 띄워준다.
 const patchNotes = [
+  {
+    version: '2026100616',
+    date: '2026-10-08',
+    items: [
+      '⚔️ 공허 적 체력이 웨이브마다 늘어나는 폭을 줄였어요 (웨이브당 +18% → +12%). 후반 보스가 훨씬 덜 가팔라져서 더 멀리 갈 수 있어요. 현재 싸우던 적의 체력도 새 기준에 맞춰 자동으로 조정돼요'
+    ]
+  },
+  {
+    version: '2026100615',
+    date: '2026-10-08',
+    items: [
+      '🛡️ 저장 데이터 검증을 강화했어요. 저장 내용이 올바르지 않거나 게임 규칙상 불가능한 값은 자동으로 바로잡거나, 랭킹·클라우드에 반영되지 않도록 막아요'
+    ]
+  },
+  {
+    version: '2026100614',
+    date: '2026-10-07',
+    items: [
+      '🛡️ 보안 강화: 서버 연결 라이브러리를 고정 버전과 무결성 검증으로 불러오도록 바꿨어요'
+    ]
+  },
+  {
+    version: '2026100613',
+    date: '2026-10-07',
+    items: [
+      '🛡️ 보안 강화: 랭킹·검 배틀·로또 공지에 표시되는 다른 유저 이름 등을 안전하게 처리하도록 개선했어요',
+      '🐛 검 강화 직후 새로고침해서 파괴·비용 소모를 되돌리던 꼼수를 막았어요. 강화 결과는 바로 저장돼요'
+    ]
+  },
+  {
+    version: '2026100612',
+    date: '2026-10-07',
+    items: [
+      '🐛 공허 보스 남은 시간이 새로고침하면 처음으로 돌아가던 버그를 고쳤어요. 이제 새로고침해도 남은 시간이 이어져요'
+    ]
+  },
   {
     version: '2026100611',
     date: '2026-10-07',
@@ -6779,6 +6874,26 @@ function getHonorScore() { return seasonMedals.gold * 3 + seasonMedals.silver * 
 function getHonorMult() { return 1 + Math.min(0.30, getHonorScore() * 0.005); }            // 수입·클릭 최대 +30%
 function getHonorSeasonBonusPoints() { return Math.min(10, Math.floor(getHonorScore() / 4)); } // 시즌 정산 보너스 포인트 최대 +10P
 
+// ===== XSS 방어 공용 함수 =====
+// 다른 유저가 서버에 직접 써 넣을 수 있는 값(이름·색상·아이콘 등)은 innerHTML에 넣기 전에 반드시 거친다.
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"'`]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '`': '&#96;' }[c]));
+}
+// style 속성에 들어가는 색상은 #RGB/#RRGGBB(AA) 형식만 허용한다. (속성 탈출·스타일 주입 차단)
+function safeCssColor(c) { return (typeof c === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(c.trim())) ? c.trim() : ''; }
+// 서버에서 받은 표시용 문자열을 무해하게 만든다: HTML 특수문자·제어문자·방향 전환 문자를 지우고 길이를 제한한다.
+function cleanRemoteText(v, max) {
+  return String(v == null ? '' : v).replace(/[<>"'`\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069]/g, '').trim().slice(0, max || 24);
+}
+// 서버 행(랭킹 등) 한 줄을 받은 직후 한 번 정화한다. 이후 어떤 화면에서 쓰더라도 안전하다.
+function sanitizeRemoteRow(d) {
+  if ('name' in d) d.name = cleanRemoteText(d.name, 24);
+  if ('nameColor' in d) d.nameColor = safeCssColor(d.nameColor) || null;
+  if ('mansionIcon' in d) d.mansionIcon = cleanRemoteText(d.mansionIcon, 16);
+  if ('tierIcon' in d) d.tierIcon = cleanRemoteText(d.tierIcon, 16);
+  if ('tierName' in d) d.tierName = cleanRemoteText(d.tierName, 16);
+  return d;
+}
 function hofEsc(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
@@ -7723,7 +7838,7 @@ async function renderLeaderboardList() {
     lbEl.innerHTML = list.map(p => `
       <div class="lb-row${p.uid === currentUser.uid ? ' me' : ''}">
         <span class="lb-rank">${p.rank}</span>
-        <span class="lb-name"${p.nameColor ? ` style="color:${p.nameColor};font-weight:bold;"` : ''}>${p.mansionIcon ? p.mansionIcon + ' ' : ''}${p.name}</span>
+        <span class="lb-name"${safeCssColor(p.nameColor) ? ` style="color:${safeCssColor(p.nameColor)};font-weight:bold;"` : ''}>${p.mansionIcon ? escapeHtml(p.mansionIcon) + ' ' : ''}${escapeHtml(p.name)}</span>
         <span class="lb-tier">🔥 ${formatWon(p.amount || 0)}원 소각</span>
       </div>
     `).join('');
@@ -7734,7 +7849,7 @@ async function renderLeaderboardList() {
     lbEl.innerHTML = list.map(p => `
       <div class="lb-row${p.uid === currentUser.uid ? ' me' : ''}">
         <span class="lb-rank">${p.rank}</span>
-        <span class="lb-name"${p.nameColor ? ` style="color:${p.nameColor};font-weight:bold;"` : ''}>${p.mansionIcon ? p.mansionIcon + ' ' : ''}${p.name}</span>
+        <span class="lb-name"${safeCssColor(p.nameColor) ? ` style="color:${safeCssColor(p.nameColor)};font-weight:bold;"` : ''}>${p.mansionIcon ? escapeHtml(p.mansionIcon) + ' ' : ''}${escapeHtml(p.name)}</span>
         <span class="lb-tier">🌌 ${(p.amount || 0).toLocaleString('ko-KR')}웨이브</span>
       </div>
     `).join('');
@@ -7745,7 +7860,7 @@ async function renderLeaderboardList() {
     lbEl.innerHTML = list.map(p => `
       <div class="lb-row${p.uid === currentUser.uid ? ' me' : ''}">
         <span class="lb-rank">${p.rank}</span>
-        <span class="lb-name"${p.nameColor ? ` style="color:${p.nameColor};font-weight:bold;"` : ''}>${p.mansionIcon ? p.mansionIcon + ' ' : ''}${p.name}</span>
+        <span class="lb-name"${safeCssColor(p.nameColor) ? ` style="color:${safeCssColor(p.nameColor)};font-weight:bold;"` : ''}>${p.mansionIcon ? escapeHtml(p.mansionIcon) + ' ' : ''}${escapeHtml(p.name)}</span>
         <span class="lb-tier">⚔️ ${(p.amount || 0).toLocaleString('ko-KR')}점</span>
       </div>
     `).join('');
@@ -7756,7 +7871,7 @@ async function renderLeaderboardList() {
     lbEl.innerHTML = list.map(p => `
       <div class="lb-row${p.uid === currentUser.uid ? ' me' : ''}${awkRowClass(p.amount || 0)}">
         <span class="lb-rank">${p.rank}</span>
-        <span class="lb-name"${p.nameColor ? ` style="color:${p.nameColor};font-weight:bold;"` : ''}>${p.mansionIcon ? p.mansionIcon + ' ' : ''}${p.name}</span>
+        <span class="lb-name"${safeCssColor(p.nameColor) ? ` style="color:${safeCssColor(p.nameColor)};font-weight:bold;"` : ''}>${p.mansionIcon ? escapeHtml(p.mansionIcon) + ' ' : ''}${escapeHtml(p.name)}</span>
         <span class="lb-tier">🗡️ ${swordPowerHtml(p.amount || 0)}</span>
       </div>
     `).join('');
@@ -7769,7 +7884,7 @@ async function renderLeaderboardList() {
       return `
       <div class="lb-row${p.uid === currentUser.uid ? ' me' : ''}${awkRowClass(lv)}">
         <span class="lb-rank">${p.rank}</span>
-        <span class="lb-name"${p.nameColor ? ` style="color:${p.nameColor};font-weight:bold;"` : ''}>${p.mansionIcon ? p.mansionIcon + ' ' : ''}${p.name}</span>
+        <span class="lb-name"${safeCssColor(p.nameColor) ? ` style="color:${safeCssColor(p.nameColor)};font-weight:bold;"` : ''}>${p.mansionIcon ? escapeHtml(p.mansionIcon) + ' ' : ''}${escapeHtml(p.name)}</span>
         <span class="lb-tier">🗡️ ${swordPowerHtml(lv)} ${getSwordPowerName(lv)}</span>
       </div>
     `;
@@ -7792,8 +7907,8 @@ async function renderLeaderboardList() {
     return `
     <div class="lb-row${p.uid === currentUser.uid ? ' me' : ''}">
       <span class="lb-rank">${p.rank}</span>
-      <span class="lb-name"${p.nameColor ? ` style="color:${p.nameColor};font-weight:bold;"` : ''}>${p.mansionIcon ? p.mansionIcon + ' ' : ''}${p.name}</span>
-      <span class="lb-tier">${tierIcon} ${tierName} · ${formatWon(p.amount || 0)}원</span>
+      <span class="lb-name"${safeCssColor(p.nameColor) ? ` style="color:${safeCssColor(p.nameColor)};font-weight:bold;"` : ''}>${p.mansionIcon ? escapeHtml(p.mansionIcon) + ' ' : ''}${escapeHtml(p.name)}</span>
+      <span class="lb-tier">${escapeHtml(tierIcon)} ${escapeHtml(tierName)} · ${formatWon(p.amount || 0)}원</span>
     </div>
   `;
   }).join('');
@@ -7812,18 +7927,18 @@ async function appendMyRankRowIfOutsideTop(lbEl, period, isBurn) {
   const row = document.createElement('div');
   row.className = 'lb-row me';
   if (isBurn) {
-    row.innerHTML = `<span class="lb-rank">${info.rank}</span><span class="lb-name">${currentUser.name} (나)</span><span class="lb-tier">🔥 ${formatWon(burnedMonthly)}원 소각</span>`;
+    row.innerHTML = `<span class="lb-rank">${info.rank}</span><span class="lb-name">${escapeHtml(currentUser.name)} (나)</span><span class="lb-tier">🔥 ${formatWon(burnedMonthly)}원 소각</span>`;
   } else if (period === 'void') {
-    row.innerHTML = `<span class="lb-rank">${info.rank}</span><span class="lb-name">${currentUser.name} (나)</span><span class="lb-tier">🌌 ${voidBestWave.toLocaleString('ko-KR')}웨이브</span>`;
+    row.innerHTML = `<span class="lb-rank">${info.rank}</span><span class="lb-name">${escapeHtml(currentUser.name)} (나)</span><span class="lb-tier">🌌 ${voidBestWave.toLocaleString('ko-KR')}웨이브</span>`;
   } else if (period === 'sword') {
-    row.innerHTML = `<span class="lb-rank">${info.rank}</span><span class="lb-name">${currentUser.name} (나)</span><span class="lb-tier">⚔️ ${swordBattleWins.toLocaleString('ko-KR')}점</span>`;
+    row.innerHTML = `<span class="lb-rank">${info.rank}</span><span class="lb-name">${escapeHtml(currentUser.name)} (나)</span><span class="lb-tier">⚔️ ${swordBattleWins.toLocaleString('ko-KR')}점</span>`;
   } else if (period === 'swordmonthly') {
-    row.innerHTML = `<span class="lb-rank">${info.rank}</span><span class="lb-name">${currentUser.name} (나)</span><span class="lb-tier">🗡️ ${swordPowerHtml(swordMonthlyBestLevel)}</span>`;
+    row.innerHTML = `<span class="lb-rank">${info.rank}</span><span class="lb-name">${escapeHtml(currentUser.name)} (나)</span><span class="lb-tier">🗡️ ${swordPowerHtml(swordMonthlyBestLevel)}</span>`;
   } else if (period === 'swordcurrent') {
-    row.innerHTML = `<span class="lb-rank">${info.rank}</span><span class="lb-name">${currentUser.name} (나)</span><span class="lb-tier">${getSwordDisplayHtml()}</span>`;
+    row.innerHTML = `<span class="lb-rank">${info.rank}</span><span class="lb-name">${escapeHtml(currentUser.name)} (나)</span><span class="lb-tier">${getSwordDisplayHtml()}</span>`;
   } else {
     const myAmount = period === 'weekly' ? weeklyWinnings : monthlyWinnings;
-    row.innerHTML = `<span class="lb-rank">${info.rank}</span><span class="lb-name">${currentUser.name} (나)</span><span class="lb-tier">${formatWon(myAmount)}원</span>`;
+    row.innerHTML = `<span class="lb-rank">${info.rank}</span><span class="lb-name">${escapeHtml(currentUser.name)} (나)</span><span class="lb-tier">${formatWon(myAmount)}원</span>`;
   }
   lbEl.appendChild(divider);
   lbEl.appendChild(row);
@@ -9360,11 +9475,12 @@ const SNAKE_TO_CAMEL = Object.fromEntries(Object.entries(CAMEL_TO_SNAKE).map(([k
 function toCamelRow(row) {
   const data = {};
   for (const k in row) data[SNAKE_TO_CAMEL[k] || k] = row[k];
-  return data;
+  return sanitizeRemoteRow(data);
 }
 
 // 문서 하나를 통째로 덮어쓴다 (upsert)
 async function dbSetDoc(collectionName, docId, data) {
+  if (isServerWriteBlocked(collectionName)) return; // 변조 의심 저장본은 클라우드·랭킹에 올리지 않는다
   const { table, boardKey } = resolveTable(collectionName);
   let row;
   if (table === 'saves') {
@@ -9394,6 +9510,7 @@ async function dbGetDoc(collectionName, docId) {
 
 // 문서 하나의 일부 필드만 갱신한다 (문서가 이미 존재해야 함)
 async function dbUpdateDoc(collectionName, docId, data) {
+  if (isServerWriteBlocked(collectionName)) return;
   const { table, boardKey } = resolveTable(collectionName);
   let q = db.from(table).update(toSnakeRow(data)).eq('user_id', docId);
   if (boardKey) q = q.eq('board_key', boardKey);
@@ -9589,7 +9706,7 @@ async function resumeFromCloud() {
     if (cloud) {
       applySaveData(cloud, { checkOffline: true });
       cloudSeenDevice = cloud.deviceId || null;
-      localStorage.setItem('lifeReverseSave', JSON.stringify(buildSaveData()));   // saveGame()의 "뒤처진 탭" 검사를 거치지 않고 로컬도 최신으로 맞춘다
+      writeLocalSave(buildSaveData());   // saveGame()의 "뒤처진 탭" 검사를 거치지 않고 로컬도 최신으로 맞춘다
       try { refreshAllScreens(); } catch (e) { console.error('화면 갱신 실패:', e); }
     }
     cloudSeenKnown = true; deviceDisplaced = false;
@@ -9668,7 +9785,7 @@ async function cloudLoadGame() {
         )
       );
 
-      if (localIsAhead) {
+      if (localIsAhead && !saveTamperFlag) {
         console.warn('클라우드 저장본이 로컬보다 뒤처져 있어 무시하고 로컬 진행을 다시 업로드합니다.');
         saveGame({ forceCloud: true });
         refreshAllScreens();
@@ -9857,7 +9974,7 @@ function rankLimitForBoard(board) {
   if (board.startsWith('leaderboard_weekly_')) return 1e31;
   if (board.startsWith('leaderboard_monthly_')) return 1e32;
   if (board.startsWith('leaderboard_burn_monthly_')) return 1e32;
-  if (board.startsWith('leaderboard_void_monthly_')) return 1000; // 공허 최고 웨이브 (적 체력이 웨이브마다 ×1.18이라 현실적으로 이 근처에도 못 감)
+  if (board.startsWith('leaderboard_void_monthly_')) return 1000; // 공허 최고 웨이브 (적 체력이 웨이브마다 ×1.12라 현실적으로 이 근처에도 못 감)
   if (board === 'leaderboard_hof_earn') return 1e45;
   if (board === 'leaderboard_hof_casino') return 1e32;
   if (board === 'leaderboard_hof_honor') return 1e12;
@@ -10092,6 +10209,7 @@ document.addEventListener('visibilitychange', () => {
 function buildSaveData() {
   return {
     gameVersion: GAME_VERSION,
+    tamperFlag: saveTamperFlag,
     money, totalEarned, stageIndex, baseClickValue,
     clickUpgradeLevel, jobLevels, map2Unlocked, jobLevels2, employeeLevels2,
     map5Unlocked, jobLevels5,
@@ -10106,7 +10224,7 @@ function buildSaveData() {
     seasonEventLoginClaimedKey, casinoGamesUnlocked,
     discoveryNudges, uiUnlocks, feverCount,
     infiniteUpgradeLevel, nameColor,
-    map6Unlocked, voidWave, voidShards, voidDamageLevel, voidEnemyHp, voidEnemyMaxHp, voidRelics, voidBestWave, voidUpgrades, voidEquipped, voidResetVersion, voidShopRefundVersion, voidLegendPity,
+    map6Unlocked, voidWave, voidShards, voidDamageLevel, voidEnemyHp, voidEnemyMaxHp, voidRelics, voidBestWave, voidUpgrades, voidEquipped, voidResetVersion, voidShopRefundVersion, voidLegendPity, voidBossTimeLeft,
     burnedTotal, burnedMonthly, mansionLevel, lastSeenPatchVersion,
     swordOwned, swordLevel, swordBestLevel, swordBreakCount,
     swordBattleWins, swordBattleSeasonKey, swordBattleCountToday, swordBattleTickets, swordBattleTicketsAt, lottoAppliedIds,
@@ -10142,7 +10260,7 @@ function saveGame(opts) {
       // 리셋된 것"이 정상 상황이므로, 이땐 totalEarned가 작아졌다고 뒤처진 탭으로
       // 오인해 예전 저장을 덮어쓰면 안 된다.
       if (existingRebirth >= data.rebirthCount && existingTotal > data.totalEarned + 1) {
-        applySaveData(existing, { checkOffline: false });
+        applySaveData(existing, { checkOffline: false, tampered: !verifyLocalSave(existing) });
         refreshAllScreens();
         return;
       }
@@ -10151,7 +10269,7 @@ function saveGame(opts) {
     console.error('저장 전 최신 데이터 확인 실패:', e);
   }
 
-  localStorage.setItem('lifeReverseSave', JSON.stringify(data)); // 로컬 저장은 항상 즉시 (비용 없음)
+  writeLocalSave(data); // 로컬 저장은 항상 즉시 (비용 없음)
   if (currentUser && db) {
     const now = Date.now();
     if (forceCloud || now - lastCloudSaveTime > CLOUD_SAVE_MIN_INTERVAL) {
@@ -10186,7 +10304,7 @@ window.addEventListener('storage', (e) => {
     // (반대로 이 탭이 이미 더 많이 환생한 상태라면 rebirthCount가 낮은 예전
     // totalEarned로 되돌리지 않는다).
     if (incomingRebirth > rebirthCount || (incomingRebirth >= rebirthCount && incomingTotal > totalEarned + 1)) {
-      applySaveData(incoming, { checkOffline: false });
+      applySaveData(incoming, { checkOffline: false, tampered: !verifyLocalSave(incoming) });
       refreshAllScreens();
     }
   } catch (err) {
@@ -10194,8 +10312,51 @@ window.addEventListener('storage', (e) => {
   }
 });
 
+// 불러온 값 중 게임 규칙상 불가능한 값을 범위 안으로 되돌린다. (저장 데이터 조작·버그로 생긴 비정상 값 방어)
+function validateLoadedState() {
+  let fixed = [];
+  const num = (name, v, min, max, int) => {
+    let n = Number(v);
+    if (!isFinite(n)) n = min;
+    n = Math.min(max, Math.max(min, n));
+    if (int) n = Math.floor(n);
+    if (n !== v) fixed.push(name);
+    return n;
+  };
+  swordLevel = num('swordLevel', swordLevel, 0, LEGENDARY_SWORD_LEVEL, true);
+  swordStoreLevel = num('swordStoreLevel', swordStoreLevel, 0, LEGENDARY_SWORD_LEVEL, true);
+  swordAwaken = num('swordAwaken', swordAwaken, 0, SWORD_AWAKEN_MAX, true);
+  swordStoreAwaken = num('swordStoreAwaken', swordStoreAwaken, 0, SWORD_AWAKEN_MAX, true);
+  if (!(swordOwned && swordLevel === LEGENDARY_SWORD_LEVEL)) swordAwaken = 0;
+  if (!(swordStoreOwned && swordStoreLevel === LEGENDARY_SWORD_LEVEL)) swordStoreAwaken = 0;
+  swordBestLevel = num('swordBestLevel', swordBestLevel, 0, SWORD_MAX_POWER, true);
+  swordMonthlyBestLevel = num('swordMonthlyBestLevel', swordMonthlyBestLevel, 0, SWORD_MAX_POWER, true);
+  swordReviveCharges = num('swordReviveCharges', swordReviveCharges, 0, 9999, true);
+  for (const k of ['x15', 'x20', 'x25']) swordBoostItems[k] = num('swordBoostItems.' + k, swordBoostItems[k], 0, 9999, true);
+  swordBattleTickets = num('swordBattleTickets', swordBattleTickets, 0, SWORD_BATTLE_BANK_CAP, false);
+  luckyCoins = num('luckyCoins', luckyCoins, 0, 1e9, true);
+  voidShards = num('voidShards', voidShards, 0, 1e9, true);
+  voidDamageLevel = num('voidDamageLevel', voidDamageLevel, 0, 100000, true);
+  voidWave = num('voidWave', voidWave, 1, 1e6, true);
+  voidBestWave = num('voidBestWave', voidBestWave, 0, 1e6, true);
+  // 체력 곡선이 바뀐 뒤 불러온 저장본: 현재 적의 최대 체력을 새 값으로 맞추고 남은 비율은 유지한다.
+  if (voidEnemyMaxHp > 0) {
+    const newMax = getVoidEnemyMaxHpForWave(voidWave);
+    if (newMax !== voidEnemyMaxHp) {
+      const ratio = Math.min(1, Math.max(0, voidEnemyHp / voidEnemyMaxHp)) || 1;
+      voidEnemyMaxHp = newMax;
+      voidEnemyHp = Math.max(1, Math.floor(newMax * ratio));
+    }
+  }
+  mansionLevel = num('mansionLevel', mansionLevel, 0, 1000, true);
+  rebirthCount = num('rebirthCount', rebirthCount, 0, 100000, true);
+  if (fixed.length) console.warn('불가능한 저장 값을 범위 안으로 되돌렸어요:', fixed.join(', '));
+}
+
 function applySaveData(data, opts) {
   opts = opts || {};
+  // 클라우드에서 온 데이터(tamperFlag 없음)를 적용하면 플래그가 풀리고, 의심되는 로컬 저장본을 적용하면 켜진다.
+  saveTamperFlag = !!(opts.tampered || (data && data.tamperFlag));
   money = sanitizeBalance(fromBigStorable(data.money) || 0);
   totalEarned = sanitizeBalance(fromBigStorable(data.totalEarned) || 0);
   stageIndex = data.stageIndex || 0;
@@ -10256,6 +10417,11 @@ function applySaveData(data, opts) {
   voidShopRefundVersion = VOID_SHOP_REFUND_VERSION;
   if (map6Unlocked && voidEnemyMaxHp <= 0) startVoidWave(1);
   voidBossTimeLeft = (map6Unlocked && voidEnemyMaxHp > 0 && isVoidBossWave(voidWave)) ? getVoidBossTimeLimit() : 0;
+  // 저장해 둔 남은 시간이 있으면 그대로 이어간다(새로고침으로 보스 시간을 리셋하는 것 방지). 옛 저장본엔 값이 없어 전체 시간으로 시작한다.
+  if (voidBossTimeLeft > 0 && data.voidBossTimeLeft !== undefined && data.voidBossTimeLeft !== null) {
+    const savedLeft = Math.floor(Number(data.voidBossTimeLeft));
+    if (isFinite(savedLeft) && savedLeft >= 1) voidBossTimeLeft = Math.min(savedLeft, voidBossTimeLeft);
+  }
   burnedTotal = fromBigStorable(data.burnedTotal) || 0;
   burnedMonthly = fromBigStorable(data.burnedMonthly) || 0;
   mansionLevel = data.mansionLevel || 0;
@@ -10386,6 +10552,7 @@ function applySaveData(data, opts) {
     }
   }
   checkUiUnlocks(true);
+  validateLoadedState();
   feverCount = Number(data.feverCount) || 0;
   lastLifeIdx = -1; // 세이브를 불러온 직후(클라우드 동기화 포함)에는 승급 연출을 띄우지 않는다
 
@@ -10448,6 +10615,12 @@ function loadGame() {
   }
   try {
     const data = JSON.parse(saved);
+    const sigOk = verifyLocalSave(data);
+    if (!sigOk) {
+      console.warn('로컬 저장 서명 불일치: 변조 의심으로 표시합니다.');
+      try { localStorage.setItem('lifeReverseSaveRejected', saved); } catch (e) {}   // 오탐 대비: 원본 보관
+      setTimeout(() => { try { showToast('⚠️ 저장 데이터 검증에 실패했어요. 이 기기의 기록은 랭킹·클라우드에 반영되지 않아요. 로그인 후 새로고침하면 클라우드 기록으로 복구돼요'); } catch (e) {} }, 3000);
+    }
     /* 버전 불일치 시 로컬 세이브를 버리고 초기화하던 로직 주석 처리 - 이제 버전이 달라도 그대로 불러온다.
     if (data.gameVersion !== GAME_VERSION) {
       // 버전이 다르면(또는 옛날 세이브라 이 필드 자체가 없으면) 그 세이브는 무시하고
@@ -10459,7 +10632,7 @@ function loadGame() {
       return;
     }
     */
-    applySaveData(data, { checkOffline: true });
+    applySaveData(data, { checkOffline: true, tampered: !sigOk });
     if (hasUnseenNotice()) {
       setTimeout(openNoticeModal, 900);
     }
@@ -10852,14 +11025,14 @@ const Lotto = (() => {
     const out = [];
     for (const r of (S ? S.rounds : [])) {
       if (!r.counts['1']) out.push({ text: r.season_end ? `🗓 ${md(r.round)} 시즌 마지막 추첨 · 1등 없음 → 이월금 소멸` : `🔥 ${md(r.round)} 1등 당첨자 없음 → 이월 ${r.carry_days}일째 · 다음 잭팟 ${fmtKRW(BigInt(r.carry_out) + cfg().base1)}`, round: null });
-      r.top.slice(0, 3).forEach(w => out.push({ text: `${RANK_ICON[w.rank]} ${md(r.round)} ${w.rank}등! ${w.uid === myUid() ? '나' : w.name}님 ${fmtKRW(w.prize)} 당첨`, round: r.round }));
+      r.top.slice(0, 3).forEach(w => out.push({ text: `${RANK_ICON[w.rank]} ${md(r.round)} ${w.rank}등! ${w.uid === myUid() ? '나' : escapeHtml(w.name)}님 ${fmtKRW(w.prize)} 당첨`, round: r.round }));
     }
     return out.slice(0, 6);
   }
   function paintHist() {
     if (!S) { $('ltFeed').innerHTML = $('ltHist').innerHTML = '<div class="lt-dim">불러오는 중…</div>'; return; }
     const feed = feedItems();
-    $('ltFeed').innerHTML = feed.length ? feed.map(f => `<div class="lt-feed-item"><span>${f.text}</span>${f.round ? `<button data-clap="${f.round}" aria-label="축하하기">👏 ${clapCache[f.round] || 0}</button>` : ''}</div>`).join('') : '<div class="lt-dim">첫 추첨이 끝나면 여기에 소식이 올라와요.</div>';
+    $('ltFeed').innerHTML = feed.length ? feed.map(f => `<div class="lt-feed-item"><span>${f.text}</span>${f.round ? `<button data-clap="${escapeHtml(f.round)}" aria-label="축하하기">👏 ${clapCache[f.round] || 0}</button>` : ''}</div>`).join('') : '<div class="lt-dim">첫 추첨이 끝나면 여기에 소식이 올라와요.</div>';
     $('ltHist').innerHTML = S.rounds.length ? S.rounds.map(h => {
       const c = h.counts, wins = h.mine.filter(t => t.rank > 0);
       const total = h.mine.reduce((a, t) => a + BigInt(t.prize), 0n);
@@ -10985,7 +11158,7 @@ const Lotto = (() => {
       ann.classList.remove('lt-r1', 'lt-r2'); ann.classList.add('show', best === 1 ? 'lt-r1' : 'lt-r2');
       $('ltAnnBadge').textContent = best === 1 ? '📢 전 서버 대형 공지 · 잭팟' : '📢 전 서버 공지';
       $('ltAnnTitle').textContent = mineWin ? `🎉 내가 ${best}등 당첨!!` : `${RANK_ICON[best]} ${best}등 당첨자 탄생!`;
-      $('ltAnnList').innerHTML = ws.slice(0, 4).map(w => `<div class="${w.uid === myUid() ? 'me' : ''}">${w.uid === myUid() ? '⭐ 나' : w.name}님</div>`).join('') + (ws.length > 4 ? `<div class="lt-dim">외 ${ws.length - 4}명</div>` : '');
+      $('ltAnnList').innerHTML = ws.slice(0, 4).map(w => `<div class="${w.uid === myUid() ? 'me' : ''}">${w.uid === myUid() ? '⭐ 나' : escapeHtml(w.name)}님</div>`).join('') + (ws.length > 4 ? `<div class="lt-dim">외 ${ws.length - 4}명</div>` : '');
       $('ltAnnPrize').textContent = fmtKRW(ws[0].prize);
       $('ltAnnShare').hidden = !mineWin; $('ltAnnShare').onclick = () => shareWin(res);
       let total = clapCache[res.round] || 0; $('ltAnnCount').textContent = total.toLocaleString('ko-KR');
