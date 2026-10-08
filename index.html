@@ -15,7 +15,7 @@
 // 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
 // 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
 (function() {
-  var CURRENT_VERSION = '2026100617';
+  var CURRENT_VERSION = '2026100622';
   try {
     if (sessionStorage.getItem('lrVersionChecked') === CURRENT_VERSION) return;
     fetch(location.pathname + '?_cb=' + Date.now(), { cache: 'no-store' })
@@ -1330,7 +1330,8 @@
           <div id="voidBossTimerText" style="font-size:11px; color:var(--gold); margin-top:3px;">⏰ 남은 시간 30초</div>
         </div>
       </div>
-      <div style="font-size:12px;">💎 차원 조각 <b id="voidShardCount">0</b></div>
+      <div id="voidItemBar" style="display:flex; gap:6px; margin-top:2px;"></div>
+      <div style="font-size:12px; margin-top:10px;">💎 차원 조각 <b id="voidShardCount">0</b></div>
       <div style="display:flex; gap:8px; justify-content:center; margin-top:12px;">
         <button class="start-btn" id="voidShopBtn">🛒 차원 상점</button>
         <button class="start-btn" id="voidRelicBtn" style="background:var(--bg-panel); color:var(--gold); border:1px solid var(--gold);">🏺 유물 도감 (<span id="voidRelicCount">0/24</span>)</button>
@@ -2147,6 +2148,29 @@ let voidSimQuiet = false;      // 오프라인 시뮬레이션 중에는 토스�
 let voidSimLog = null;         // 오프라인 시뮬레이션 동안 얻은 것을 모아두는 요약 (저장 안 함)
 let voidBestWave = 0;   // 지금까지 클리어한 가장 높은 웨이브. 이 기록을 넘기는 "첫 클리어"에서만 아이템·돈 보상이 나온다.
 let voidUpgrades = { auto: 0, autoSpd: 0, crit: 0, shard: 0, find: 0, time: 0 }; // 차원 상점 추가 강화 레벨 (공격력은 voidDamageLevel)
+
+// ===== 공허 소모품 (미니보스전 전용) =====
+// 피해는 고정 숫자가 아니라 "보스 최대 체력의 %"라서 웨이브가 올라가도 항상 같은 비중으로 쓸모가 있다.
+// 가격은 최고 웨이브에 비례하고(아래 getVoidConsumableCost), 보유 상한 + 보스 1마리당 사용 횟수 제한으로 사재기·무한 사용을 막는다.
+// 가성비(가격 비율 기준): 폭탄 20 : 5% / 핵 100 : 30% / 시간 연장권 60 : 약 17% → 핵이 조각당 효율이 조금 더 좋고(100조각당 0.6% vs 0.5%), 폭탄은 싸게 조금씩 쓰는 용도.
+// 한 보스에 쓸 수 있는 최대치: 폭탄 3발(약 15%) + 핵 1발(약 30%) → 나머지 약 55%는 내 공격으로 깎아야 한다. 오프라인 진행에는 쓰이지 않는다.
+// 시즌(월) 초기화 때 조각과 함께 소모품도 0으로 돌아간다. (공정한 랭킹 출발)
+const VOID_CONSUMABLES = [
+  { key: 'bomb', icon: '💣', name: '폭탄',       costMult: 20, cap: 10, perBoss: 3, desc: '보스 최대 체력의 4~6% 피해' },
+  { key: 'nuke', icon: '☢️', name: '핵',         costMult: 100, cap: 3,  perBoss: 1, desc: '보스 최대 체력의 25~35% 피해' },
+  { key: 'time', icon: '⏱️', name: '시간 연장권', costMult: 60, cap: 10, perBoss: 2, desc: '보스 제한시간 +5초' }
+];
+// 가격은 "최고 웨이브의 기본 조각 보상(3+웨이브)"에 비례한다. 웨이브가 오를수록 조각 수입도 같이 오르기 때문에, 고정 가격이면 후반엔 소모품이 너무 싸진다.
+// 초반 사재기를 막으려고 기준 웨이브의 바닥은 30으로 두고(그 아래에선 가격이 더 안 내려간다), 보유 상한·시즌 초기화로도 한 번 더 막는다.
+const VOID_CONSUMABLE_PRICE_FLOOR_WAVE = 30;
+function getVoidConsumableCost(c) {
+  const w = Math.max(VOID_CONSUMABLE_PRICE_FLOOR_WAVE, voidBestWave || 0);
+  return Math.max(1000, Math.round(c.costMult * (3 + w) / 1000) * 1000); // 천 단위로 끊는다 (최소 1,000)
+}
+const VOID_TIME_TICKET_SEC = 5;
+const VOID_TIME_EXTRA_MAX = 10;   // 시간 연장권으로 늘릴 수 있는 최대치(보스당 2장 × 5초) — 저장 불러오기 때 시간 보정에도 쓴다
+let voidItems = { bomb: 0, nuke: 0, time: 0 };
+let voidBossUse = { bomb: 0, nuke: 0, time: 0 }; // 지금 보스에게 이미 쓴 횟수 (새 웨이브가 시작되면 0으로)
 let voidEquipped = [];  // 장착한 유물 id (최대 3칸, 장착하면 효과 2배)
 let voidBossTimeLeft = 0; // 보스 남은 시간(초). 새로고침해도 시간이 리셋되지 않도록 저장한다.
 // 공허 리뉴얼(2026-10-06) 때 모든 유저의 공허 진행도를 1회 초기화하기 위한 버전. 저장본의 값이 이보다 작으면 불러올 때 1번만 초기화한다.
@@ -2779,6 +2803,7 @@ function isVoidScreenVisible() {
 }
 function startVoidWave(wave) {
   voidWave = wave;
+  voidBossUse = { bomb: 0, nuke: 0, time: 0 };
   voidEnemyMaxHp = getVoidEnemyMaxHpForWave(wave);
   voidEnemyHp = voidEnemyMaxHp;
   voidBossTimeLeft = isVoidBossWave(wave) ? getVoidBossTimeLimit() : 0;
@@ -2928,6 +2953,7 @@ function resetVoidProgress() {
   voidUpgrades = { auto: 0, autoSpd: 0, crit: 0, shard: 0, find: 0, time: 0 };
   voidBestWave = 0;
   voidLegendPity = 0;
+  voidItems = { bomb: 0, nuke: 0, time: 0 };
   voidEnemyMaxHp = 0; // 불러오기 끝에서 startVoidWave(1)이 새 적을 만든다
   voidEnemyHp = 0;
   voidBossTimeLeft = 0;
@@ -3328,14 +3354,84 @@ function renderVoidMap() {
       tWrap.style.display = 'none';
     }
   }
+  renderVoidItemBar();
   renderVoidRelicPanel();
+}
+// ----- 소모품: 구매 / 사용 / 화면 -----
+function buyVoidConsumable(key) {
+  const c = VOID_CONSUMABLES.find(x => x.key === key);
+  if (!c) return;
+  if ((voidItems[key] || 0) >= c.cap) { showToast(`${c.icon} ${c.name}은 최대 ${c.cap}개까지 가질 수 있어요`); return; }
+  const price = getVoidConsumableCost(c);
+  if (voidShards < price) { showToast('💎 차원 조각이 부족해요!'); return; }
+  voidShards -= price;
+  voidItems[key] = (voidItems[key] || 0) + 1;
+  playSound('coin');
+  showToast(`${c.icon} ${c.name} 구매! (보유 ${voidItems[key]}/${c.cap})`);
+  renderVoidShop();
+  renderVoidMap();
+  saveGame();
+}
+function useVoidConsumable(key) {
+  const c = VOID_CONSUMABLES.find(x => x.key === key);
+  if (!c || !map6Unlocked || voidEnemyMaxHp <= 0) return;
+  if (!isVoidBossWave() || voidEnemyHp <= 0) { showToast('👹 소모품은 미니보스전에서만 쓸 수 있어요'); return; }
+  if ((voidItems[key] || 0) <= 0) { showToast(`${c.icon} ${c.name}이(가) 없어요. 🛒 차원 상점에서 살 수 있어요`); return; }
+  if ((voidBossUse[key] || 0) >= c.perBoss) { showToast(`${c.icon} ${c.name}은 보스 한 마리당 ${c.perBoss}번까지만 쓸 수 있어요`); return; }
+  if (key === 'time' && voidBossTimeLeft <= 0) return;
+  initAudio();
+  voidItems[key]--;
+  voidBossUse[key]++;
+  if (key === 'time') {
+    voidBossTimeLeft += VOID_TIME_TICKET_SEC;
+    playSound('coin');
+    floatVoidText(`⏱️ +${VOID_TIME_TICKET_SEC}초`, '', '#ffd23f', 24);
+    renderVoidMap();
+  } else {
+    const pct = key === 'bomb' ? 0.04 + Math.random() * 0.02 : 0.25 + Math.random() * 0.10;
+    const dmg = Math.max(1, Math.floor(voidEnemyMaxHp * pct));
+    playSound('crit');
+    if (!voidSimQuiet) voidFlash('legendary');
+    damageVoidEnemy(dmg, true, false, false);
+  }
+  saveGame();
+}
+let lastVoidItemBarKey = '';
+function renderVoidItemBar() {
+  const bar = document.getElementById('voidItemBar');
+  if (!bar) return;
+  const boss = isVoidBossWave() && voidEnemyHp > 0;
+  const key = (boss ? 'B' : 'n') + VOID_CONSUMABLES.map(c => `${voidItems[c.key] || 0}/${voidBossUse[c.key] || 0}`).join('|');
+  if (key === lastVoidItemBarKey) return;
+  lastVoidItemBarKey = key;
+  bar.innerHTML = VOID_CONSUMABLES.map(c => {
+    const have = voidItems[c.key] || 0, used = voidBossUse[c.key] || 0;
+    const usable = boss && have > 0 && used < c.perBoss;
+    return `<button type="button" data-vitem="${c.key}" style="flex:1; padding:8px 4px; border-radius:10px; border:1px solid ${usable ? 'var(--gold)' : '#3a332a'}; background:${usable ? 'rgba(240,180,41,0.15)' : 'var(--bg-panel)'}; color:${usable ? 'var(--gold)' : 'var(--paper-dim)'}; font-size:12px; line-height:1.35; opacity:${usable ? 1 : 0.65};">
+      <div style="font-size:18px;">${c.icon}</div>
+      <div>${c.name} ×${have}</div>
+      <div style="font-size:10px;">${boss ? `이번 보스 ${used}/${c.perBoss}` : '보스전 전용'}</div>
+    </button>`;
+  }).join('');
+}
+function voidConsumableShopHtml() {
+  return `<div style="font-size:12px; color:var(--gold); text-align:left; margin:0 2px 6px;">🎒 소모품 (미니보스전 전용 · 시즌 초기화 때 사라져요)</div>` + VOID_CONSUMABLES.map(c => {
+    const have = voidItems[c.key] || 0, price = getVoidConsumableCost(c), full = have >= c.cap, can = !full && voidShards >= price;
+    return `<div style="display:flex; align-items:center; gap:8px; background:var(--bg-panel); border-radius:10px; padding:10px 12px; margin-bottom:8px;">
+      <div style="flex:1; text-align:left;">
+        <div style="font-size:13px;">${c.icon} ${c.name} <b style="color:var(--gold);">${have}/${c.cap}</b></div>
+        <div style="font-size:11px; color:var(--paper-dim); margin-top:2px;">${c.desc} · 보스 1마리당 최대 ${c.perBoss}번</div>
+      </div>
+      <button type="button" data-vbuy="${c.key}" style="min-width:86px; padding:8px 6px; border-radius:10px; border:1px solid var(--gold); background:${can ? 'var(--gold)' : 'var(--bg-panel)'}; color:${can ? '#2a1d00' : 'var(--gold)'}; font-size:12px; opacity:${full ? 0.5 : 1};">${full ? '가득 참' : '💎 ' + price.toLocaleString('ko-KR')}</button>
+    </div>`;
+  }).join('') + `<div style="font-size:12px; color:var(--gold); text-align:left; margin:10px 2px 6px;">⬆️ 영구 강화</div>`;
 }
 function renderVoidShop() {
   const box = document.getElementById('voidShopList');
   if (!box) return;
   const shardEl = document.getElementById('voidShopShards');
   if (shardEl) shardEl.textContent = voidShards.toLocaleString('ko-KR');
-  box.innerHTML = VOID_UPGRADES.map(u => {
+  box.innerHTML = voidConsumableShopHtml() + VOID_UPGRADES.map(u => {
     const lv = getVoidUpgradeLevel(u);
     const maxed = lv >= u.max;
     const cost = maxed ? 0 : u.cost(lv);
@@ -5022,6 +5118,48 @@ let isBrandNewPlayer = false;
 // 간주해 배지를 띄우고, 기존 유저가 접속하면 자동으로 한 번 띄워준다.
 const patchNotes = [
   {
+    version: '2026100622',
+    date: '2026-10-08',
+    items: [
+      '💎 공허 소모품 가격이 천 단위로 딱 떨어지게 정리됐어요 (최소 1,000)'
+    ]
+  },
+  {
+    version: '2026100621',
+    date: '2026-10-08',
+    items: [
+      '💎 공허 소모품이 후반에 너무 싸서 가격 방식을 바꿨어요! 이제 가격이 최고 웨이브에 비례해서 올라가요 (웨이브가 높을수록 조각 보상도 늘어나니 항상 비슷한 부담이에요)',
+      '💣 폭탄 = (3+웨이브)×20 · ☢️ 핵 = (3+웨이브)×100 · ⏱️ 시간 연장권 = (3+웨이브)×60 (웨이브 30 미만이면 30웨이브 기준 가격, 천 단위로 끊어요). 예) 99웨이브: 폭탄 2,000 · 핵 10,000 · 시간 연장권 6,000',
+      '🛡️ 초반에 싸게 사재기하는 건 보유 상한(폭탄 10·핵 3·시간 연장권 10)과 시즌 초기화로 막혀 있어요'
+    ]
+  },
+  {
+    version: '2026100620',
+    date: '2026-10-08',
+    items: [
+      '⚖️ 💣 폭탄이 핵보다 가성비가 너무 좋아서 하향했어요! 폭탄 피해 8~12% → 4~6%. 이제 조각당 효율은 ☢️ 핵이 조금 더 좋고, 폭탄은 싸게 조금씩 보태는 용도예요'
+    ]
+  },
+  {
+    version: '2026100619',
+    date: '2026-10-08',
+    items: [
+      '🎒 공허 소모품 등장! 🛒 차원 상점에서 사서 미니보스전 아래 버튼으로 쓰는 일회용 아이템이에요',
+      '💣 폭탄 (💎1,000 · 최대 10개): 보스 최대 체력의 4~6% 피해 · 보스 1마리당 최대 3번',
+      '☢️ 핵 (💎5,000 · 최대 3개): 보스 최대 체력의 25~35% 피해 · 보스 1마리당 1번',
+      '⏱️ 시간 연장권 (💎1,500 · 최대 10개): 보스 제한시간 +5초 · 보스 1마리당 최대 2번',
+      '⚖️ 피해가 고정 숫자가 아니라 보스 체력의 %라서 몇 웨이브든 똑같이 쓸모 있어요. 대신 한 보스에 다 쏟아부어도 체력의 약 45%까지만 깎을 수 있고, 나머지는 내 공격으로 잡아야 해요',
+      '🔄 소모품은 시즌(월) 초기화 때 차원 조각과 함께 사라져요. 오프라인 진행에는 쓰이지 않아요'
+    ]
+  },
+  {
+    version: '2026100618',
+    date: '2026-10-08',
+    items: [
+      '🎁 검 되돌리기 업데이트 기념으로 전체 유저에게 🛡️ 되돌리기 5회권을 드렸어요! ⚔️ 검 강화 창에서 보유 횟수를 확인하고, "되돌리기 사용 ON"을 켜두면 검이 파괴될 때 1회 소모해서 막아줘요'
+    ]
+  },
+  {
     version: '2026100617',
     date: '2026-10-08',
     items: [
@@ -6104,8 +6242,14 @@ document.getElementById('voidShopBtn').addEventListener('click', () => {
 document.getElementById('voidShopCloseBtn').addEventListener('click', () => {
   document.getElementById('voidShopModal').classList.remove('show');
 });
+document.getElementById('voidItemBar').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-vitem]');
+  if (b) useVoidConsumable(b.dataset.vitem);
+});
 document.getElementById('voidShopList').addEventListener('click', (e) => {
   initAudio();
+  const vb = e.target.closest('[data-vbuy]');
+  if (vb) { buyVoidConsumable(vb.dataset.vbuy); return; }
   if (e.target.closest('[data-upg-reset]')) { resetVoidShopUpgrades(); return; }
   const b = e.target.closest('[data-upg]');
   if (!b) return;
@@ -10252,7 +10396,7 @@ function buildSaveData() {
     seasonEventLoginClaimedKey, casinoGamesUnlocked,
     discoveryNudges, uiUnlocks, feverCount,
     infiniteUpgradeLevel, nameColor,
-    map6Unlocked, voidWave, voidShards, voidDamageLevel, voidEnemyHp, voidEnemyMaxHp, voidRelics, voidBestWave, voidUpgrades, voidEquipped, voidResetVersion, voidShopRefundVersion, voidLegendPity, voidBossTimeLeft,
+    map6Unlocked, voidWave, voidShards, voidDamageLevel, voidEnemyHp, voidEnemyMaxHp, voidRelics, voidBestWave, voidUpgrades, voidItems, voidEquipped, voidResetVersion, voidShopRefundVersion, voidLegendPity, voidBossTimeLeft,
     burnedTotal, burnedMonthly, mansionLevel, lastSeenPatchVersion,
     swordOwned, swordLevel, swordBestLevel, swordBreakCount,
     swordBattleWins, swordBattleSeasonKey, swordBattleCountToday, swordBattleTickets, swordBattleTicketsAt, lottoAppliedIds,
@@ -10445,10 +10589,17 @@ function applySaveData(data, opts) {
   voidShopRefundVersion = VOID_SHOP_REFUND_VERSION;
   if (map6Unlocked && voidEnemyMaxHp <= 0) startVoidWave(1);
   voidBossTimeLeft = (map6Unlocked && voidEnemyMaxHp > 0 && isVoidBossWave(voidWave)) ? getVoidBossTimeLimit() : 0;
+  voidItems = { bomb: 0, nuke: 0, time: 0 };
+  if (data.voidItems && typeof data.voidItems === 'object') {
+    for (const c of VOID_CONSUMABLES) {
+      const n = Math.floor(Number(data.voidItems[c.key]));
+      if (isFinite(n) && n > 0) voidItems[c.key] = Math.min(c.cap, n);
+    }
+  }
   // 저장해 둔 남은 시간이 있으면 그대로 이어간다(새로고침으로 보스 시간을 리셋하는 것 방지). 옛 저장본엔 값이 없어 전체 시간으로 시작한다.
   if (voidBossTimeLeft > 0 && data.voidBossTimeLeft !== undefined && data.voidBossTimeLeft !== null) {
     const savedLeft = Math.floor(Number(data.voidBossTimeLeft));
-    if (isFinite(savedLeft) && savedLeft >= 1) voidBossTimeLeft = Math.min(savedLeft, voidBossTimeLeft);
+    if (isFinite(savedLeft) && savedLeft >= 1) voidBossTimeLeft = Math.min(savedLeft, voidBossTimeLeft + VOID_TIME_EXTRA_MAX);
   }
   burnedTotal = fromBigStorable(data.burnedTotal) || 0;
   burnedMonthly = fromBigStorable(data.burnedMonthly) || 0;
