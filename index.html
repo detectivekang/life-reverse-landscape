@@ -15,7 +15,7 @@
 // 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
 // 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
 (function() {
-  var CURRENT_VERSION = '2026100616';
+  var CURRENT_VERSION = '2026100617';
   try {
     if (sessionStorage.getItem('lrVersionChecked') === CURRENT_VERSION) return;
     fetch(location.pathname + '?_cb=' + Date.now(), { cache: 'no-store' })
@@ -1350,7 +1350,7 @@
       <div style="margin:0 0 14px; text-align:left; background:var(--bg-panel); border-radius:10px; padding:12px 14px; font-size:12px; line-height:1.7;">
         <div style="color:var(--gold); font-weight:bold; margin-bottom:4px;">🎁 아이템 드랍 확률 (최고 기록을 넘기는 웨이브 1회당 · 보스 +1%p · 높은 웨이브 추가 보너스)</div>
         <div id="voidItemDropTable"></div>
-        <div style="font-size:10.5px; color:var(--paper-dim); margin-top:6px;">🍀 강화 확률 아이템은 ⚔️ 검 강화 창에서 장전해서 써요. 🛡️ 되돌리기는 얻는 즉시 보유 횟수에 더해지고, 검이 파괴될 때 자동으로 막아줘요.</div>
+        <div style="font-size:10.5px; color:var(--paper-dim); margin-top:6px;">🍀 강화 확률 아이템은 ⚔️ 검 강화 창에서 장전해서 써요. 🛡️ 되돌리기는 얻는 즉시 보유 횟수에 더해지고, ⚔️ 검 강화 창에서 <b>사용 ON</b>으로 켜두면 검이 파괴될 때 막아줘요.</div>
       </div>
       <button class="close-btn" id="voidRelicCloseBtn">닫기</button>
     </div>
@@ -1680,7 +1680,7 @@
   <div class="modal-overlay" id="swordModal">
     <div class="modal-box">
       <h2>⚔️ 검 강화</h2>
-      <p style="font-size:12px; color:var(--paper-dim); margin-top:-4px;">평범한 나뭇가지를 강화해서 전설의 무기로 키워보세요. 최대 +20강까지 가능하지만, 레벨이 오를수록 성공 확률은 낮아지고 실패하면 검이 파괴될 수도 있어요. (되돌리기 능력을 보유하고 있으면 파괴가 자동으로 막혀요) 검 랭킹·현재검 랭킹은 <b>메인 검</b> 기준이고, 매달 초기화돼요.<br>🗃️ 아래 보관함에 예비 검을 하나 더 넣어두면, 메인 검이 깨져도 바로 교체해서 이어갈 수 있어요. 메인·보관 둘 다 +20강을 채우면 하나로 합쳐서 <b>+21강 전설검</b>을 만들 수 있어요!<br>🌌 +21강 전설검은 보관함의 <b>+20강 검을 제물</b>로 바쳐 <b>각성</b>시킬 수 있어요 (최대 20단계). 실패하면 제물만 사라지고 +21강 검은 그대로예요.</p>
+      <p style="font-size:12px; color:var(--paper-dim); margin-top:-4px;">평범한 나뭇가지를 강화해서 전설의 무기로 키워보세요. 최대 +20강까지 가능하지만, 레벨이 오를수록 성공 확률은 낮아지고 실패하면 검이 파괴될 수도 있어요. (되돌리기는 <b>사용 ON</b>으로 켜둔 때만 파괴를 막아줘요. 낮은 구간에선 꺼두고 아껴 쓰세요) 검 랭킹·현재검 랭킹은 <b>메인 검</b> 기준이고, 매달 초기화돼요.<br>🗃️ 아래 보관함에 예비 검을 하나 더 넣어두면, 메인 검이 깨져도 바로 교체해서 이어갈 수 있어요. 메인·보관 둘 다 +20강을 채우면 하나로 합쳐서 <b>+21강 전설검</b>을 만들 수 있어요!<br>🌌 +21강 전설검은 보관함의 <b>+20강 검을 제물</b>로 바쳐 <b>각성</b>시킬 수 있어요 (최대 20단계). 실패하면 제물만 사라지고 +21강 검은 그대로예요.</p>
       <div style="margin:14px 0; text-align:center; background:var(--bg-panel); border-radius:10px; padding:16px 14px;">
         <div id="swordIcon" style="font-size:48px;">❔</div>
         <div id="swordName" style="margin-top:6px; font-size:15px; color:var(--gold); font-weight:bold;">검이 없어요</div>
@@ -1692,6 +1692,7 @@
         <div id="swordItemRow" style="display:flex; gap:6px;"></div>
         <div style="font-size:10.5px; color:var(--paper-dim); margin-top:6px;">공허맵 웨이브를 클리어하면 얻어요. 성공률이 오른 만큼 실패 확률이 줄어들어요.</div>
       </div>
+      <button class="start-btn" id="swordReviveToggleBtn" style="margin:0 0 10px; background:var(--bg-panel); color:var(--paper-dim); border:1px solid #3a332a;">🛡️ 되돌리기 사용 OFF</button>
       <button class="start-btn" id="swordEnhanceBtn" style="display:none;">⚒️ 강화하기</button>
       <button class="start-btn" id="swordCraftBtn" style="display:none; background:var(--bg-panel); color:var(--gold); border:1px solid var(--gold);">🎲 검 뽑기</button>
       <button class="start-btn" id="swordFuseBtn" style="display:none; background:linear-gradient(135deg,#5b3bd6,#8a4fe0); border:1px solid #c9a6ff;">🌌 전설 합성 (+21강)</button>
@@ -3673,6 +3674,7 @@ let swordMonthlyBestLevel = 0;   // 이번 달 동안 도달한 최고 강화 �
 let swordReviveCharges = 0;      // 검 파괴를 막아주는 "되돌리기" 능력 보유 횟수
 // 공허맵에서 드랍되는 "검 강화 확률 아이템" (보관해 두었다가 검 강화 창에서 장전 → 다음 강화 1회에만 적용)
 let swordBoostItems = { x15: 0, x20: 0, x25: 0 };
+let swordReviveOn = false;   // 되돌리기 사용 ON/OFF (켜져 있을 때만 파괴 순간에 횟수를 소모해서 막아준다)
 let swordBoostArmed = ''; // 장전된 아이템 키('' 이면 없음). 강화를 시도하면 1개 소모되고 풀린다.
 let swordColorBoostMonthKey = ''; // 이름색 확률 부스트가 적용되는 달(monthlyPeriodKey)
 let swordColorBoostMult = 1;      // 파랑을 제외한 이름색 확률에 곱해지는 배수
@@ -3986,6 +3988,14 @@ function awakenSword() {
   renderSwordPanel();
   saveGame({ forceCloud: true });
 }
+document.addEventListener('click', (e) => {
+  if (!e.target.closest || !e.target.closest('#swordReviveToggleBtn')) return;
+  if (!swordReviveOn && swordReviveCharges <= 0) { showToast('🛡️ 보유한 되돌리기가 없어요.'); return; }
+  swordReviveOn = !swordReviveOn;
+  showToast(swordReviveOn ? '🛡️ 되돌리기 ON · 파괴될 때 1회 소모해서 막아줘요' : '🛡️ 되돌리기 OFF · 파괴되면 검이 사라져요');
+  renderSwordPanel();
+  saveGame();
+});
 function enhanceSword() {
   if (!swordOwned) { showToast('⚔️ 먼저 검을 만들어주세요!'); return; }
   if (swordLevel >= SWORD_MAX_LEVEL) { showToast('⚔️ 이미 최고 강화 단계예요! 검 배틀로 실력을 뽐내보세요!'); return; }
@@ -4027,7 +4037,7 @@ function enhanceSword() {
     playSound('swordFail');
     showToast(`💦 강화 실패... (레벨 유지, 비용만 소모${usedBoost ? ' · 🍀 아이템도 소모' : ''})`);
   } else {
-    if (swordReviveCharges > 0) {
+    if (swordReviveOn && swordReviveCharges > 0) {
       swordReviveCharges--;
       playSound('coin');
       mascotSay([`🛡️ 되돌리기 능력이 파괴를 막아냈어요! (남은 횟수 ${swordReviveCharges}회)`]);
@@ -4056,6 +4066,14 @@ function renderSwordPanel() {
   document.getElementById('swordBreakCount').textContent = swordBreakCount;
   document.getElementById('swordMonthlyBestLevel').innerHTML = swordPowerHtml(swordMonthlyBestLevel);
   document.getElementById('swordReviveChargesText').textContent = swordReviveCharges;
+  const reviveBtn = document.getElementById('swordReviveToggleBtn');
+  if (reviveBtn) {
+    const on = swordReviveOn && swordReviveCharges > 0;
+    reviveBtn.textContent = `🛡️ 되돌리기 사용 ${on ? 'ON' : 'OFF'} (보유 ${swordReviveCharges}회)`;
+    reviveBtn.style.background = on ? 'linear-gradient(135deg,#1f6f43,#2e9e62)' : 'var(--bg-panel)';
+    reviveBtn.style.color = on ? '#fff' : 'var(--paper-dim)';
+    reviveBtn.style.borderColor = on ? '#7CFC9A' : '#3a332a';
+  }
   renderSwordItemRow();
   const enhanceBtn = document.getElementById('swordEnhanceBtn');
   const craftBtn = document.getElementById('swordCraftBtn');
@@ -5003,6 +5021,15 @@ let isBrandNewPlayer = false;
 // 함께 올려준다. lastSeenPatchVersion이 patchNotes[0].version과 다르면 "안 읽은 공지"로
 // 간주해 배지를 띄우고, 기존 유저가 접속하면 자동으로 한 번 띄워준다.
 const patchNotes = [
+  {
+    version: '2026100617',
+    date: '2026-10-08',
+    items: [
+      '🛡️ 검 되돌리기를 직접 켜고 끌 수 있어요! ⚔️ 검 강화 창의 "되돌리기 사용 ON/OFF" 버튼으로 선택해요. OFF일 땐 파괴돼도 횟수가 줄지 않으니 낮은 구간에선 꺼두고 아껴 쓰세요 (기본값은 OFF)',
+      '🏅 랭킹 목록은 상위 20명까지 보여주고, 내 순위가 밖이면 아래에 따로 이어서 보여줘요',
+      '👥 "전체 ○○명 중 ○○위" 인원이 서버 조회 상한 때문에 적게 나오던 문제를 고쳤어요'
+    ]
+  },
   {
     version: '2026100616',
     date: '2026-10-08',
@@ -9529,7 +9556,7 @@ async function dbGetDocsOrdered(collectionName, orderField, limitN, columns) {
   const PAGE_SIZE = 1000;
   const all = [];
   let from = 0;
-  for (let guard = 0; guard < 500; guard++) {
+  for (let guard = 0; guard < 3000; guard++) {
     const want = limitN ? Math.min(PAGE_SIZE, limitN - all.length) : PAGE_SIZE;
     let q = db.from(table).select(columns || '*', { count: 'exact' })
       .order(col, { ascending: false, nullsFirst: false })
@@ -9542,7 +9569,8 @@ async function dbGetDocsOrdered(collectionName, orderField, limitN, columns) {
     all.push(...rows);
     from += rows.length;
     if (limitN && all.length >= limitN) break;
-    if (typeof count === 'number' && all.length >= count) break;
+    // 서버 Max rows가 작게(예: 20) 설정돼 있으면 한 페이지가 요청 크기보다 적게 오는 게 정상이라서,
+    // 페이지 크기나 count 값으로 끝을 판단하면 전체 인원이 잘려서 집계된다. 빈 페이지가 올 때까지 계속 받는다.
   }
   return all.map(row => ({ id: row.user_id, ...toCamelRow(row) }));
 }
@@ -9958,7 +9986,7 @@ function getLeaderboardSortField(period) {
 // 랭킹창에 몇 명까지 보여줄지. 예전엔 10명이라 순위가 조금만 밀려도 안 보였는데,
 // 더 많이 보고 싶다는 요청으로 30명까지 늘렸다. 실제로 DB에서 넉넉히 더 받아와서
 // (LEADERBOARD_FETCH_LIMIT) 우리가 직접 재정렬한 뒤 그중 상위 N명만 자른다.
-const LEADERBOARD_TOP_N = 30;
+const LEADERBOARD_TOP_N = 20;
 const LEADERBOARD_FETCH_LIMIT = 100;
 
 // ===== 랭킹 값 검증 =====
@@ -10228,7 +10256,7 @@ function buildSaveData() {
     burnedTotal, burnedMonthly, mansionLevel, lastSeenPatchVersion,
     swordOwned, swordLevel, swordBestLevel, swordBreakCount,
     swordBattleWins, swordBattleSeasonKey, swordBattleCountToday, swordBattleTickets, swordBattleTicketsAt, lottoAppliedIds,
-    swordMonthlyBestLevel, swordReviveCharges, swordBoostItems, swordBoostArmed, swordColorBoostMonthKey, swordColorBoostMult, claimedSwordSeasonRewards, claimedVoidSeasonRewards, voidShopResetKey,
+    swordMonthlyBestLevel, swordReviveCharges, swordReviveOn, swordBoostItems, swordBoostArmed, swordColorBoostMonthKey, swordColorBoostMult, claimedSwordSeasonRewards, claimedVoidSeasonRewards, voidShopResetKey,
     swordStoreOwned, swordStoreLevel, swordAwaken, swordStoreAwaken,
     fateCardId, fateOffer, seasonMedals, seasonHistory, claimedMedalSeasons, medalPendingKey, bestSeasonEarned, bestMonthlyCasino, seasonCount, seasonResetKey,
     deviceId: DEVICE_ID,
@@ -10449,6 +10477,7 @@ function applySaveData(data, opts) {
       swordBoostItems[k] = isFinite(n) && n > 0 ? n : 0;
     }
   }
+  swordReviveOn = data.swordReviveOn === true;
   swordBoostArmed = (typeof data.swordBoostArmed === 'string' && swordBoostItems[data.swordBoostArmed] > 0) ? data.swordBoostArmed : '';
   swordStoreOwned = !!data.swordStoreOwned;
   swordStoreLevel = Number.isFinite(data.swordStoreLevel) ? Math.max(0, Math.min(LEGENDARY_SWORD_LEVEL, data.swordStoreLevel)) : 0;
