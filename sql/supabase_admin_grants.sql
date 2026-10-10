@@ -15,16 +15,18 @@ create table if not exists public.admin_grants (
   message    text check (char_length(message) <= 500),   -- 운영자 메시지(본문)
   note       text,                                       -- 운영자 메모(유저에게 안 보임)
   created_at timestamptz not null default now(),
+  expires_at timestamptz not null default (now() + interval '30 days'),  -- 이 시각이 지나면 우편함에서 사라진다(기본 30일)
   claimed_at timestamptz
 );
 -- (이미 이전 버전 테이블을 만들었다면 아래 3줄이 컬럼을 추가해 준다)
 alter table public.admin_grants add column if not exists title     text check (char_length(title) <= 40);
 alter table public.admin_grants add column if not exists gift_name text check (char_length(gift_name) <= 40);
 alter table public.admin_grants add column if not exists message   text check (char_length(message) <= 500);
+alter table public.admin_grants add column if not exists expires_at timestamptz not null default (now() + interval '30 days');   -- 이미 있던 우편은 지금부터 30일
 -- 지급 종류 제한 ('revive_floor' = "최소 N개가 되게 맞춰주기": 이미 N개 이상이면 아무 일도 안 하고, 모자라면 N개로 채운다)
 alter table public.admin_grants drop constraint if exists admin_grants_item_check;
 alter table public.admin_grants add constraint admin_grants_item_check
-  check (item in ('revive', 'revive_floor', 'boost_x15', 'boost_x20', 'boost_x25'));
+  check (item in ('revive', 'revive_floor', 'boost_x15', 'boost_x20', 'boost_x25', 'void_shards', 'talent_points'));
 create index if not exists admin_grants_user_idx on public.admin_grants (user_id) where claimed_at is null;
 alter table public.admin_grants enable row level security;          -- 정책 없음: 앱이 직접 읽고 쓸 수 없다
 revoke all on public.admin_grants from anon, authenticated;
@@ -41,10 +43,10 @@ begin
   if uid is null then return '[]'::jsonb; end if;
   update public.admin_grants set claimed_at = now()
    where user_id = uid and claimed_at is null and id = any(coalesce(p_applied, '{}'));
-  select coalesce(jsonb_agg(jsonb_build_object('id', id, 'item', item, 'amount', amount, 'title', title, 'gift_name', gift_name, 'message', message) order by created_at), '[]'::jsonb)
+  select coalesce(jsonb_agg(jsonb_build_object('id', id, 'item', item, 'amount', amount, 'title', title, 'gift_name', gift_name, 'message', message, 'created_at', created_at, 'expires_at', expires_at) order by created_at), '[]'::jsonb)
     into res
     from public.admin_grants
-   where user_id = uid and claimed_at is null and not (id = any(coalesce(p_applied, '{}')));
+   where user_id = uid and claimed_at is null and expires_at > now() and not (id = any(coalesce(p_applied, '{}')));
   return res;
 end $$;
 revoke all on function public.admin_grants_sync(uuid[]) from public;
@@ -52,7 +54,9 @@ grant execute on function public.admin_grants_sync(uuid[]) to authenticated;
 
 -- =====================================================================
 -- 지급하는 방법 (이 줄들만 필요할 때 실행)
---   item: 'revive'(되돌리기) | 'boost_x15' | 'boost_x20' | 'boost_x25'
+--   item: 'revive'(되돌리기) | 'revive_floor'(최소 보장) | 'boost_x15' | 'boost_x20' | 'boost_x25' | 'void_shards'(차원 조각) | 'talent_points'(특성 포인트)
+--   받는 기한: 기본 30일 (expires_at). 다르게 하려면 insert 할 때 expires_at 컬럼에 날짜를 직접 넣는다.
+--   ※ 이제 유저가 우편함에서 '받기'를 눌러야 지급된다 (자동 지급 아님). 기한이 지나면 사라지고 지급되지 않는다.
 --   title/gift_name/message 는 유저 화면에 보이는 글, note 는 운영자 메모
 --
 -- ① 특정 유저에게
