@@ -2385,7 +2385,14 @@ function writeLocalSave(obj) {
   localStorage.setItem('lifeReverseSigSeen', '1');
 }
 // 변조 의심 상태에서 서버(저장·랭킹)에 값이 올라가지 않게 하는 공용 검사.
+let accountBanned = false;   // 서버가 이 계정의 저장을 거부(banned_user)하면 켜져서, 이후 저장/랭킹 요청을 아예 보내지 않는다
+function noteBanError(err) {
+  if (accountBanned || !err || !/banned_user/.test(String(err.message || err))) return;
+  accountBanned = true;
+  try { showToast('⛔ 이 계정은 저장·랭킹 이용이 제한됐어요. 진행은 이 기기에만 저장돼요.'); } catch (e) {}
+}
 function isServerWriteBlocked(collectionName) {
+  if (accountBanned) { const n0 = String(collectionName || ''); return n0 === 'saves' || n0.indexOf('leaderboard') === 0; }
   if (!saveTamperFlag) return false;
   const n = String(collectionName || '');
   return n === 'saves' || n.indexOf('leaderboard') === 0;
@@ -7740,10 +7747,12 @@ async function syncHallOfFameBoards() {
     const updatedAt = Date.now();
     const nameColorHex = nameColor ? nameColor.color : null;
     const mansionIcon = getMansionTier().icon;
+    const hofItems = [];
     for (const cfg of HOF_ALL_TIME) {
       const v = cfg.get();
-      if (v > 0) await dbSetDoc(cfg.board, currentUser.uid, { name: currentUser.name, updatedAt, amount: cfg.big ? toBigStorable(v) : v, nameColor: nameColorHex, mansionIcon });
+      if (v > 0) hofItems.push({ c: cfg.board, d: { name: currentUser.name, updatedAt, amount: cfg.big ? toBigStorable(v) : v, nameColor: nameColorHex, mansionIcon } });
     }
+    await dbSetDocs(hofItems);
   } catch (e) {
     hofSyncSig = '';
     console.error('명예의 전당 기록 동기화 실패:', e);
@@ -10059,7 +10068,24 @@ async function dbSetDoc(collectionName, docId, data) {
   }
   const onConflict = boardKey ? 'board_key,user_id' : 'user_id';
   const { error } = await db.from(table).upsert(row, { onConflict });
-  if (error) throw error;
+  if (error) { noteBanError(error); throw error; }
+}
+
+// 랭킹 문서 여러 개를 요청 1개로 한꺼번에 upsert한다. items = [{ c: 컬렉션이름, d: 데이터 }, ...]
+// 한 줄이 서버 규칙(트리거)에 걸려 거절되면 묶음 전체가 실패하므로, 그때만 한 줄씩 다시 시도해서 정상인 것은 저장한다.
+async function dbSetDocs(items) {
+  const list = (items || []).filter(it => it && !isServerWriteBlocked(it.c));
+  if (!list.length) return;
+  const uid = currentUser.uid;
+  if (list.length === 1 || list.some(it => resolveTable(it.c).table !== 'leaderboard_entries')) { for (const it of list) await dbSetDoc(it.c, uid, it.d); return; }
+  const rows = list.map(it => ({ user_id: uid, ...toSnakeRow(it.d), board_key: resolveTable(it.c).boardKey }));
+  const { error } = await db.from('leaderboard_entries').upsert(rows, { onConflict: 'board_key,user_id' });
+  if (!error) return;
+  noteBanError(error);
+  if (accountBanned) throw error;
+  let firstErr = null;
+  for (const it of list) { try { await dbSetDoc(it.c, uid, it.d); } catch (e) { firstErr = firstErr || e; } }
+  if (firstErr) throw firstErr;
 }
 
 // 문서 하나를 읽는다. 없으면 null, 있으면 { id, ...필드 } 형태로 반환한다.
@@ -10081,7 +10107,7 @@ async function dbUpdateDoc(collectionName, docId, data) {
   let q = db.from(table).update(toSnakeRow(data)).eq('user_id', docId);
   if (boardKey) q = q.eq('board_key', boardKey);
   const { error } = await q;
-  if (error) throw error;
+  if (error) { noteBanError(error); throw error; }
 }
 
 // 컬렉션을 특정 필드 기준 내림차순으로 정렬해서 가져온다. limitN이 없으면 전체를 가져온다.
@@ -10305,12 +10331,20 @@ document.getElementById('nicknameSaveBtn').addEventListener('click', saveNicknam
 
 // 클라우드 세이브에 적힌 deviceId가 "내가 마지막으로 본/쓴 것"이 아니면, 그 사이 다른 기기가 저장했다는 뜻이다.
 // 그 상태에서 내 (오래된) 진행으로 덮어쓰면 안 되므로 저장을 멈추고 안내 창을 띄운다. 충돌이면 true.
+let deviceCheckedOkAt = 0;
 async function deviceConflictCheck() {
-  if (!currentUser || !db || !cloudSeenKnown || deviceDisplaced) return false;
+  if (!currentUser || !db || !cloudSeenKnown || deviceDisplaced || accountBanned) return false;
+  if (Date.now() - deviceCheckedOkAt < 180000) return false;   // 최근 3분 안에 확인했고 문제 없었으면 저장마다 다시 묻지 않는다
   let cur = null;
-  try { cur = await dbGetDoc('saves', currentUser.uid); } catch (e) { return false; }   // 확인 자체가 실패하면 기존처럼 진행
+  try {
+    // 세이브 전체(수십 KB)를 매번 내려받지 않고 deviceId 한 줄만 읽는다 → 서버 전송량(egress) 절약
+    const { data: row, error } = await db.from('saves').select('device:data->>deviceId').eq('user_id', currentUser.uid).maybeSingle();
+    if (error) throw error;
+    cur = row ? { deviceId: row.device || null } : null;
+  } catch (e) { return false; }   // 확인 자체가 실패하면 기존처럼 진행
   const curDevice = cur ? (cur.deviceId || null) : null;
   if (cur && curDevice !== DEVICE_ID && curDevice !== cloudSeenDevice) { showDeviceConflict(); return true; }
+  deviceCheckedOkAt = Date.now();
   return false;
 }
 function showDeviceConflict() {
@@ -10343,7 +10377,7 @@ async function resumeFromCloud() {
 }
 document.getElementById('deviceConflictBtn').addEventListener('click', resumeFromCloud);
 let lastDeviceCheck = 0;
-function deviceCheckSoon() { if (Date.now() - lastDeviceCheck < 5000) return; lastDeviceCheck = Date.now(); deviceConflictCheck(); }
+function deviceCheckSoon() { if (Date.now() - lastDeviceCheck < 5000) return; lastDeviceCheck = Date.now(); deviceCheckedOkAt = 0; deviceConflictCheck(); }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) deviceCheckSoon(); });   // 다른 앱/탭에 갔다 돌아왔을 때 바로 확인
 window.addEventListener('focus', deviceCheckSoon);
 
@@ -10479,7 +10513,7 @@ function openMailbox() {
 }
 // 서버 우편 목록 가져오기 (자동 지급하지 않음 — 우편함에서 받아야 지급)
 async function syncAdminGrants() {
-  if (adminGrantBusy || !currentUser || !db || deviceDisplaced) return;
+  if (adminGrantBusy || !currentUser || !db || deviceDisplaced || accountBanned) return;
   adminGrantBusy = true;
   try {
     const { data, error } = await db.rpc('admin_grants_sync', { p_applied: grantAppliedIds });
@@ -10493,7 +10527,7 @@ async function syncAdminGrants() {
   } catch (e) { console.warn('[우편] 처리 실패', e); }
   finally { adminGrantBusy = false; }
 }
-setInterval(() => { if (!document.hidden) { syncAdminGrants(); if (purgeExpiredMails()) updateMailBadge(); } }, 120000);
+setInterval(() => { if (!document.hidden) { syncAdminGrants(); if (purgeExpiredMails()) updateMailBadge(); } }, 300000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(syncAdminGrants, 1500); });
 
 async function cloudSaveGame(dataObj, opts) {
@@ -10661,6 +10695,10 @@ async function claimReferralRewards() {
 // ----- 공허 랭킹(이번 시즌 최고 웨이브) -----
 // 신기록 웨이브를 깰 때마다 전체 동기화(7개 보드)를 돌리면 낭비라서, 공허 보드만 따로 가볍게 올린다.
 // voidRankDirty가 켜져 있으면 10초마다 한 번 올리고(로그인 전이면 로그인 후에), 전체 동기화 때도 함께 올라간다.
+function voidRankItem() {
+  if (!currentUser || !db || deviceDisplaced || !map6Unlocked) return null;
+  return { c: `leaderboard_void_monthly_${monthlyPeriodKey}`, d: { name: currentUser.name, updatedAt: Date.now(), amount: voidBestWave, nameColor: nameColor ? nameColor.color : null, mansionIcon: getMansionTier().icon } };
+}
 async function writeVoidRankDoc() {
   if (!currentUser || !db || deviceDisplaced) return false;
   if (!map6Unlocked) return false; // 최고 웨이브가 0으로 초기화된 경우에도 덮어써서 예전 기록이 보드에 남지 않게 한다
@@ -10674,8 +10712,37 @@ setInterval(() => {
   if (!voidRankDirty || !currentUser || !db) return;
   voidRankDirty = false;
   writeVoidRankDoc().catch(() => { voidRankDirty = true; });
-}, 10000);
-async function syncLeaderboard() {
+}, 120000);
+// 요청 폭주 방지: 한 번의 동기화가 서버 요청 7~10개라서, 카지노 연타/검 강화 때마다 부르면 요청이 순식간에 쌓인다.
+//  · 일반 호출은 3분에 한 번, 강제 호출(forceSync)은 30초에 한 번만 실제로 보내고, 그 사이 호출은 마지막에 한 번으로 합친다.
+//  · 보낼 내용이 직전과 같으면(heartbeat 10분 제외) 보내지 않는다.
+const LB_MIN_GAP_MS = 180000, LB_FORCE_GAP_MS = 30000, LB_HEARTBEAT_MS = 600000;
+let lbLastSyncAt = 0, lbSyncTimer = null, lbRunning = false, lbLastSig = '', lbLastForce = false;
+function leaderboardSig() {
+  return [currentUser && currentUser.name, casinoTotalWinnings, weeklyWinnings, monthlyWinnings, swordBattleWins, getMySwordPower(), swordMonthlyBestLevel,
+    nameColor && nameColor.color, getMansionTier().icon, weeklyPeriodKey, monthlyPeriodKey, voidBestWave, voidRankDirty].join('|');
+}
+async function runLeaderboardSync() {
+  lbRunning = true; lbLastSyncAt = Date.now();
+  try {
+    const sig = leaderboardSig();
+    if (sig === lbLastSig && Date.now() - lbLastSig_t < LB_HEARTBEAT_MS) return;
+    await syncLeaderboardNow();
+    lbLastSig = sig; lbLastSig_t = Date.now();
+  } finally { lbRunning = false; }
+}
+let lbLastSig_t = 0;
+function syncLeaderboard(opts) {
+  if (!currentUser || !db || deviceDisplaced || accountBanned) return Promise.resolve();
+  const force = !!(opts && opts.forceSync);
+  if (force) lbLastForce = true;
+  const gap = lbLastForce ? LB_FORCE_GAP_MS : LB_MIN_GAP_MS;
+  const wait = lbLastSyncAt + gap - Date.now();
+  if (wait <= 0 && !lbRunning) { lbLastForce = false; return runLeaderboardSync(); }
+  if (!lbSyncTimer) lbSyncTimer = setTimeout(() => { lbSyncTimer = null; lbLastForce = false; syncLeaderboard(); }, Math.max(1500, wait));
+  return Promise.resolve();
+}
+async function syncLeaderboardNow() {
   if (!currentUser || !db || deviceDisplaced) return;
   try {
     checkPeriodRollover();
@@ -10690,21 +10757,26 @@ async function syncLeaderboard() {
     const updatedAt = Date.now();
     const nameColorHex = nameColor ? nameColor.color : null;
     const mansionIcon = getMansionTier().icon;
-    await dbSetDoc('leaderboard', currentUser.uid, { name, updatedAt, tierName: overallTier.name, tierIcon: overallTier.icon, amount: toBigStorable(casinoTotalWinnings), nameColor: nameColorHex, mansionIcon });
-    await dbSetDoc(`leaderboard_weekly_${weeklyPeriodKey}`, currentUser.uid, { name, updatedAt, tierName: weeklyTier.name, tierIcon: weeklyTier.icon, amount: toBigStorable(weeklyWinnings), nameColor: nameColorHex, mansionIcon });
-    await dbSetDoc(`leaderboard_monthly_${monthlyPeriodKey}`, currentUser.uid, { name, updatedAt, tierName: monthlyTier.name, tierIcon: monthlyTier.icon, amount: toBigStorable(monthlyWinnings), nameColor: nameColorHex, mansionIcon });
-    // 검배틀 랭킹(승점) 매치메이킹용 문서: 상대 검색은 검 레벨(swordLevel) 기준이라
-    // 이 컬렉션은 시즌과 무관하게 계속 재사용한다(matchmaking pool).
-    // sword_level / 월간 amount에는 각성 단계를 포함한 "실질 레벨(최대 41)"이 들어간다. 서버 트리거가 21까지만 허용하면 여기서 거절될 수 있어서, 이 두 줄이 실패해도 나머지 랭킹은 계속 동기화한다.
-    try { await dbSetDoc('leaderboard_sword', currentUser.uid, { name, updatedAt, amount: swordBattleWins, nameColor: nameColorHex, mansionIcon, swordLevel: getMySwordPower() }); } catch (e) { console.warn('검 현재레벨 동기화 실패(서버 한도 확인 필요):', e); }
-    // [변경] 검배틀 랭킹(승점) 순위 표시는 매달 초기화되도록 월별 컬렉션에 별도로 기록한다.
-    // (예전엔 leaderboard_sword 하나를 전체기간 누적으로 계속 써서, 새 시즌이 와도
-    // 지난 시즌 승점이 그대로 순위에 남아있는 문제가 있었음)
-    await dbSetDoc(`leaderboard_sword_battle_${monthlyPeriodKey}`, currentUser.uid, { name, updatedAt, amount: swordBattleWins, nameColor: nameColorHex, mansionIcon });
-    // 검 랭킹(월간, 이번 달 최고 강화 레벨 기준)
-    try { await dbSetDoc(`leaderboard_sword_monthly_${monthlyPeriodKey}`, currentUser.uid, { name, updatedAt, amount: swordMonthlyBestLevel, nameColor: nameColorHex, mansionIcon }); } catch (e) { console.warn('검 월간 랭킹 동기화 실패(서버 한도 확인 필요):', e); }
-    // 공허 랭킹(이번 시즌 최고 웨이브)
-    if (await writeVoidRankDoc()) voidRankDirty = false;
+    // 서버 요청을 아끼려고 랭킹 줄들을 묶어서 보낸다: ① 일반 랭킹 묶음 1번 ② 검 랭킹 묶음 1번(서버 한도에 걸려도 ①은 안전)
+    const common = { name, updatedAt, nameColor: nameColorHex, mansionIcon };
+    const groupA = [
+      { c: 'leaderboard', d: { ...common, tierName: overallTier.name, tierIcon: overallTier.icon, amount: toBigStorable(casinoTotalWinnings) } },
+      { c: `leaderboard_weekly_${weeklyPeriodKey}`, d: { ...common, tierName: weeklyTier.name, tierIcon: weeklyTier.icon, amount: toBigStorable(weeklyWinnings) } },
+      { c: `leaderboard_monthly_${monthlyPeriodKey}`, d: { ...common, tierName: monthlyTier.name, tierIcon: monthlyTier.icon, amount: toBigStorable(monthlyWinnings) } },
+      // 검배틀 랭킹(승점)은 매달 초기화되도록 월별 컬렉션에 기록
+      { c: `leaderboard_sword_battle_${monthlyPeriodKey}`, d: { ...common, amount: swordBattleWins } },
+    ];
+    const voidItem = voidRankItem();   // 공허 랭킹(이번 시즌 최고 웨이브)
+    if (voidItem) groupA.push(voidItem);
+    await dbSetDocs(groupA);
+    if (voidItem) voidRankDirty = false;
+    // 검 현재 레벨(배틀 매칭용)·검 월간 랭킹: 서버 한도에 걸려 거절될 수 있어서 따로 보내고, 실패해도 위 랭킹은 계속 동기화한다.
+    try {
+      await dbSetDocs([
+        { c: 'leaderboard_sword', d: { ...common, amount: swordBattleWins, swordLevel: getMySwordPower() } },
+        { c: `leaderboard_sword_monthly_${monthlyPeriodKey}`, d: { ...common, amount: swordMonthlyBestLevel } },
+      ]);
+    } catch (e) { console.warn('검 랭킹 동기화 실패(서버 한도 확인 필요):', e); }
     // 명예의 전당(역대 전설) 기록은 값이 바뀐 때만 따로 기록한다
     await syncHallOfFameBoards();
   } catch (e) {
@@ -11011,7 +11083,9 @@ function buildSaveData() {
 }
 
 let lastCloudSaveTime = 0;
-const CLOUD_SAVE_MIN_INTERVAL = 30000; // 클라우드 저장은 최소 30초 간격으로만 (세션 종료 시엔 강제 저장)
+const CLOUD_SAVE_MIN_INTERVAL = 120000; // 일반 자동저장은 최소 2분 간격 (로컬 저장은 즉시, 세션 종료 시엔 클라우드도 즉시 저장)
+const CLOUD_FORCE_MIN_INTERVAL = 20000;  // 강제 저장(검 강화·구매 등)도 20초에 한 번으로 합친다 — 마지막 상태는 곧이어 한 번 더 저장됨
+let cloudForceTimer = null;
 
 function saveGame(opts) {
   if (deviceDisplaced) return;   // 다른 기기가 먼저 저장한 상태에서는 이 화면이 저장(로컬 포함)하지 않는다
@@ -11046,9 +11120,13 @@ function saveGame(opts) {
   writeLocalSave(data); // 로컬 저장은 항상 즉시 (비용 없음)
   if (currentUser && db) {
     const now = Date.now();
-    if (forceCloud || now - lastCloudSaveTime > CLOUD_SAVE_MIN_INTERVAL) {
+    const urgent = !!(opts && opts.noCheck);   // 앱이 닫히는 중: 기다리지 않고 바로 저장
+    if (urgent || (forceCloud && now - lastCloudSaveTime > CLOUD_FORCE_MIN_INTERVAL) || now - lastCloudSaveTime > CLOUD_SAVE_MIN_INTERVAL) {
+      if (cloudForceTimer) { clearTimeout(cloudForceTimer); cloudForceTimer = null; }
       lastCloudSaveTime = now;
-      cloudSaveGame(data, { noCheck: !!(opts && opts.noCheck) });
+      cloudSaveGame(data, { noCheck: urgent });
+    } else if (forceCloud && !cloudForceTimer) {
+      cloudForceTimer = setTimeout(() => { cloudForceTimer = null; saveGame({ forceCloud: true }); }, CLOUD_FORCE_MIN_INTERVAL - (now - lastCloudSaveTime) + 300);
     }
   }
 }
@@ -11518,8 +11596,8 @@ const Analytics = (() => {
     on('inviteCopyBtn', 'click', () => track('invite_click', { k: 'copy' }));
     on('rankOpenBtn', 'click', () => track('rank_open'));
     document.addEventListener('visibilitychange', () => { if (document.hidden) flush(); });
-    setInterval(flush, 20000);
-    setInterval(ping, 60000);
+    setInterval(flush, 60000);
+    setInterval(ping, 300000);
     setTimeout(appOpen, 1500);   // 세이브를 불러온 뒤의 진행도(te)를 담기 위해 잠깐 뒤에
   }
   init();
@@ -12072,7 +12150,7 @@ const Lotto = (() => {
   function tick() {
     if (isOpen()) {
       paintBoard();
-      if (S && Date.now() - lastFetch > 20000 && !fetching && Date.now() >= retryAt) refresh();
+      if (S && Date.now() - lastFetch > (isOpen() ? 30000 : 300000) && !fetching && Date.now() >= retryAt) refresh();
     }
     if (!enabled()) return;
     if (!S) { if (!fetching && Date.now() >= retryAt) refresh(); return; }
