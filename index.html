@@ -12013,7 +12013,7 @@ const Lotto = (() => {
   }
 
   // ---------- 1·2등 전 서버 공지 + 축하하기 ----------
-  let pendingClaps = 0, clapFlush = 0, annPoll = 0;
+  let pendingClaps = 0, clapFlush = 0, annPoll = 0, annFlush = 0;
   function announce(res) {
     return new Promise(resolve => {
       const best = res.top[0].rank, ws = res.top.filter(t => t.rank === best), ann = $('lottoAnn');
@@ -12029,14 +12029,22 @@ const Lotto = (() => {
       [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => tone(f, .25, 'triangle', .07), i * 140));
       const pull = async () => { try { const d = await rpc('lotto_congrats', { p_round: res.round, p_add: 0 }); total = Math.max(total, d.total); clapCache[res.round] = total; $('ltAnnCount').textContent = total.toLocaleString('ko-KR'); } catch (e) { /* 다음 주기에 재시도 */ } };
       const flush = async () => { if (!pendingClaps) return; const n = pendingClaps; pendingClaps = 0; try { const d = await rpc('lotto_congrats', { p_round: res.round, p_add: n }); total = Math.max(total, d.total); clapCache[res.round] = total; $('ltAnnCount').textContent = total.toLocaleString('ko-KR'); } catch (e) { /* 무시 */ } };
-      pull(); annPoll = setInterval(() => { flush(); pull(); }, 3000);
+      // 요청 수 줄이기: 합계 갱신(pull)은 60초 주기 · 화면이 숨겨지면 중단 · 공지가 열린 지 3분 지나면 자동 중단(축하를 누르면 재개).
+      // 축하 전송(flush)은 누른 게 있을 때만 요청이 나가므로 3초 주기를 유지(0이면 요청 없음).
+      let annOpenAt = Date.now(), annIdle = false;
+      const PULL_MS = 60000, PULL_MAX = 180000;
+      const pullTick = () => { if (document.hidden) return; if (Date.now() - annOpenAt > PULL_MAX) { annIdle = true; return; } pull(); };
+      const onVis = () => { if (!document.hidden && !annIdle) pull(); };
+      document.addEventListener('visibilitychange', onVis);
+      pull(); annPoll = setInterval(pullTick, PULL_MS); annFlush = setInterval(flush, 3000);
       $('ltAnnCongrats').onclick = e => {
+        annOpenAt = Date.now(); annIdle = false;
         total++; pendingClaps++; $('ltAnnCount').textContent = total.toLocaleString('ko-KR'); tone(900 + rndInt(300), .08, 'triangle', .06);
         const r = e.currentTarget.getBoundingClientRect(), f = document.createElement('div');
         f.className = 'lt-clap'; f.textContent = ['👏', '🎉', '✨', '🥳'][rndInt(4)]; f.style.left = (r.left + r.width * (.2 + Math.random() * .6)) + 'px'; f.style.top = r.top + 'px';
         document.body.appendChild(f); setTimeout(() => f.remove(), 1100);
       };
-      $('ltAnnClose').onclick = async () => { clearInterval(annPoll); clearInterval(fx.fw); await flush(); ann.classList.remove('show'); resolve(); };
+      $('ltAnnClose').onclick = async () => { clearInterval(annPoll); clearInterval(annFlush); document.removeEventListener('visibilitychange', onVis); clearInterval(fx.fw); await flush(); ann.classList.remove('show'); resolve(); };
     });
   }
 
