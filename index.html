@@ -1311,7 +1311,7 @@
       <button class="map-btn" id="mapBtn6" data-map="map6" style="display:none;">⑥ 공허</button>
     </div>
     <div class="top-actions">
-      <button class="icon-btn" id="loginBtn" title="로그인">👤</button>
+      <button class="icon-btn" id="loginBtn" title="프로필">👤</button>
       <button class="icon-btn" id="rankTopBtn" title="랭킹">🏅</button>
       <button class="icon-btn" id="dailyBtn" title="일일 미션">📅<span class="badge" id="dailyPointBadge" style="display:none;"></span></button>
       <button class="icon-btn" id="talentBtn" title="특성">🌳<span class="badge" id="talentPointBadge" style="display:none;"></span></button>
@@ -1678,9 +1678,11 @@
 
   <div class="modal-overlay" id="loginModal">
     <div class="modal-box">
-      <h2>👤 계정</h2>
+      <h2 id="loginTitle">👤 계정</h2>
       <p id="loginGateMsg" style="display:none; color:#ffb74d; font-weight:bold;">🔒 1억원을 넘기려면 구글 로그인이 필요해요. 로그인하면 계속 진행할 수 있어요!</p>
       <p id="loginStatus">로그인되어 있지 않습니다 (이 기기에만 저장됩니다)</p>
+      <div id="profileCard" style="display:none; margin: 2px 0 10px;"></div>
+      <button class="close-btn" id="renameBtn" style="display:none; margin-bottom:8px;">✏️ 이름 바꾸기</button>
       <div id="nicknameSection" style="display:none; margin: 4px 0 12px;">
         <input type="text" id="nicknameInput" maxlength="10" placeholder="닉네임 입력 (최대 10자)"
           style="width:100%; padding:9px; border-radius:8px; border:1px solid #3a332a; background:#1c170f; color:var(--paper); font-size:12px; box-sizing:border-box; margin-bottom:6px;">
@@ -10220,17 +10222,71 @@ function updateLoginUI() {
   const statusEl = document.getElementById('loginStatus');
   if (statusEl) {
     statusEl.textContent = currentUser
-      ? `${currentUser.name}님으로 로그인됨 (구글)`
+      ? '구글 계정으로 로그인됨'
       : '로그인되어 있지 않습니다 (이 기기에만 저장됩니다)';
   }
   const logoutBtn = document.getElementById('logoutBtn');
   if (logoutBtn) logoutBtn.style.display = currentUser ? 'block' : 'none';
   const nicknameSection = document.getElementById('nicknameSection');
+  const renameBtn = document.getElementById('renameBtn');
+  if (!currentUser) profileRenaming = false;
   if (nicknameSection) {
-    nicknameSection.style.display = currentUser ? 'block' : 'none';
-    if (currentUser) document.getElementById('nicknameInput').value = currentUser.name;
+    nicknameSection.style.display = currentUser && profileRenaming ? 'block' : 'none';
+    if (currentUser && !profileRenaming) document.getElementById('nicknameInput').value = currentUser.name;
   }
+  if (renameBtn) renameBtn.style.display = currentUser && !profileRenaming ? 'block' : 'none';
+  renderProfile();
 }
+
+// ===== 프로필 (계정 창): 로그인했을 때 내 핵심 정보를 한눈에 보여준다 =====
+let profileRenaming = false;
+function renderProfile() {
+  const card = document.getElementById('profileCard');
+  const title = document.getElementById('loginTitle');
+  if (!card) return;
+  if (!currentUser) { card.style.display = 'none'; card.textContent = ''; if (title) title.textContent = '👤 계정'; return; }
+  if (title) title.textContent = '👤 프로필';
+  const esc = escapeHtml;
+  const st = LIFE_STAGES[getLifeStageIndex()];
+  const mt = getMansionTier(), rt = getRankTier();
+  const myP = getMySwordPower();
+  const nc = nameColor && safeCssColor(nameColor.color) ? safeCssColor(nameColor.color) : '';
+  const nameHtml = `<span${nc ? ` style="color:${nc};font-weight:bold;"` : ' style="font-weight:bold;"'}>${mt.icon ? esc(mt.icon) + ' ' : ''}${esc(currentUser.name || '익명')}</span>`;
+  const row = (icon, label, val) => `<div style="background:#241f17;border:1px solid #3a332a;border-radius:10px;padding:7px 9px;text-align:left;min-width:0;"><div style="font-size:10px;color:#bba978;">${icon} ${label}</div><div style="font-size:13px;font-weight:700;color:#f4ead2;margin-top:2px;word-break:keep-all;overflow-wrap:anywhere;">${val}</div></div>`;
+  const swordVal = myP < 0 ? '없음' : `${swordMiniImg(myP)} ${swordPowerHtml(myP)}`;
+  const swordSub = myP < 0 ? '' : `<div style="font-size:10px;color:#bba978;font-weight:400;margin-top:1px;">${esc(getSwordPowerName(myP))}</div>`;
+  card.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:12px;background:#2a241b;border:1px solid rgba(230,182,62,.4);">
+      <div id="profAvatar" style="width:64px;height:64px;flex:none;display:flex;align-items:center;justify-content:center;font-size:44px;"></div>
+      <div style="text-align:left;min-width:0;">
+        <div style="font-size:16px;">${nameHtml}</div>
+        <div style="font-size:11px;color:#bba978;margin-top:3px;">${esc(st.name)}</div>
+        <div style="font-size:11px;color:#bba978;margin-top:1px;">${esc(rt.icon || '')} 카지노 ${esc(rt.name)} 등급</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;">
+      ${row('💰', '재산', esc(formatWon(money)) + '원')}
+      ${row('🏠', '집', mt.icon ? `${esc(mt.icon)} ${esc(mt.name)}` : esc(mt.name))}
+      ${row('⚔️', '현재 검', swordVal + swordSub)}
+      ${row('🏅', '검 최고 기록', swordPowerHtml(Math.max(0, swordMonthlyBestLevel || 0)) + '<div style="font-size:10px;color:#bba978;font-weight:400;margin-top:1px;">이번 달</div>')}
+      ${row('🌌', '공허 최고 웨이브', Math.max(0, voidBestWave || 0).toLocaleString('ko-KR') + ' 웨이브')}
+      ${row('💎', '차원 조각', Math.floor(voidShards || 0).toLocaleString('ko-KR'))}
+      ${row('🎨', '이름 색', nameColor ? `<span style="color:${nc || 'inherit'}">${esc(nameColor.name)}</span>` : '기본(무색)')}
+      ${row('🔄', '환생', (rebirthCount || 0).toLocaleString('ko-KR') + '회')}
+    </div>`;
+  card.style.display = 'block';
+  paintAvatar(card.querySelector('#profAvatar'), st, 60, true);
+}
+document.getElementById('renameBtn').addEventListener('click', () => {
+  profileRenaming = true; updateLoginUI();
+  const inp = document.getElementById('nicknameInput'); if (inp) { inp.focus(); inp.select(); }
+});
+document.getElementById('nicknameInput').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); saveNickname(); } });
+// 창이 열릴 때 최신 정보로 다시 그리고, 닫히면 이름 입력 상태를 풀어준다
+new MutationObserver(() => {
+  const open = document.getElementById('loginModal').classList.contains('show');
+  if (open) renderProfile(); else if (profileRenaming) { profileRenaming = false; updateLoginUI(); }
+}).observe(document.getElementById('loginModal'), { attributes: true, attributeFilter: ['class'] });
 
 function saveNickname() {
   if (!currentUser) return;
@@ -10240,6 +10296,7 @@ function saveNickname() {
   customNickname = newName;
   currentUser.name = newName;
   localStorage.setItem('lifeReverseNickname', newName);
+  profileRenaming = false;
   updateLoginUI();
   showToast(`닉네임이 "${newName}"(으)로 변경되었습니다!`);
   syncLeaderboard();
