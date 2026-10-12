@@ -24,7 +24,7 @@
       // 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
       // 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
       (function () {
-        var CURRENT_VERSION = "2026101222";
+        var CURRENT_VERSION = "2026101223";
         try {
           if (sessionStorage.getItem("lrVersionChecked") === CURRENT_VERSION)
             return;
@@ -21097,7 +21097,7 @@
         const esc = escapeHtml,
           nf = (n) => Number(n).toLocaleString("ko-KR");
         const btnCss =
-          "padding:7px 4px;border-radius:999px;border:2px solid #e6b63e;background:#e6b63e;color:#2b2118;font-weight:800;font-size:12px;cursor:pointer;flex:1;";
+          "padding:7px 4px 6px;border-radius:12px;border:2px solid #e6b63e;background:#e6b63e;color:#2b2118;cursor:pointer;flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;line-height:1.25;";
         let html = `<div style="font-size:18px;font-weight:800;color:#ffd75e;">🛒 상점</div>`;
         if (!data) {
           html += `<div style="padding:26px 0;color:#bba978;font-size:13px;">${esc(msg)}</div>`;
@@ -21118,21 +21118,22 @@
             html += `<div style="text-align:left;background:#2a241b;border:1px solid rgba(230,182,62,.3);border-radius:12px;padding:10px 12px;margin-bottom:8px;">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
           <div style="font-weight:800;font-size:14px;color:#ffe9a8;">${SHOP_ICON[it.grant_item] || "🎁"} ${esc(it.name)}</div>
-          <div style="font-weight:800;font-size:13px;white-space:nowrap;">${shopRuby()} ${nf(it.price)}</div></div>
-        <div style="font-size:11px;color:#bba978;margin-top:3px;">${esc(it.desc || "")}${left == null ? "" : ` · 이번 주 ${it.bought_week || 0}/${it.weekly_limit}`}</div>
+          <div style="font-size:11px;color:#bba978;white-space:nowrap;">개당 <b style="font-size:14px;color:#fff;">${shopRuby()} ${nf(it.price)}</b></div></div>
+        <div style="font-size:11px;color:#bba978;margin-top:3px;">${esc(it.desc || "")}${left == null ? "" : ` · 이번 주 ${it.bought_week || 0}/${it.weekly_limit}개 구매`}</div>
         <div style="display:flex;gap:6px;margin-top:8px;">${
           soldOut
             ? `<div style="flex:1;text-align:center;font-size:12px;color:#bba978;padding:6px;">이번 주 매진 (월요일에 다시 열려요)</div>`
             : opts
                 .map((q) => {
                   const p = shopPriceFor(it, q),
-                    off = p < it.price * q;
-                  return `<button class="shopBuyBtn" data-id="${esc(it.id)}" data-q="${q}" style="${btnCss}">×${q} · ${nf(p)}${off ? `<div style="font-size:10px;font-weight:700;">묶음 ${Number(it.bundle_discount)}%↓</div>` : ""}</button>`;
+                    off = p < it.price * q,
+                    can = Number(data.ruby) >= p;
+                  return `<button class="shopBuyBtn" data-id="${esc(it.id)}" data-q="${q}" style="${btnCss}${can ? "" : "opacity:.5;"}"><span style="font-size:11px;font-weight:700;">${q}개 구매</span><span style="font-size:14px;font-weight:900;">${shopRuby(1)} ${nf(p)}</span>${off ? `<span style="font-size:10px;font-weight:800;color:#9a3d00;">${Number(it.bundle_discount)}% 할인</span>` : ""}</button>`;
                 })
                 .join("")
         }</div></div>`;
           }
-          html += `<div style="font-size:10px;color:#8f8566;margin-top:6px;line-height:1.5;">구매한 아이템은 바로 지급돼요. 루비는 카지노·로또에는 쓸 수 없어요.<br>💎 차원 조각은 시즌이 바뀌는 매월 1일에 초기화돼요. 🍀 주문서와 🛡️ 되돌리기는 시즌이 바뀌어도 유지돼요.</div>`;
+          html += `<div style="font-size:10px;color:#8f8566;margin-top:6px;line-height:1.5;">구매한 아이템은 바로 지급돼요. 많이 한 번에 사면 할인돼요(버튼에 할인율 표시). 루비는 카지노·로또에는 쓸 수 없어요.<br>💎 차원 조각은 시즌이 바뀌는 매월 1일에 초기화돼요. 🍀 주문서와 🛡️ 되돌리기는 시즌이 바뀌어도 유지돼요.</div>`;
         }
         html += `<button id="shopCloseBtn" style="margin-top:12px;padding:9px 34px;border-radius:999px;border:2px solid #e6b63e;background:transparent;color:#e6b63e;font-weight:800;font-size:14px;cursor:pointer;">닫기</button>`;
         card.innerHTML = html;
@@ -21146,7 +21147,13 @@
         card.querySelectorAll(".shopBuyBtn").forEach((b) => {
           b.onclick = () => {
             const it = (data.items || []).find((x) => x.id === b.dataset.id);
-            if (it) buyShopItem(box, it, Number(b.dataset.q));
+            if (!it) return;
+            const q = Number(b.dataset.q);
+            if (Number(data.ruby) < shopPriceFor(it, q)) {
+              showToast("루비가 부족해요. 먼저 충전해 주세요");
+              return;
+            }
+            buyShopItem(box, it, q);
           };
         });
       }
