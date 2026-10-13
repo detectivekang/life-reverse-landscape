@@ -24,7 +24,7 @@
       // 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
       // 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
       (function () {
-        var CURRENT_VERSION = "2026101328";
+        var CURRENT_VERSION = "2026101329";
         try {
           if (sessionStorage.getItem("lrVersionChecked") === CURRENT_VERSION)
             return;
@@ -6240,6 +6240,17 @@
           >
             🔥 지금 가진 돈 전부 태우기
           </button>
+          <p
+            id="rankDelayNote"
+            style="
+              font-size: 11px;
+              color: var(--paper-dim);
+              text-align: center;
+              margin: 8px 0 0;
+            "
+          >
+            ⏱️ 랭킹은 실시간이 아니라, 반영되는 데 몇 분 정도 걸려요
+          </p>
           <div id="leaderboardList" class="leaderboard-list">
             <p style="font-size: 11px; color: var(--paper-dim)">
               불러오는 중...
@@ -13621,6 +13632,13 @@
       // 함께 올려준다. lastSeenPatchVersion이 patchNotes[0].version과 다르면 "안 읽은 공지"로
       // 간주해 배지를 띄우고, 기존 유저가 접속하면 자동으로 한 번 띄워준다.
       const patchNotes = [
+        {
+          version: "2026101329",
+          date: "2026-10-13",
+          items: [
+            "⏱️ 랭킹창에 \"랭킹은 실시간이 아니라 반영되는 데 몇 분 정도 걸려요\" 안내를 추가했어요. 방금 올린 기록이 바로 안 보여도 잠시 뒤에 반영돼요",
+          ],
+        },
         {
           version: "2026101328",
           date: "2026-10-13",
