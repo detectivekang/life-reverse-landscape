@@ -24,7 +24,7 @@
       // 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
       // 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
       (function () {
-        var CURRENT_VERSION = "2026101405";
+        var CURRENT_VERSION = "2026101407";
         try {
           if (sessionStorage.getItem("lrVersionChecked") === CURRENT_VERSION)
             return;
@@ -3379,6 +3379,30 @@
         color: var(--ink);
         font-weight: bold;
         border-color: var(--gold);
+      }
+      /* 시즌 등급 표시 (검배틀·공허 랭킹 줄) */
+      .lb-grade {
+        font-weight: bold;
+        white-space: nowrap;
+      }
+      .lb-grade-champion {
+        color: #ffd24a;
+        text-shadow: 0 0 6px rgba(255, 210, 74, 0.6);
+      }
+      .lb-grade-master {
+        color: #d9a7ff;
+      }
+      .lb-grade-platinum {
+        color: #8fe6ff;
+      }
+      .lb-grade-gold {
+        color: #f0c84a;
+      }
+      .lb-grade-silver {
+        color: #cfd3d8;
+      }
+      .lb-grade-bronze {
+        color: #cd8a5a;
       }
       .rank-cat-btn[data-cat="records"] {
         opacity: 0.9;
@@ -10562,6 +10586,7 @@
             <li>보스를 시간 안에 못 잡으면 <b>직전 웨이브로 후퇴</b>해요. 강화하고 다시 도전하세요.</li>
             <li>후퇴해서 다시 깨는 구간은 <b>차원 조각·유물만</b> 나와요. 아이템·선물은 <b>최고 기록을 넘기는 웨이브</b>에서만 나와요.</li>
             <li>공허는 <b>매월 1일</b>에 웨이브·조각·강화·유물이 전부 처음부터 다시 시작돼요.</li>
+            <li>랭킹에서 <b>같은 웨이브면 먼저 도달한 사람이 위</b>예요. 시즌 등급도 이 순위로 정해져요.</li>
           </ul></div></details>
           <details class="sg-d" id="vgShardDet"><summary>💎 웨이브 클리어 조각 보상</summary><div class="sg-body"><ul>
             <li>기본 <b>(3 + 웨이브) 조각</b>, 보스는 <b>×3</b>이에요.</li>
@@ -14179,6 +14204,20 @@
       // 함께 올려준다. lastSeenPatchVersion이 patchNotes[0].version과 다르면 "안 읽은 공지"로
       // 간주해 배지를 띄우고, 기존 유저가 접속하면 자동으로 한 번 띄워준다.
       const patchNotes = [
+        {
+          version: "2026101407",
+          date: "2026-10-14",
+          items: [
+            "🌌 공허 랭킹에서 같은 웨이브에 막힌 사람이 여럿이면, 그 웨이브에 먼저 도달한 사람이 더 높은 순위가 돼요. 시즌 등급도 이 순위로 정해져요 (서버 설정이 적용된 뒤부터 반영돼요)",
+          ],
+        },
+        {
+          version: "2026101406",
+          date: "2026-10-14",
+          items: [
+            "🏆 검배틀·공허 랭킹 목록에서 이름 옆에 시즌 등급(챔피언 · 마스터 · 플래티넘 · 골드 · 실버 · 브론즈)이 바로 보여요. 미니게임 랭킹처럼 누가 어느 등급인지 한눈에 볼 수 있어요",
+          ],
+        },
         {
           version: "2026101405",
           date: "2026-10-14",
@@ -18177,7 +18216,7 @@
       <span class="my-rank-icon">🌌</span>
       <div style="flex:1;">
         <div class="my-rank-name">공허 최고 웨이브 <span style="font-size:10px; color:var(--paper-dim); font-weight:normal;">(이번 시즌)</span></div>
-        <div class="my-rank-sub">${map6Unlocked ? `이번 시즌 최고 웨이브 ${voidBestWave.toLocaleString("ko-KR")} · 시즌이 바뀌면 공허도 1웨이브부터 다시 시작해요` : "공허맵을 해금하면 도전할 수 있어요"}</div>
+        <div class="my-rank-sub">${map6Unlocked ? `이번 시즌 최고 웨이브 ${voidBestWave.toLocaleString("ko-KR")} · 같은 웨이브면 먼저 도달한 사람이 위 · 시즌이 바뀌면 1웨이브부터 다시 시작해요` : "공허맵을 해금하면 도전할 수 있어요"}</div>
         <div class="my-rank-sub" id="myRankPosition" style="color:var(--gold);">내 순위 불러오는 중...</div>
         <div class="season-grade-line" id="myRankGrade"></div>
         ${seasonGuideHtml("void")}
@@ -18340,6 +18379,14 @@
         burnMoney();
       });
 
+      // 검배틀·공허 랭킹 줄 앞에 붙는 시즌 등급 표시 (챔피언/마스터/플래티넘/골드/실버/브론즈)
+      // total(기록 있는 전체 인원)을 모르면 1~3위(챔피언·마스터)만 표시한다.
+      function seasonGradeTag(rank, total) {
+        const gid = getSeasonRankGrade(rank, total > 0 ? total : rank <= 3 ? 999999 : 0);
+        if (!gid) return "";
+        const g = SEASON_RANK_GRADES[gid];
+        return `<span class="lb-grade lb-grade-${gid}">${g.icon} ${g.name}</span> · `;
+      }
       async function renderLeaderboardList() {
         const lbEl = document.getElementById("leaderboardList");
         const periodLabels = {
@@ -18394,13 +18441,16 @@
           return;
         }
         if (currentLeaderboardPeriod === "void") {
+          const gInfo = await fetchMyRankInfo("void");
+          if (currentLeaderboardPeriod !== "void") return;
+          const gTotal = gInfo ? gInfo.total : 0;
           lbEl.innerHTML = list
             .map(
               (p) => `
       <div class="lb-row${p.uid === currentUser.uid ? " me" : ""}">
         <span class="lb-rank">${p.rank}</span>
         <span class="lb-name"${safeCssColor(p.nameColor) ? ` style="color:${safeCssColor(p.nameColor)};font-weight:bold;"` : ""}>${p.mansionIcon ? escapeHtml(p.mansionIcon) + " " : ""}${escapeHtml(p.name)}</span>
-        <span class="lb-tier">🌌 ${(p.amount || 0).toLocaleString("ko-KR")}웨이브</span>
+        <span class="lb-tier">${seasonGradeTag(p.rank, gTotal)}🌌 ${(p.amount || 0).toLocaleString("ko-KR")}웨이브</span>
       </div>
     `,
             )
@@ -18410,13 +18460,16 @@
           return;
         }
         if (currentLeaderboardPeriod === "sword") {
+          const gInfo = await fetchMyRankInfo("sword");
+          if (currentLeaderboardPeriod !== "sword") return;
+          const gTotal = gInfo ? gInfo.total : 0;
           lbEl.innerHTML = list
             .map(
               (p) => `
       <div class="lb-row${p.uid === currentUser.uid ? " me" : ""}">
         <span class="lb-rank">${p.rank}</span>
         <span class="lb-name"${safeCssColor(p.nameColor) ? ` style="color:${safeCssColor(p.nameColor)};font-weight:bold;"` : ""}>${p.mansionIcon ? escapeHtml(p.mansionIcon) + " " : ""}${escapeHtml(p.name)}</span>
-        <span class="lb-tier">⚔️ ${(p.amount || 0).toLocaleString("ko-KR")}점</span>
+        <span class="lb-tier">${seasonGradeTag(p.rank, gTotal)}⚔️ ${(p.amount || 0).toLocaleString("ko-KR")}점</span>
       </div>
     `,
             )
@@ -18502,9 +18555,9 @@
         if (isBurn) {
           row.innerHTML = `<span class="lb-rank">${info.rank}</span><span class="lb-name">${escapeHtml(currentUser.name)} (나)</span><span class="lb-tier">🔥 ${formatWon(burnedMonthly)}원 소각</span>`;
         } else if (period === "void") {
-          row.innerHTML = `<span class="lb-rank">${info.rank}</span><span class="lb-name">${escapeHtml(currentUser.name)} (나)</span><span class="lb-tier">🌌 ${voidBestWave.toLocaleString("ko-KR")}웨이브</span>`;
+          row.innerHTML = `<span class="lb-rank">${info.rank}</span><span class="lb-name">${escapeHtml(currentUser.name)} (나)</span><span class="lb-tier">${seasonGradeTag(info.rank, info.total)}🌌 ${voidBestWave.toLocaleString("ko-KR")}웨이브</span>`;
         } else if (period === "sword") {
-          row.innerHTML = `<span class="lb-rank">${info.rank}</span><span class="lb-name">${escapeHtml(currentUser.name)} (나)</span><span class="lb-tier">⚔️ ${swordBattleWins.toLocaleString("ko-KR")}점</span>`;
+          row.innerHTML = `<span class="lb-rank">${info.rank}</span><span class="lb-name">${escapeHtml(currentUser.name)} (나)</span><span class="lb-tier">${seasonGradeTag(info.rank, info.total)}⚔️ ${swordBattleWins.toLocaleString("ko-KR")}점</span>`;
         } else if (period === "swordmonthly") {
           row.innerHTML = `<span class="lb-rank">${info.rank}</span><span class="lb-name">${escapeHtml(currentUser.name)} (나)</span><span class="lb-tier">${swordMiniImg(swordMonthlyBestLevel)} ${swordPowerHtml(swordMonthlyBestLevel)}</span>`;
         } else if (period === "swordcurrent") {
@@ -20758,6 +20811,7 @@
         swordLevel: "sword_level",
         referrerUid: "referrer_uid",
         createdAt: "created_at",
+        reachedAt: "reached_at",
       };
       function toSnakeRow(data) {
         const row = {};
@@ -22911,7 +22965,14 @@
                   : fromBigStorable(raw.amount),
             }))
             .filter((e) => (period !== "void" && period !== "sword") || e.amount > 0);
-          decoded.sort((a, b) => b.amount - a.amount);
+          // 같은 점수(웨이브)면 먼저 도달한 사람이 위. reachedAt은 서버 트리거가 기록하며, 없으면(옛 기록) 뒤로 보낸다.
+          decoded.sort((a, b) => {
+            if (b.amount !== a.amount) return b.amount - a.amount;
+            const ra = Number(a.reachedAt) || 0,
+              rb = Number(b.reachedAt) || 0;
+            if (ra && rb) return ra - rb;
+            return ra ? -1 : rb ? 1 : 0;
+          });
           return decoded
             .slice(0, LEADERBOARD_TOP_N)
             .map((entry, i) => ({ rank: i + 1, ...entry }));
