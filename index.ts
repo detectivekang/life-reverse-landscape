@@ -8,11 +8,39 @@ const CORS = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
+// 응답에 항상 v 가 들어간다. 게임 콘솔의 "[충전] portone-verify 응답"에 v 가 보이면 이 버전이 배포된 것.
+const VERSION = "2026-10-13-d-diag";
 const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), {
+  new Response(JSON.stringify({ v: VERSION, ...(body as Record<string, unknown>) }), {
     status,
     headers: { ...CORS, "Content-Type": "application/json" },
   });
+
+// 404 원인 진단용: 이 시크릿으로 실제로 보이는 최근 결제 5건을 서버 로그에만 남긴다(응답에는 넣지 않음).
+async function diagRecentPayments(secret: string) {
+  try {
+    const body = { page: { number: 0, size: 5 }, filter: { storeId: STORE_ID } };
+    const r = await fetch(
+      `https://api.portone.io/payments?requestBody=${encodeURIComponent(JSON.stringify(body))}`,
+      { headers: { Authorization: `PortOne ${secret}` } },
+    );
+    const text = await r.text();
+    if (!r.ok) {
+      console.error("diag list http", r.status, text.slice(0, 300));
+      return;
+    }
+    const j = JSON.parse(text);
+    const items = (j.items ?? []).map((p: any) => ({
+      id: p.id,
+      status: p.status,
+      store: p.storeId,
+      channel: p.channel?.type,
+    }));
+    console.error("diag recent payments", JSON.stringify(items), "total", j.page?.totalCount);
+  } catch (e) {
+    console.error("diag failed", String(e));
+  }
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
@@ -37,6 +65,7 @@ Deno.serve(async (req) => {
     if (r.status === 404) {
       // 결제창만 열고 끝내지 않았거나, 시크릿이 다른 상점 것인 경우
       console.error("portone 404", paymentId, await r.text());
+      await diagRecentPayments(secret);
       return json({ ok: false, reason: "not_paid", portone: 404 });
     }
     if (!r.ok) {
