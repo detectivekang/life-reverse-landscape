@@ -24,7 +24,7 @@
       // 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
       // 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
       (function () {
-        var CURRENT_VERSION = "2026101402";
+        var CURRENT_VERSION = "2026101404";
         try {
           if (sessionStorage.getItem("lrVersionChecked") === CURRENT_VERSION)
             return;
@@ -161,6 +161,16 @@
         flex-direction: column;
         position: relative;
         overflow: hidden;
+      }
+
+      /* 공허맵: 화면이 길어지면(설명 펼침 등) 이 안에서 스크롤되게 한다 */
+      #part6Screen {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
       }
 
       /* ===== 세로 모드 지원 ===== */
@@ -5902,6 +5912,17 @@
             <button class="start-btn" id="voidShopBtn">🛒 차원 상점</button>
             <button
               class="start-btn"
+              id="voidGuideBtn"
+              style="
+                background: var(--bg-panel);
+                color: var(--gold);
+                border: 1px solid var(--gold);
+              "
+            >
+              📖 규칙
+            </button>
+            <button
+              class="start-btn"
               id="voidRelicBtn"
               style="
                 background: var(--bg-panel);
@@ -5912,7 +5933,21 @@
               🏺 유물 도감 (<span id="voidRelicCount">0/24</span>)
             </button>
           </div>
-          <div id="voidGuide" class="sg" style="margin-top: 14px"></div>
+        </div>
+      </div>
+
+      <!-- 공허 규칙 모달 (예전엔 화면 아래에 펼쳐져 있던 설명) -->
+      <div class="modal-overlay" id="voidGuideModal">
+        <div class="modal-box">
+          <h2>📖 공허 규칙</h2>
+          <div
+            id="voidGuide"
+            class="sg"
+            style="text-align: left; max-height: 62vh; overflow-y: auto; overscroll-behavior: contain"
+          ></div>
+          <button class="close-btn" id="voidGuideCloseBtn" style="margin-top: 10px">
+            닫기
+          </button>
         </div>
       </div>
 
@@ -14132,6 +14167,20 @@
       // 간주해 배지를 띄우고, 기존 유저가 접속하면 자동으로 한 번 띄워준다.
       const patchNotes = [
         {
+          version: "2026101404",
+          date: "2026-10-14",
+          items: [
+            "📖 공허맵 아래에 길게 펼쳐져 있던 설명을 [📖 규칙] 버튼으로 옮겼어요. 누르면 팝업에서 기본 규칙·웨이브 보상표·드랍 설명을 볼 수 있어서, 전투 화면이 훨씬 깔끔해졌어요",
+          ],
+        },
+        {
+          version: "2026101403",
+          date: "2026-10-14",
+          items: [
+            "🌌 공허맵에서 아래 설명(공허 기본 규칙, 웨이브 보상표 등)을 펼쳐도 스크롤이 안 돼서 내용을 볼 수 없던 문제를 고쳤어요",
+          ],
+        },
+        {
           version: "2026101402",
           date: "2026-10-14",
           items: [
@@ -15644,6 +15693,16 @@
           const c = e.target.closest("[data-relic]");
           if (!c) return;
           toggleVoidRelicEquip(c.dataset.relic);
+        });
+      document.getElementById("voidGuideBtn").addEventListener("click", () => {
+        updateVoidGuide();
+        refreshVoidGuide(true);
+        document.getElementById("voidGuideModal").classList.add("show");
+      });
+      document
+        .getElementById("voidGuideCloseBtn")
+        .addEventListener("click", () => {
+          document.getElementById("voidGuideModal").classList.remove("show");
         });
       document.getElementById("voidRelicBtn").addEventListener("click", () => {
         renderVoidRelicPanel();
