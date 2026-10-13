@@ -24,7 +24,7 @@
       // 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
       // 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
       (function () {
-        var CURRENT_VERSION = "2026101331";
+        var CURRENT_VERSION = "2026101333";
         try {
           if (sessionStorage.getItem("lrVersionChecked") === CURRENT_VERSION)
             return;
@@ -21054,6 +21054,12 @@
         )
           return;
         chargeBusy = true;
+        // 상점창(z-index 100000)·충전창(100001)이 포트원 결제창을 가리므로, 결제창이 떠 있는 동안 숨긴다
+        const covers = [box, document.getElementById("shopModal")].filter(Boolean);
+        const setCovers = (show) =>
+          covers.forEach((el) => {
+            if (document.body.contains(el)) el.style.display = show ? "flex" : "none";
+          });
         showToast("💳 결제창 여는 중…"); // 누르자마자 반응이 보이도록
         try {
           // 주문 생성과 SDK 로드를 동시에 진행 (SDK는 보통 이미 미리 받아져 있음)
@@ -21069,6 +21075,8 @@
           const { data: o, error } = prep;
           if (error) throw error;
           console.log("[충전] requestPayment 호출", ms());
+          // 충전 모달(z-index 100001)이 결제창을 가리지 않도록 결제창이 열리기 전에 잠시 숨긴다
+          setCovers(false);
           const res = await window.PortOne.requestPayment({
             storeId: PORTONE_STORE_ID,
             channelKey: PORTONE_CHANNEL_KEY,
@@ -21090,6 +21098,7 @@
           console.warn("[충전]", e);
           showToast("결제를 시작하지 못했어요. 잠시 후 다시 시도해 주세요");
         } finally {
+          setCovers(true); // 취소/실패/완료 후 상점·충전창 복구
           chargeBusy = false;
         }
       }
