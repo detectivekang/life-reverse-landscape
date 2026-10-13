@@ -20924,15 +20924,21 @@
         );
       }
       let chargeBusy = false;
+      let portOneSdkPromise = null;
       function loadPortOneSdk() {
-        return new Promise((resolve, reject) => {
-          if (window.PortOne) return resolve();
+        if (window.PortOne) return Promise.resolve();
+        if (portOneSdkPromise) return portOneSdkPromise;
+        portOneSdkPromise = new Promise((resolve, reject) => {
           const s = document.createElement("script");
           s.src = "https://cdn.portone.io/v2/browser-sdk.js";
           s.onload = () => resolve();
-          s.onerror = () => reject(new Error("portone sdk load failed"));
+          s.onerror = () => {
+            portOneSdkPromise = null; // 실패하면 다음에 다시 시도
+            reject(new Error("portone sdk load failed"));
+          };
           document.head.appendChild(s);
         });
+        return portOneSdkPromise;
       }
       async function verifyPortOnePayment(paymentId) {
         const r = await fetch(
@@ -21002,6 +21008,7 @@
           if (e.target === box) box.remove();
         });
         document.body.appendChild(box);
+        loadPortOneSdk().catch(() => {}); // 상품을 고르는 동안 결제 SDK를 미리 받아 둔다
         let list = null;
         try {
           const { data, error } = await db.rpc("charge_catalog");
@@ -21047,12 +21054,15 @@
         )
           return;
         chargeBusy = true;
+        showToast("💳 결제창 여는 중…"); // 누르자마자 반응이 보이도록
         try {
-          const { data: o, error } = await db.rpc("charge_prepare", {
-            p_package: pkg.id,
-          });
+          // 주문 생성과 SDK 로드를 동시에 진행 (SDK는 보통 이미 미리 받아져 있음)
+          const [prep] = await Promise.all([
+            db.rpc("charge_prepare", { p_package: pkg.id }),
+            loadPortOneSdk(),
+          ]);
+          const { data: o, error } = prep;
           if (error) throw error;
-          await loadPortOneSdk();
           const res = await window.PortOne.requestPayment({
             storeId: PORTONE_STORE_ID,
             channelKey: PORTONE_CHANNEL_KEY,
