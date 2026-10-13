@@ -21057,12 +21057,18 @@
         showToast("💳 결제창 여는 중…"); // 누르자마자 반응이 보이도록
         try {
           // 주문 생성과 SDK 로드를 동시에 진행 (SDK는 보통 이미 미리 받아져 있음)
+          const t0 = performance.now();
+          const ms = () => Math.round(performance.now() - t0) + "ms";
           const [prep] = await Promise.all([
-            db.rpc("charge_prepare", { p_package: pkg.id }),
-            loadPortOneSdk(),
+            db.rpc("charge_prepare", { p_package: pkg.id }).then((r) => {
+              console.log("[충전] charge_prepare 응답", ms());
+              return r;
+            }),
+            loadPortOneSdk().then(() => console.log("[충전] SDK 준비", ms())),
           ]);
           const { data: o, error } = prep;
           if (error) throw error;
+          console.log("[충전] requestPayment 호출", ms());
           const res = await window.PortOne.requestPayment({
             storeId: PORTONE_STORE_ID,
             channelKey: PORTONE_CHANNEL_KEY,
