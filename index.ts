@@ -1,49 +1,71 @@
-// 포트원 결제 검증 + 루비 지급 (Supabase Edge Function)
-// 호출 경로 2가지: ① 게임(브라우저)이 결제 직후 { paymentId } 전송  ② 포트원 웹훅 (body.data.paymentId)
-// 어느 쪽이든 "받은 값을 믿지 않고" 포트원 API 로 결제를 다시 조회해서 확인한다.
-//   → 누가 이 주소를 호출하든, 실제로 PAID 이고 금액이 주문과 같을 때만 루비가 들어간다 (중복 호출해도 한 번만).
-// 배포: supabase functions deploy portone-verify --no-verify-jwt
-// 시크릿: supabase secrets set PORTONE_API_SECRET=... (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY 는 자동 제공)
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
-const cors = {
-  "Access-Control-Allow-Origin": "https://detectivekang.github.io",
+// 게임(index.html)의 PORTONE_STORE_ID 와 같은 값. 공개돼도 되는 식별자다.
+const STORE_ID = "store-ae1726c2-237e-405b-af44-6aef5427446e";
+
+const CORS = {
+  "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
-const json = (b: unknown, status = 200) =>
-  new Response(JSON.stringify(b), { status, headers: { ...cors, "Content-Type": "application/json" } });
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...CORS, "Content-Type": "application/json" },
+  });
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
-  if (req.method !== "POST") return json({ ok: false, reason: "method" }, 405);
+  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
+  try {
+    const { paymentId } = await req.json();
+    // charge_prepare 가 만드는 형식(lr- + 32자리 hex)만 받는다
+    if (typeof paymentId !== "string" || !/^lr-[0-9a-f]{32}$/.test(paymentId)) {
+      return json({ ok: false, reason: "bad_payment_id" });
+    }
 
-  let body: any = {};
-  try { body = await req.json(); } catch (_) { /* 빈 본문 */ }
-  const paymentId: string | undefined = body?.paymentId ?? body?.data?.paymentId;
-  if (!paymentId || typeof paymentId !== "string" || !paymentId.startsWith("lr-") || paymentId.length > 80) {
-    return json({ ok: false, reason: "bad_payment_id" }, 400);
+    const secret = Deno.env.get("PORTONE_API_SECRET")?.trim();
+    if (!secret) {
+      console.error("PORTONE_API_SECRET 시크릿이 없습니다");
+      return json({ ok: false, reason: "server_misconfigured" });
+    }
+
+    // 1) 포트원에서 실제 결제 상태·금액 확인 (브라우저가 하는 말은 믿지 않는다)
+    const r = await fetch(
+      `https://api.portone.io/payments/${encodeURIComponent(paymentId)}?storeId=${STORE_ID}`,
+      { headers: { Authorization: `PortOne ${secret}` } },
+    );
+    if (r.status === 404) {
+      // 결제창만 열고 끝내지 않았거나, 시크릿이 다른 상점 것인 경우
+      console.error("portone 404", paymentId, await r.text());
+      return json({ ok: false, reason: "not_paid", portone: 404 });
+    }
+    if (!r.ok) {
+      console.error("portone api", r.status, await r.text());
+      return json({ ok: false, reason: "portone_http_" + r.status });
+    }
+    const payment = await r.json();
+    if (payment.status !== "PAID") {
+      return json({ ok: false, reason: "not_paid", status: payment.status });
+    }
+    const paid = Number(payment.amount?.total);
+    if (!Number.isInteger(paid)) return json({ ok: false, reason: "bad_amount" });
+
+    // 2) 서버 DB 의 주문과 대조 + 루비 지급 (중복 지급 방지는 charge_complete 안에서 처리됨)
+    const sb = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+    const { data, error } = await sb.rpc("charge_complete", {
+      p_payment_id: paymentId,
+      p_paid_amount: paid,
+    });
+    if (error) {
+      console.error("charge_complete", error);
+      return json({ ok: false, reason: "db_error" });
+    }
+    return json(data);
+  } catch (e) {
+    console.error(e);
+    return json({ ok: false, reason: "exception" });
   }
-
-  // 1) 포트원에서 결제 단건 조회
-  const secret = Deno.env.get("PORTONE_API_SECRET");
-  if (!secret) return json({ ok: false, reason: "server_config" }, 500);
-  const pr = await fetch(`https://api.portone.io/payments/${encodeURIComponent(paymentId)}`, {
-    headers: { Authorization: `PortOne ${secret}` },
-  });
-  if (!pr.ok) return json({ ok: false, reason: "portone_lookup_failed", status: pr.status }, 502);
-  const pay = await pr.json();
-
-  // 2) 결제 완료 여부
-  if (pay.status !== "PAID") return json({ ok: false, reason: "not_paid", status: pay.status });
-  if (pay.currency && pay.currency !== "KRW") return json({ ok: false, reason: "bad_currency" });
-
-  // 3) 금액 확인 + 루비 지급은 DB 함수가 한 번에 처리 (주문 금액과 비교, 중복 지급 방지)
-  const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-  const { data, error } = await sb.rpc("charge_complete", {
-    p_payment_id: paymentId,
-    p_paid_amount: Number(pay.amount?.total),
-  });
-  if (error) { console.error("charge_complete", error); return json({ ok: false, reason: "db_error" }, 500); }
-  return json(data);
 });
