@@ -1,16 +1,23 @@
 -- =====================================================================
--- 스타터 패키지 (3,000루비 · 시즌(매월 1일, 한국 시간)당 1회 구매) — Supabase SQL Editor 에서 한 번 실행
+-- 스타터 패키지(3,000루비 · 시즌당 1회) + 검 배틀 횟수 상품 — Supabase SQL Editor 에서 한 번 실행 (이전 버전을 이미 실행했어도 다시 실행하면 최신으로 맞춰진다)
 -- 먼저 supabase_admin_grants.sql / supabase_shop.sql / supabase_shop_update.sql / supabase_shop_shards_update.sql 이 적용돼 있어야 한다.
 -- 바뀌는 것
---   1) shop_items 에 season_limit(시즌 구매 한도) 컬럼 추가
+--   0) 우편(admin_grants) 지급 종류에 'battle_tickets'(검 배틀 횟수) 추가
+--   1) shop_items 에 season_limit(시즌 구매 한도), tiers(수량별 가격표) 컬럼 추가
 --   2) shop_pack_contents(패키지 구성품) 테이블 추가 + 스타터 패키지 등록
 --   3) shop_catalog : season_limit / bought_season / pack(구성품) / list_value(단품 정가 합계) 를 함께 내려준다
 --   4) shop_buy     : 시즌 한도 검사 + 패키지는 구성품마다 우편(admin_grants)을 한 건씩 만들고 grant_ids 로 돌려준다
 -- 기존 상품(되돌리기/주문서/차원 조각)은 동작이 그대로다. 같은 파일을 다시 실행해도 안전하다.
 -- =====================================================================
 
--- 1) 시즌 한도 컬럼
+-- 0) 우편 지급 종류에 검 배틀 횟수 추가
+alter table public.admin_grants drop constraint if exists admin_grants_item_check;
+alter table public.admin_grants add constraint admin_grants_item_check
+  check (item in ('revive', 'revive_floor', 'boost_x15', 'boost_x20', 'boost_x25', 'void_shards', 'talent_points', 'battle_tickets'));
+
+-- 1) 컬럼
 alter table public.shop_items add column if not exists season_limit int;   -- 시즌(월, 한국 시간) 구매 한도. null 이면 제한 없음
+alter table public.shop_items add column if not exists tiers jsonb;        -- 수량별 가격표 [{"qty":10,"price":80},...]. 있으면 이 수량으로만 살 수 있고 가격도 표대로
 
 -- 2) 패키지 구성품
 create table if not exists public.shop_pack_contents (
@@ -24,7 +31,17 @@ create table if not exists public.shop_pack_contents (
 alter table public.shop_pack_contents enable row level security;
 revoke all on public.shop_pack_contents from anon, authenticated;
 
--- 스타터 패키지 (단품 정가 합계 4,350루비 → 3,000루비 = 약 31% 할인)
+-- 검 배틀 횟수 (단가 8루비 → 많이 살수록 싸짐: 10회 80 / 30회 210 / 50회 300 / 100회 500). 게임 쪽 보관 한도(SWORD_BATTLE_BANK_CAP)는 1,000회.
+--   주간 구매 한도는 두지 않는다(null). 배틀은 내 승점만 바뀌고 상대 점수는 건드리지 않기 때문. 상한을 두려면 아래 update 에서 숫자로.
+insert into public.shop_items (id, name, descr, category, price, grant_item, grant_amount, weekly_limit, season_limit, max_qty, tiers, sort)
+values ('battle_tickets', '검 배틀 횟수', '검 배틀 참여 횟수를 충전해요 (최대 1,000회까지 보관)', 'item', 8, 'battle_tickets', 1, null, null, 100,
+        '[{"qty":10,"price":80},{"qty":30,"price":210},{"qty":50,"price":300},{"qty":100,"price":500}]'::jsonb, 45)
+on conflict (id) do update
+   set name = excluded.name, descr = excluded.descr, price = excluded.price, grant_item = excluded.grant_item,
+       grant_amount = excluded.grant_amount, weekly_limit = excluded.weekly_limit, max_qty = excluded.max_qty,
+       tiers = excluded.tiers, sort = excluded.sort, active = true;
+
+-- 스타터 패키지 (단품 정가 합계 약 4,310루비 → 3,000루비 = 약 30% 할인)
 insert into public.shop_items (id, name, descr, category, price, grant_item, grant_amount, weekly_limit, season_limit, max_qty, sort)
 values ('starter_pack', '스타터 패키지', '시즌마다 1회 한정 · 단품보다 훨씬 저렴해요', 'pack', 3000, 'starter_pack', 1, null, 1, 1, 5)
 on conflict (id) do update
@@ -34,11 +51,12 @@ on conflict (id) do update
 
 delete from public.shop_pack_contents where pack_id = 'starter_pack';
 insert into public.shop_pack_contents (pack_id, grant_item, grant_amount, label, sort) values
-  ('starter_pack', 'boost_x15',   20,    '강화 주문서 ×1.5', 10),
-  ('starter_pack', 'boost_x20',    8,    '강화 주문서 ×2',   20),
-  ('starter_pack', 'boost_x25',    4,    '강화 주문서 ×2.5', 30),
-  ('starter_pack', 'revive',      15,    '되돌리기',         40),
-  ('starter_pack', 'void_shards', 60000, '차원 조각',        50);
+  ('starter_pack', 'boost_x15',      30,    '강화 주문서 ×1.5', 10),
+  ('starter_pack', 'boost_x20',       8,    '강화 주문서 ×2',   20),
+  ('starter_pack', 'boost_x25',       4,    '강화 주문서 ×2.5', 30),
+  ('starter_pack', 'revive',         15,    '되돌리기',         40),
+  ('starter_pack', 'battle_tickets', 20,    '검 배틀 횟수',     45),
+  ('starter_pack', 'void_shards',  30000,   '차원 조각',        50);
 -- (덤으로 특성 포인트를 넣고 싶으면:  insert into public.shop_pack_contents values ('starter_pack','talent_points',3,'특성 포인트',60);  ← 정가 합계에는 안 들어간다)
 
 -- 3) 카탈로그
@@ -57,7 +75,7 @@ begin
            'grant_item', i.grant_item, 'grant_amount', i.grant_amount, 'weekly_limit', i.weekly_limit, 'max_qty', i.max_qty,
            'bundle_qty', i.bundle_qty, 'bundle_discount', i.bundle_discount,
            'bought_week', coalesce((select sum(p.qty) from public.shop_purchases p where p.user_id = uid and p.item_id = i.id and p.created_at >= wk), 0),
-           'season_limit', i.season_limit,
+           'season_limit', i.season_limit, 'tiers', i.tiers,
            'bought_season', coalesce((select sum(p.qty) from public.shop_purchases p where p.user_id = uid and p.item_id = i.id and p.created_at >= sk), 0),
            'pack', (select jsonb_agg(jsonb_build_object('item', c.grant_item, 'amount', c.grant_amount, 'label', c.label) order by c.sort)
                       from public.shop_pack_contents c where c.pack_id = i.id),
@@ -79,7 +97,7 @@ declare
   it public.shop_items%rowtype; w public.wallets%rowtype; c record;
   wk timestamptz := date_trunc('week',  now() at time zone 'Asia/Seoul') at time zone 'Asia/Seoul';
   sk timestamptz := date_trunc('month', now() at time zone 'Asia/Seoul') at time zone 'Asia/Seoul';
-  bought int; bought_s int; total int; gid uuid; gids uuid[] := '{}';
+  bought int; bought_s int; total int; tier_price int; gid uuid; gids uuid[] := '{}';
 begin
   if uid is null then raise exception 'shop: login required'; end if;
   if p_qty is null or p_qty < 1 then raise exception 'shop: bad quantity'; end if;
@@ -96,7 +114,14 @@ begin
     select coalesce(sum(qty), 0) into bought_s from public.shop_purchases where user_id = uid and item_id = it.id and created_at >= sk;
     if bought_s + p_qty > it.season_limit then raise exception 'shop: season limit (% of %)', bought_s, it.season_limit; end if;
   end if;
-  total := case when p_qty >= it.bundle_qty then ceil(it.price::numeric * p_qty * (100 - it.bundle_discount) / 100)::int else it.price * p_qty end;
+  if it.tiers is not null then
+    -- 수량별 가격표가 있는 상품: 표에 있는 수량으로만 살 수 있고, 가격도 표대로
+    select (t->>'price')::int into tier_price from jsonb_array_elements(it.tiers) t where (t->>'qty')::int = p_qty;
+    if tier_price is null then raise exception 'shop: bad quantity'; end if;
+    total := tier_price;
+  else
+    total := case when p_qty >= it.bundle_qty then ceil(it.price::numeric * p_qty * (100 - it.bundle_discount) / 100)::int else it.price * p_qty end;
+  end if;
   if w.ruby < total then raise exception 'shop: not enough ruby'; end if;
   update public.wallets set ruby = ruby - total, updated_at = now() where user_id = uid;
   insert into public.ruby_ledger (user_id, delta, reason) values (uid, -total, 'buy:' || it.id || ' x' || p_qty);
@@ -126,9 +151,10 @@ grant execute on function public.shop_catalog() to authenticated;
 grant execute on function public.shop_buy(text, int) to authenticated;
 
 -- 확인용:
---   select id, name, price, season_limit, max_qty from public.shop_items order by sort;
+--   select id, name, price, weekly_limit, season_limit, max_qty, tiers from public.shop_items order by sort;
 --   select * from public.shop_pack_contents where pack_id = 'starter_pack' order by sort;
 --   (테스트) select public.admin_add_ruby('<user_id>', 3000, '스타터 테스트');
 --   (테스트 후 다시 사게 하려면)  delete from public.shop_purchases where user_id = '<user_id>' and item_id = 'starter_pack';
+-- 배틀 횟수 주간 한도 바꾸기:  update public.shop_items set weekly_limit = 300 where id = 'battle_tickets';  -- 주간 구매 한도 걸기 (null 이면 무제한)
 -- 가격/구성 바꾸기:  update public.shop_items set price = 2800 where id = 'starter_pack';
 --                    update public.shop_pack_contents set grant_amount = 10 where pack_id = 'starter_pack' and grant_item = 'revive';
