@@ -2158,6 +2158,26 @@
         color: var(--paper-dim);
         margin: 0 0 12px;
       }
+      /* ===== 검 강화 안내(접이식) ===== */
+      .sg { text-align: left; margin: 0 0 12px; }
+      .sg-sum { font-size: 12px; line-height: 1.6; color: var(--paper-dim); text-align: center; margin: 0 0 8px; }
+      .sg-d { background: rgba(255,255,255,.04); border: 1px solid rgba(232,179,61,.25); border-radius: 10px; margin-bottom: 6px; padding: 0 10px; }
+      .sg-d summary { cursor: pointer; padding: 9px 0; font-size: 12.5px; font-weight: 700; color: var(--gold); list-style: none; }
+      .sg-d summary::-webkit-details-marker { display: none; }
+      .sg-d summary::after { content: "▾"; float: right; transition: transform .2s; }
+      .sg-d[open] summary::after { transform: rotate(180deg); }
+      .sg-body { font-size: 11.5px; color: var(--paper-dim); line-height: 1.65; padding-bottom: 9px; }
+      .sg-body ul { margin: 0; padding-left: 16px; }
+      .sg-body li { margin: 3px 0; }
+      .sg-body b { color: #f4ead2; }
+      .sg-tbl { width: 100%; border-collapse: collapse; text-align: center; font-size: 10.5px; color: #f4ead2; margin-top: 6px; }
+      .sg-tbl th { color: #bba978; font-weight: 700; padding: 3px 2px; border-bottom: 1px solid rgba(230,182,62,.3); }
+      .sg-tbl td { padding: 3px 2px; border-bottom: 1px solid rgba(230,182,62,.12); }
+      .sg-tbl th:first-child, .sg-tbl td:first-child { text-align: left; }
+      .sg-tbl .g { color: #9fe08a; }
+      .sg-tbl .r { color: #ff8f80; }
+      .sg-tbl tr.sg-cur td { background: rgba(232,179,61,.18); font-weight: 700; }
+      .sg-note { font-size: 10.5px; color: #8f8566; margin-top: 5px; line-height: 1.5; }
       .route-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -6673,18 +6693,7 @@
             />
             검 강화
           </h2>
-          <p style="font-size: 12px; color: var(--paper-dim); margin-top: -4px">
-            평범한 나뭇가지를 강화해서 전설의 무기로 키워보세요. 최대 +20강까지
-            가능하지만, 레벨이 오를수록 성공 확률은 낮아지고 실패하면 검이
-            파괴될 수도 있어요. (되돌리기는 <b>사용 ON</b>으로 켜둔 때만 파괴를
-            막아줘요. 낮은 구간에선 꺼두고 아껴 쓰세요) 검 랭킹·현재검 랭킹은
-            <b>메인 검</b> 기준이고, 매달 초기화돼요.<br />🗃️ 아래 보관함에 예비
-            검을 하나 더 넣어두면, 메인 검이 깨져도 바로 교체해서 이어갈 수
-            있어요. 메인·보관 둘 다 +20강을 채우면 하나로 합쳐서
-            <b>+21강 전설검</b>을 만들 수 있어요!<br />🌌 +21강 전설검은
-            보관함의 <b>+20강 검을 제물</b>로 바쳐 <b>각성</b>시킬 수 있어요
-            (최대 20단계). 실패하면 제물만 사라지고 +21강 검은 그대로예요.
-          </p>
+          <div id="swordGuide" class="sg"></div>
           <div
             style="
               margin: 14px 0;
@@ -6739,8 +6748,7 @@
                 margin-bottom: 6px;
               "
             >
-              🎒 강화 아이템 · 누르면 <b>다음 강화 1회</b>에만 적용돼요 (다시
-              누르면 해제)
+              🍀 강화 주문서 · 누르면 <b>다음 1회</b>에 적용 (다시 누르면 해제)
             </div>
             <div id="swordItemRow" style="display: flex; gap: 6px"></div>
             <div
@@ -6750,8 +6758,7 @@
                 margin-top: 6px;
               "
             >
-              공허맵 웨이브를 클리어하면 얻어요. 성공률이 오른 만큼 실패 확률이
-              줄어들어요.
+              공허맵 웨이브 클리어로 얻어요
             </div>
           </div>
           <button
@@ -6847,7 +6854,7 @@
                 margin-bottom: 6px;
               "
             >
-              🗃️ 보관함 (예비 검 1자루 · 강화 불가, 메인과 교체해서 써요)
+              🗃️ 보관함 · 예비 검 1자루 (강화 불가)
             </div>
             <div id="swordStoreIcon" style="font-size: 36px">❔</div>
             <div
@@ -12004,9 +12011,101 @@
             : undefined,
         );
       }
+      // ===== 검 강화 안내(접이식) : 한 번만 만들고, 이후엔 "지금 내 단계" 강조만 갱신한다 (열어둔 칸이 닫히지 않게) =====
+      let swordGuideBuilt = false;
+      function buildSwordGuideOnce() {
+        if (swordGuideBuilt) return;
+        const box = document.getElementById("swordGuide");
+        if (!box) return;
+        swordGuideBuilt = true;
+        const f = (n) => {
+          const v = Math.round(Number(n) * 10) / 10;
+          return (Number.isInteger(v) ? v : v.toFixed(1)) + "%";
+        };
+        let rows = "";
+        for (let k = 1; k <= SWORD_MAX_LEVEL; k++) {
+          const st = SWORD_STAGES[k];
+          if (!st || !(st.success > 0)) continue;
+          const b = (key) => getSwordEnhanceRates(st, key).success;
+          const sure = st.success >= 100;
+          rows += `<tr data-sg-lv="${k}"><td>+${k - 1}→+${k}</td><td class="g">${f(st.success)}</td><td>${f(sure ? 0 : st.maintain)}</td><td class="r">${f(sure ? 0 : st.destroy)}</td><td>${f(b("x15"))}</td><td>${f(b("x20"))}</td><td>${f(b("x25"))}</td></tr>`;
+        }
+        // 각성 표: 성공률이 같은 연속 단계끼리 묶는다. 평균 제물 = 100 / 성공률 (시도할 때마다 제물 1자루가 사라지므로)
+        const groups = [];
+        let cum = 0;
+        for (let a = 1; a <= SWORD_AWAKEN_MAX; a++) {
+          const r = getSwordAwakenRate(a);
+          const last = groups[groups.length - 1];
+          cum += 100 / r;
+          if (last && last.rate === r) {
+            last.to = a;
+            last.cum = cum;
+          } else groups.push({ from: a, to: a, rate: r, cum });
+        }
+        const awkRows = groups
+          .map((g) => {
+            const per = 100 / g.rate;
+            const perTxt = (Number.isInteger(per) ? per : per.toFixed(1)) + "자루";
+            const label = g.from === g.to ? `${g.from}단계` : `${g.from}~${g.to}단계`;
+            return `<tr data-sg-from="${g.from}" data-sg-to="${g.to}"><td>${getAwakenTier(g.from).icon} ${label}</td><td class="g">${g.rate}%</td><td>${perTxt}</td><td>${Math.round(g.cum)}자루</td></tr>`;
+          })
+          .join("");
+        const totalTxt = Math.round(cum);
+        box.innerHTML = `
+          <div class="sg-sum">+${SWORD_MAX_LEVEL}강까지 강화할 수 있어요. 단계가 오를수록 성공 확률이 낮아지고, 실패하면 검이 <b>파괴</b>될 수 있어요.<br>랭킹은 <b>메인 검</b> 기준이고 매달 초기화돼요.</div>
+          <details class="sg-d"><summary>📘 강화 기본 규칙</summary><div class="sg-body"><ul>
+            <li>결과는 <b>성공(+1) · 유지 · 파괴</b> 중 하나예요.</li>
+            <li>🛡️ <b>되돌리기</b>는 <b>사용 ON</b>일 때만 파괴를 막아주고 1회가 소모돼요. 낮은 구간에선 꺼두고 아껴 쓰세요.</li>
+            <li>🍀 <b>강화 주문서</b>는 장전하면 <b>다음 1회</b>만 성공 확률이 올라가요. 올라간 만큼 실패 확률이 줄어요.</li>
+            <li>🗃️ <b>보관함</b>에 예비 검을 넣어두면 메인이 깨져도 바로 교체해 이어갈 수 있어요.</li>
+          </ul></div></details>
+          <details class="sg-d"><summary>🎲 강화 확률표 (+0 → +${SWORD_MAX_LEVEL})</summary><div class="sg-body">
+            <table class="sg-tbl"><tr><th>단계</th><th>성공</th><th>유지</th><th>파괴</th><th>×1.5</th><th>×2</th><th>×2.5</th></tr>${rows}</table>
+            <div class="sg-note">×1.5 · ×2 · ×2.5 칸은 해당 주문서를 썼을 때의 <b>성공 확률</b>이에요. 남은 확률은 원래 유지:파괴 비율대로 나눠 가져요.</div>
+          </div></details>
+          <details class="sg-d"><summary>🔱 +${LEGENDARY_SWORD_LEVEL}강 전설 합성</summary><div class="sg-body"><ul>
+            <li>메인과 보관함이 <b>둘 다 +${SWORD_MAX_LEVEL}강</b>이면 하나로 합쳐 <b>+${LEGENDARY_SWORD_LEVEL}강 전설검</b>을 만들 수 있어요.</li>
+            <li>+${LEGENDARY_SWORD_LEVEL}강은 강화가 아니라 <b>합성으로만</b> 얻어요.</li>
+          </ul></div></details>
+          <details class="sg-d"><summary>🌈 각성 확률표 (+${LEGENDARY_SWORD_LEVEL}강 전용)</summary><div class="sg-body"><ul>
+            <li><b>메인 +${LEGENDARY_SWORD_LEVEL}강</b> + 보관함의 <b>+${SWORD_MAX_LEVEL}강 검(제물)</b>이 있으면 도전할 수 있어요. 최대 ${SWORD_AWAKEN_MAX}단계예요.</li>
+            <li>성공·실패와 상관없이 <b>제물은 사라지지만</b>, +${LEGENDARY_SWORD_LEVEL}강 검은 <b>파괴되지 않아요</b>.</li>
+            <li>1단계마다 실질 레벨 <b>+1</b>로 쳐요 (예: +${LEGENDARY_SWORD_LEVEL}강 각성 3 = 실질 +${LEGENDARY_SWORD_LEVEL + 3}강). 랭킹·검 배틀에 쓰여요.</li>
+            <li>💠 1~5 하늘 · 🔮 6~10 보라 · 🌠 11~15 분홍 · 🌈 16~20 무지개 색으로 바뀌어요.</li>
+          </ul>
+            <table class="sg-tbl"><tr><th>단계</th><th>성공률</th><th>단계당 평균 제물</th><th>누적 평균</th></tr>${awkRows}</table>
+            <div class="sg-note">평균 제물은 확률로 계산한 기대값이에요. 각성 ${SWORD_AWAKEN_MAX}단계까지 평균 약 <b>${totalTxt}자루</b>의 +${SWORD_MAX_LEVEL}강 검이 필요해요.</div>
+          </div></details>`;
+      }
+      function updateSwordGuideHighlight() {
+        const box = document.getElementById("swordGuide");
+        if (!box || !swordGuideBuilt) return;
+        const curLv =
+          swordOwned && swordLevel >= 0 && swordLevel < SWORD_MAX_LEVEL
+            ? swordLevel + 1
+            : 0;
+        const curAwk =
+          swordOwned &&
+          swordLevel === LEGENDARY_SWORD_LEVEL &&
+          swordAwaken < SWORD_AWAKEN_MAX
+            ? swordAwaken + 1
+            : 0;
+        box.querySelectorAll("tr[data-sg-lv]").forEach((tr) => {
+          tr.classList.toggle("sg-cur", Number(tr.dataset.sgLv) === curLv);
+        });
+        box.querySelectorAll("tr[data-sg-from]").forEach((tr) => {
+          tr.classList.toggle(
+            "sg-cur",
+            curAwk > 0 &&
+              curAwk >= Number(tr.dataset.sgFrom) &&
+              curAwk <= Number(tr.dataset.sgTo),
+          );
+        });
+      }
       function renderSwordPanel() {
         const iconEl = document.getElementById("swordIcon");
         if (!iconEl) return;
+        updateSwordGuideHighlight();
         iconEl.dataset.lv = swordLevel;
         iconEl.dataset.awk = clampAwaken(swordAwaken);
         iconEl.textContent = getSwordIcon();
@@ -15001,6 +15100,7 @@
         });
 
       document.getElementById("swordBtn").addEventListener("click", () => {
+        buildSwordGuideOnce();
         renderSwordPanel();
         document.getElementById("swordModal").classList.add("show");
       });
@@ -21158,6 +21258,7 @@
         boost_x25: "🍀",
         void_shards: "💎",
         talent_points: "⭐",
+        starter_pack: "🎁",
       };
       let shopBusy = false;
       // 서버(shop_buy)와 같은 계산: bundle_qty개 이상 사면 (100-할인율)%, 소수는 올림
@@ -21262,19 +21363,49 @@
       <button id="shopChargeBtn" style="padding:7px 14px;border-radius:999px;border:2px solid #e6b63e;background:transparent;color:#e6b63e;font-weight:800;font-size:12px;cursor:pointer;">충전하기</button></div>`;
           html += swordRateTableHtml();
           for (const it of data.items || []) {
-            const left =
+            const weekLeft =
               it.weekly_limit == null
                 ? null
                 : Math.max(0, it.weekly_limit - (it.bought_week || 0));
+            const seasonLeft =
+              it.season_limit == null
+                ? null
+                : Math.max(0, it.season_limit - (it.bought_season || 0));
+            const left =
+              weekLeft == null
+                ? seasonLeft
+                : seasonLeft == null
+                  ? weekLeft
+                  : Math.min(weekLeft, seasonLeft);
             const opts = [1, 5, 10, 50].filter(
               (q) => q <= it.max_qty && (left == null || q <= left),
             );
             const soldOut = left === 0;
+            if (Array.isArray(it.pack) && it.pack.length) {
+              const val = Number(it.list_value) || 0;
+              const off = val > it.price ? Math.round((1 - it.price / val) * 100) : 0;
+              const can = Number(data.ruby) >= it.price;
+              html += `<div style="text-align:left;background:linear-gradient(160deg,#3a2c12,#2a241b);border:2px solid #ffd75e;border-radius:12px;padding:10px 12px;margin-bottom:8px;box-shadow:0 0 14px rgba(255,215,94,.25);">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+          <div style="font-weight:800;font-size:15px;color:#ffe9a8;">${SHOP_ICON[it.grant_item] || "🎁"} ${esc(it.name)}</div>
+          ${off > 0 ? `<div style="font-size:11px;font-weight:900;color:#2b2118;background:#ffd75e;border-radius:999px;padding:2px 8px;white-space:nowrap;">${off}% 할인</div>` : ""}</div>
+        <div style="font-size:11px;color:#bba978;margin-top:3px;">${esc(it.desc || "")} · 이번 시즌 ${it.bought_season || 0}/${it.season_limit == null ? 1 : it.season_limit}회 구매</div>
+        <div style="margin-top:8px;font-size:12.5px;line-height:1.75;color:#f4ead2;">${it.pack
+          .map((c) => `<div style="display:flex;justify-content:space-between;gap:8px;"><span>${SHOP_ICON[c.item] || "🎁"} ${esc(c.label)}</span><b>${nf(c.amount)}개</b></div>`)
+          .join("")}</div>
+        ${val > 0 ? `<div style="font-size:11px;color:#bba978;margin-top:6px;text-align:right;">단품으로 사면 <s>${shopRuby(0.95)} ${nf(val)}</s></div>` : ""}
+        <div style="display:flex;gap:6px;margin-top:8px;">${
+          soldOut
+            ? `<div style="flex:1;text-align:center;font-size:12px;color:#bba978;padding:6px;">이번 시즌 구매 완료 (매월 1일에 다시 열려요)</div>`
+            : `<button class="shopBuyBtn" data-id="${esc(it.id)}" data-q="1" style="${btnCss}${can ? "" : "opacity:.5;"}"><span style="font-size:11px;font-weight:700;">패키지 구매</span><span style="font-size:15px;font-weight:900;">${shopRuby(1)} ${nf(it.price)}</span></button>`
+        }</div></div>`;
+              continue;
+            }
             html += `<div style="text-align:left;background:#2a241b;border:1px solid rgba(230,182,62,.3);border-radius:12px;padding:10px 12px;margin-bottom:8px;">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
           <div style="font-weight:800;font-size:14px;color:#ffe9a8;">${SHOP_ICON[it.grant_item] || "🎁"} ${esc(it.name)}</div>
           <div style="font-size:11px;color:#bba978;white-space:nowrap;">개당 <b style="font-size:14px;color:#fff;">${shopRuby()} ${nf(it.price)}</b></div></div>
-        <div style="font-size:11px;color:#bba978;margin-top:3px;">${esc(it.desc || "")}${left == null ? "" : ` · 이번 주 ${it.bought_week || 0}/${it.weekly_limit}개 구매`}</div>
+        <div style="font-size:11px;color:#bba978;margin-top:3px;">${esc(it.desc || "")}${weekLeft == null ? "" : ` · 이번 주 ${it.bought_week || 0}/${it.weekly_limit}개 구매`}</div>
         <div style="display:flex;gap:6px;margin-top:8px;">${
           soldOut
             ? `<div style="flex:1;text-align:center;font-size:12px;color:#bba978;padding:6px;">이번 주 매진 (월요일에 다시 열려요)</div>`
@@ -21315,13 +21446,18 @@
       async function buyShopItem(box, it, qty) {
         if (shopBusy) return;
         const total = shopPriceFor(it, qty);
+        const isPack = Array.isArray(it.pack) && it.pack.length > 0;
         const seasonNote =
-          it.grant_item === "void_shards"
+          it.grant_item === "void_shards" ||
+          (isPack && it.pack.some((c) => c.item === "void_shards"))
             ? "\n※ 차원 조각은 시즌이 바뀌는 매월 1일에 초기화돼요."
             : "";
+        const packNote = isPack
+          ? "\n" + it.pack.map((c) => `· ${c.label} ${Number(c.amount).toLocaleString("ko-KR")}개`).join("\n")
+          : "";
         if (
           !confirm(
-            `${it.name} ×${qty}\n루비 ${total.toLocaleString("ko-KR")}개를 사용해요.${seasonNote}\n구매할까요?`,
+            `${it.name}${isPack ? "" : " ×" + qty}${packNote}\n루비 ${total.toLocaleString("ko-KR")}개를 사용해요.${seasonNote}\n구매할까요?`,
           )
         )
           return;
@@ -21332,12 +21468,26 @@
             p_qty: qty,
           });
           if (error) throw error;
-          showToast(`🛒 ${it.name} ×${qty} 구매 완료!`);
+          showToast(`🛒 ${it.name}${isPack ? "" : " ×" + qty} 구매 완료!`);
           try {
             await syncAdminGrants();
-            if (data && data.grant_id) {
-              const got = await takeMail(data.grant_id);
-              if (got) finishMailAccept(got);
+            const gids =
+              data && Array.isArray(data.grant_ids) && data.grant_ids.length
+                ? data.grant_ids
+                : data && data.grant_id
+                  ? [data.grant_id]
+                  : [];
+            if (gids.length) {
+              const labels = [];
+              let any = false;
+              for (const gid of gids) {
+                const got = await takeMail(gid);
+                if (got) {
+                  any = true;
+                  labels.push(...got);
+                }
+              }
+              if (any) finishMailAccept(labels);
             }
           } catch (e) {
             console.warn("[상점] 자동 수령 실패(우편함에서 받을 수 있어요)", e);
@@ -21347,7 +21497,9 @@
           showToast(
             /not enough ruby/.test(m)
               ? "루비가 부족해요"
-              : /weekly limit/.test(m)
+              : /season limit/.test(m)
+                ? "이번 시즌에는 이미 구매했어요 (매월 1일에 다시 열려요)"
+                : /weekly limit/.test(m)
                 ? "이번 주 구매 한도를 넘었어요"
                 : /quantity/.test(m)
                   ? "한 번에 살 수 있는 수량을 넘었어요"
