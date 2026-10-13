@@ -24,7 +24,7 @@
       // 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
       // 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
       (function () {
-        var CURRENT_VERSION = "2026101329";
+        var CURRENT_VERSION = "2026101331";
         try {
           if (sessionStorage.getItem("lrVersionChecked") === CURRENT_VERSION)
             return;
@@ -6187,7 +6187,7 @@
             "
           >
             🔒 랭킹 등록·조회는 구글 로그인이 필요해요. (미로그인 시 등급만 이
-            기기에서 확인 가능 · 로그인 시 전체 순위 실시간 갱신)
+            기기에서 확인 가능 · 로그인하면 전체 순위를 볼 수 있어요)
           </p>
           <button
             class="start-btn"
@@ -13633,6 +13633,20 @@
       // 간주해 배지를 띄우고, 기존 유저가 접속하면 자동으로 한 번 띄워준다.
       const patchNotes = [
         {
+          version: "2026101331",
+          date: "2026-10-13",
+          items: [
+            "📝 로그인 전 랭킹창과 현재검 랭킹의 \"실시간\" 문구도 정리했어요. 랭킹은 반영되는 데 몇 분 정도 걸려요 (게임 내용은 그대로예요)",
+          ],
+        },
+        {
+          version: "2026101330",
+          date: "2026-10-13",
+          items: [
+            "📝 랭킹창 맨 위의 \"실시간으로 갱신돼요\" 문구를 없앴어요. 랭킹은 반영되는 데 몇 분 정도 걸려요 (게임 내용은 그대로예요)",
+          ],
+        },
+        {
           version: "2026101329",
           date: "2026-10-13",
           items: [
@@ -17524,11 +17538,11 @@
         const noteEl = document.getElementById("rankLoginNote");
         const loginBtn = document.getElementById("rankLoginBtn");
         if (currentUser) {
-          noteEl.textContent = `👤 ${currentUser.name}님으로 로그인됨 · 랭킹에 등록되고 있어요 (전체 순위가 실시간으로 갱신돼요)`;
+          noteEl.textContent = `👤 ${currentUser.name}님으로 로그인됨 · 랭킹에 등록되고 있어요`;
           loginBtn.style.display = "none";
         } else {
           noteEl.textContent =
-            "🔒 랭킹 등록·조회는 구글 로그인이 필요해요. (미로그인 시 등급은 이 기기에서만 확인 가능 · 로그인 시 전체 순위 실시간 갱신)";
+            "🔒 랭킹 등록·조회는 구글 로그인이 필요해요. (미로그인 시 등급은 이 기기에서만 확인 가능 · 로그인하면 전체 순위를 볼 수 있어요)";
           loginBtn.style.display = "block";
         }
         await renderLeaderboardList();
@@ -17597,7 +17611,7 @@
           card.innerHTML = `
       <span class="my-rank-icon">🗡️</span>
       <div style="flex:1;">
-        <div class="my-rank-name">현재검 랭킹 <span style="font-size:10px; color:var(--paper-dim); font-weight:normal;">(지금 들고 있는 검 기준, 실시간)</span></div>
+        <div class="my-rank-name">현재검 랭킹 <span style="font-size:10px; color:var(--paper-dim); font-weight:normal;">(지금 들고 있는 검 기준)</span></div>
         <div class="my-rank-sub">현재 보유 중: ${getSwordDisplayName()}</div>
         <div class="my-rank-sub" id="myRankPosition" style="color:var(--gold);">${swordOwned ? "내 순위 불러오는 중..." : "검이 없으면 순위에 안 들어가요"}</div>
       </div>
