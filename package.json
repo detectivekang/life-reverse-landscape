@@ -2,7 +2,7 @@
   "name": "kakao-login-function",
   "description": "카카오 로그인 토큰을 Firebase 커스텀 토큰으로 교환하는 Cloud Function",
   "engines": {
-    "node": "18"
+    "node": "20.x"
   },
   "main": "index.js",
   "dependencies": {
