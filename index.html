@@ -24,7 +24,7 @@
       // 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
       // 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
       (function () {
-        var CURRENT_VERSION = "2026101407";
+        var CURRENT_VERSION = "2026101410";
         try {
           if (sessionStorage.getItem("lrVersionChecked") === CURRENT_VERSION)
             return;
@@ -59,13 +59,13 @@
     />
     <link
       rel="apple-touch-icon"
-      href="https://detectivekang.github.io/life-reverse-landscape/apple-touch-icon.png"
+      href="https://life-reverse-landscape-4dbo.vercel.app/apple-touch-icon.png"
     />
     <!-- ===== 링크 미리보기(오픈그래프/카카오톡/디스코드 등) 이미지 설정 ===== -->
     <meta property="og:type" content="website" />
     <meta
       property="og:url"
-      content="https://detectivekang.github.io/life-reverse-landscape/"
+      content="https://life-reverse-landscape-4dbo.vercel.app/"
     />
     <meta property="og:title" content="인생역전 - 무일푼에서 글로벌 재벌까지" />
     <meta
@@ -74,7 +74,7 @@
     />
     <meta
       property="og:image"
-      content="https://detectivekang.github.io/life-reverse-landscape/og-image.png"
+      content="https://life-reverse-landscape-4dbo.vercel.app/og-image.png"
     />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
@@ -89,7 +89,7 @@
     />
     <meta
       name="twitter:image"
-      content="https://detectivekang.github.io/life-reverse-landscape/og-image.png"
+      content="https://life-reverse-landscape-4dbo.vercel.app/og-image.png"
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -2188,7 +2188,7 @@
       .mascot-bubble {
         position: fixed;
         left: 10px;
-        bottom: calc(24px + var(--dock-h));
+        bottom: calc(60px + var(--dock-h));
         z-index: 91;
         display: flex;
         align-items: flex-end;
@@ -5794,7 +5794,30 @@
       </div>
 
       <div id="part6Screen" style="display: none">
-        <div style="padding: 16px 14px; text-align: center">
+        <div style="padding: 16px 14px; text-align: center; position: relative">
+          <button
+            type="button"
+            id="voidGuideBtn"
+            aria-label="공허 규칙 보기"
+            style="
+              position: absolute;
+              top: 10px;
+              right: 12px;
+              z-index: 2;
+              padding: 5px 11px;
+              font-size: 11.5px;
+              line-height: 1.2;
+              font-family: inherit;
+              border-radius: 999px;
+              border: 1px solid var(--gold);
+              background: var(--bg-panel);
+              color: var(--gold);
+              cursor: pointer;
+              white-space: nowrap;
+            "
+          >
+            📖 규칙
+          </button>
           <div style="font-size: 12px; color: var(--paper-dim)">
             🌌 공허맵 · 끝없는 웨이브 서바이벌
           </div>
@@ -5934,17 +5957,7 @@
             "
           >
             <button class="start-btn" id="voidShopBtn">🛒 차원 상점</button>
-            <button
-              class="start-btn"
-              id="voidGuideBtn"
-              style="
-                background: var(--bg-panel);
-                color: var(--gold);
-                border: 1px solid var(--gold);
-              "
-            >
-              📖 규칙
-            </button>
+
             <button
               class="start-btn"
               id="voidRelicBtn"
@@ -14205,6 +14218,27 @@
       // 간주해 배지를 띄우고, 기존 유저가 접속하면 자동으로 한 번 띄워준다.
       const patchNotes = [
         {
+          version: "2026101410",
+          date: "2026-10-14",
+          items: [
+            "🐷 복돼지와 말풍선이 아래 메뉴줄 바로 위에 붙어 있던 걸 조금 더 위로 올렸어요",
+          ],
+        },
+        {
+          version: "2026101409",
+          date: "2026-10-14",
+          items: [
+            "📖 공허 [규칙] 버튼을 화면 오른쪽 위의 작은 버튼으로 옮겼어요. 아래 버튼 줄이 좁은 폰에서 글자가 두 줄로 깨지던 것도 함께 해결됐어요",
+          ],
+        },
+        {
+          version: "2026101408",
+          date: "2026-10-14",
+          items: [
+            "🌐 링크 미리보기(카카오톡·디스코드 등)와 결과 공유 카드에 들어가는 게임 주소를 새 주소로 바꿨어요",
+          ],
+        },
+        {
           version: "2026101407",
           date: "2026-10-14",
           items: [
@@ -18800,7 +18834,7 @@
         ctx.font = '22px \"Noto Color Emoji\", sans-serif';
         ctx.fillStyle = "#6b6355";
         ctx.fillText(
-          "detectivekang.github.io/life-reverse-landscape",
+          "life-reverse-landscape-4dbo.vercel.app",
           400,
           940,
         );
