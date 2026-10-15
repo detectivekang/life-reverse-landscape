@@ -10,8 +10,8 @@
 // 보이던 문제)가 있었다. 이제 HTML/JS 문서는 "네트워크 우선"으로 바꿔서, 새로 배포하면
 // 바로 반영되고, 오프라인일 때만 캐시로 대체되게 한다. 아이콘 등 진짜 안 바뀌는 정적
 // 파일만 캐시 우선으로 남겨 오프라인 PWA 셸을 유지한다.
-const CACHE_NAME = 'life-reverse-shell-v2';
-const SHELL_FILES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
+const CACHE_NAME = 'life-reverse-shell-v3';
+const SHELL_FILES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './ui-v2.css', './ui-v2.js'];
 // 이 목록에 해당하는 요청만 "캐시 우선" (자주 안 바뀌는 정적 리소스)
 const CACHE_FIRST_PATTERNS = [/icon-192\.png$/, /icon-512\.png$/, /manifest\.json$/];
 

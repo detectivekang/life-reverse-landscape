@@ -7,7 +7,7 @@
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
     <link rel="manifest" href="./manifest.json" />
-    <meta name="theme-color" content="#1c1712" />
+    <meta name="theme-color" content="#141c30" />
     <meta
       http-equiv="Content-Security-Policy"
       content="object-src 'none'; base-uri 'self'"
@@ -24,7 +24,7 @@
       // 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
       // 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
       (function () {
-        var CURRENT_VERSION = "2026101410";
+        var CURRENT_VERSION = "2026101412";
         try {
           if (sessionStorage.getItem("lrVersionChecked") === CURRENT_VERSION)
             return;
@@ -51,7 +51,7 @@
       name="description"
       content="탭 하나로 시작하는 인생 역전 방치형(放置形) 게임. 노숙자에서 시작해 상가, 행운의 거리, 월드 비즈니스까지 확장하며 재벌이 되어보세요."
     />
-    <meta name="theme-color" content="#3A2E1F" />
+    <meta name="theme-color" content="#1a2238" />
     <link
       rel="icon"
       type="image/png"
@@ -120,19 +120,19 @@
     </script>
     <style>
       :root {
-        --bg-deep: #14110f;
+        --bg-deep: #0e1424;
         --bg-sky: #6fa8dc;
         --bg-grass: #8fcb9a;
         --bg-road: #4a4640;
         --bg-walk: #c9bfa6;
-        --bg-panel: #201b16;
-        --bg-card: #fff7e6;
-        --gold: #e8b33d;
-        --gold-dim: #8a6c2b;
-        --paper: #f5efe2;
-        --paper-dim: #b8b0a0;
-        --ink: #3a2e1f;
-        --danger: #c0463c;
+        --bg-panel: #141c30;
+        --bg-card: #f4f6fb;
+        --gold: #f0b43c;
+        --gold-dim: #3a4a73;
+        --paper: #eef1f8;
+        --paper-dim: #a7b1c9;
+        --ink: #1a2238;
+        --danger: #e5534b;
       }
       * {
         box-sizing: border-box;
@@ -211,7 +211,7 @@
         gap: 8px;
         padding: 6px 10px;
         background: var(--bg-panel);
-        border-bottom: 1px solid #2e2822;
+        border-bottom: 1px solid #1d2740;
         z-index: 30;
       }
       .money-block {
@@ -275,7 +275,7 @@
         width: 100%;
         max-width: 320px;
         height: 6px;
-        background: #3a322a;
+        background: #2c3a5c;
         border-radius: 3px;
       }
       .stage-fill {
@@ -299,7 +299,7 @@
         width: 11px;
         height: 11px;
         border-radius: 50%;
-        background: #3a322a;
+        background: #2c3a5c;
         border: 2px solid var(--bg-deep);
       }
       .stop.done {
@@ -307,7 +307,7 @@
       }
       .stop.current {
         background: var(--gold);
-        box-shadow: 0 0 0 3px rgba(232, 179, 61, 0.25);
+        box-shadow: 0 0 0 3px rgba(240, 180, 60, 0.25);
       }
 
       .hud-mult {
@@ -339,7 +339,7 @@
         text-align: center;
         font-size: 11.5px;
         font-weight: bold;
-        color: #1c1712;
+        color: #141c30;
         cursor: pointer;
         background: linear-gradient(90deg, #ffd166, #ffb347, #ffd166);
         padding: 6px 10px;
@@ -364,7 +364,7 @@
         text-align: center;
         font-size: 11.5px;
         font-weight: bold;
-        color: #1c1712;
+        color: #141c30;
         background: linear-gradient(90deg, #ffd166, #ffb347, #ffd166);
         background-size: 200% 100%;
         padding: 7px 10px;
@@ -386,7 +386,7 @@
         gap: 10px;
         font-size: 11.5px;
         color: var(--paper);
-        background: #2a241d;
+        background: #1d2740;
         border-bottom: 1px solid var(--gold-dim);
         padding: 8px 10px;
       }
@@ -411,7 +411,7 @@
       .map-switch {
         display: flex;
         gap: 3px;
-        background: #2a241d;
+        background: #1d2740;
         border-radius: 14px;
         padding: 3px;
         flex: 0 0 auto;
@@ -435,7 +435,7 @@
         width: 28px;
         height: 28px;
         border-radius: 50%;
-        background: #2a241d;
+        background: #1d2740;
         border: 1px solid var(--gold-dim);
         color: var(--gold);
         font-size: 13px;
@@ -480,9 +480,9 @@
         gap: 8px;
         width: 100%;
         box-sizing: border-box;
-        background: #2a241d;
+        background: #1d2740;
         border: none;
-        border-bottom: 1px solid #3a332a;
+        border-bottom: 1px solid #2c3a5c;
         color: var(--paper);
         padding: 5px 10px;
         font-size: 11px;
@@ -502,7 +502,7 @@
         flex: 1;
         min-width: 24px;
         height: 5px;
-        background: #3a332a;
+        background: #2c3a5c;
         border-radius: 3px;
         overflow: hidden;
       }
@@ -611,7 +611,7 @@
         flex: 0 0 112px;
         height: auto;
         background: var(--bg-card);
-        border: 2px solid #c99a4a;
+        border: 2px solid #b9c3da;
         border-radius: 10px;
         padding: 8px 5px 7px;
         position: relative;
@@ -634,10 +634,10 @@
         height: 12px;
         background: repeating-linear-gradient(
           90deg,
-          #c0463c,
-          #c0463c 8px,
-          #f5efe2 8px,
-          #f5efe2 16px
+          #e5534b,
+          #e5534b 8px,
+          #eef1f8 8px,
+          #eef1f8 16px
         );
         border-radius: 6px 6px 0 0;
       }
@@ -653,7 +653,7 @@
       }
       .stall-lv {
         font-size: 9px;
-        color: #8a7a5c;
+        color: #6b7794;
       }
       .stall-progress-track {
         height: 6px;
@@ -664,7 +664,7 @@
       }
       .stall-progress-fill {
         height: 100%;
-        background: linear-gradient(90deg, #f6d06b, #e8b33d);
+        background: linear-gradient(90deg, #f6d06b, #f0b43c);
         width: 0%;
         transition: width 0.15s linear;
       }
@@ -679,7 +679,7 @@
       }
       .employee-btn {
         margin-top: 5px;
-        background: #2a241d;
+        background: #1d2740;
         border: 1px solid var(--gold-dim);
         color: var(--paper);
         border-radius: 6px;
@@ -750,10 +750,10 @@
       .scene.stage1 .stall .roof {
         background: repeating-linear-gradient(
           90deg,
-          #e8b33d,
-          #e8b33d 8px,
-          #201b16 8px,
-          #201b16 16px
+          #f0b43c,
+          #f0b43c 8px,
+          #141c30 8px,
+          #141c30 16px
         );
       }
       .scene.stage2 .stall .roof {
@@ -766,14 +766,14 @@
         );
       }
       .scene.stage3 .stall .roof {
-        background: linear-gradient(90deg, #8a6c2b, #e8b33d);
+        background: linear-gradient(90deg, #3a4a73, #f0b43c);
       }
 
       .scene.stage0 .building {
         background: #33465c;
       }
       .scene.stage1 .building {
-        background: #6b5a44;
+        background: #6b7794;
       }
       .scene.stage2 .building {
         background: #4a3a68;
@@ -825,7 +825,7 @@
         );
       }
       .scene.map2theme .stall .roof {
-        background: linear-gradient(90deg, #8a6c2b, #e8b33d);
+        background: linear-gradient(90deg, #3a4a73, #f0b43c);
       }
       .scene.map2theme .building {
         background: #3f5a7a;
@@ -1156,11 +1156,11 @@
         padding: 12px 14px;
         margin: 0 auto;
         max-width: 340px;
-        background: rgba(28, 23, 15, 0.9);
+        background: rgba(20, 28, 48, 0.9);
         border: 2px solid var(--gold);
         border-radius: 16px;
         text-align: center;
-        box-shadow: 0 0 24px rgba(232, 179, 61, 0.55);
+        box-shadow: 0 0 24px rgba(240, 180, 60, 0.55);
         animation: lifeBanner 2.8s ease-out forwards;
       }
       .life-banner .lb-head {
@@ -1219,7 +1219,7 @@
         align-items: center;
         gap: 12px;
         text-align: left;
-        background: #2a241d;
+        background: #1d2740;
         border: 1px solid var(--gold-dim);
         border-radius: 12px;
         padding: 10px 12px;
@@ -1276,7 +1276,7 @@
         gap: 10px;
         padding: 7px 10px;
         border-radius: 9px;
-        background: #241f18;
+        background: #141c30;
         font-size: 12px;
         color: var(--paper-dim);
       }
@@ -1286,7 +1286,7 @@
       .life-row.current {
         border: 1px solid var(--gold);
         color: var(--gold);
-        background: #2f271b;
+        background: #1d2740;
       }
       .life-row:not(.done):not(.current) .lr-av {
         opacity: 0.5;
@@ -1332,7 +1332,7 @@
         right: 0;
         top: 0;
         height: 5px;
-        background: rgba(28, 23, 15, 0.85);
+        background: rgba(20, 28, 48, 0.85);
         opacity: 0;
         transition: opacity 0.25s ease;
         overflow: hidden;
@@ -1904,7 +1904,7 @@
         gap: 10px;
         padding: 6px 10px;
         background: var(--bg-panel);
-        border-top: 1px solid #2e2822;
+        border-top: 1px solid #1d2740;
         z-index: 30;
       }
       .tap-btn {
@@ -1940,10 +1940,10 @@
       @keyframes pulseGlow {
         0%,
         100% {
-          box-shadow: 0 0 0 0 rgba(232, 179, 61, 0.5);
+          box-shadow: 0 0 0 0 rgba(240, 180, 60, 0.5);
         }
         50% {
-          box-shadow: 0 0 0 9px rgba(232, 179, 61, 0);
+          box-shadow: 0 0 0 9px rgba(240, 180, 60, 0);
         }
       }
       .tap-btn.pulse {
@@ -1957,7 +1957,7 @@
         align-items: center;
         justify-content: space-between;
         background: var(--bg-card);
-        border: 1px solid #c99a4a;
+        border: 1px solid #b9c3da;
         border-radius: 10px;
         padding: 7px 12px;
         cursor: pointer;
@@ -1973,7 +1973,7 @@
       }
       .upgrade-meta {
         font-size: 9.5px;
-        color: #8a7a5c;
+        color: #6b7794;
       }
       .upgrade-cost {
         font-size: 11.5px;
@@ -1994,7 +1994,7 @@
         justify-content: space-around;
         gap: 2px;
         padding: 4px 6px calc(4px + env(safe-area-inset-bottom, 0px));
-        background: linear-gradient(180deg, #211b15, var(--bg-panel));
+        background: linear-gradient(180deg, #141c30, var(--bg-panel));
         border-top: 1px solid var(--gold-dim);
         box-shadow: 0 -4px 14px rgba(0, 0, 0, 0.45);
         z-index: 30;
@@ -2018,7 +2018,7 @@
         -webkit-tap-highlight-color: transparent;
       }
       .dock-btn:active {
-        background: rgba(232, 179, 61, 0.16);
+        background: rgba(240, 180, 60, 0.16);
         border-color: var(--gold-dim);
       }
       .dock-ico {
@@ -2127,7 +2127,7 @@
         margin-top: 12px;
       }
       .booster-btn {
-        background: #2a241d;
+        background: #1d2740;
         border: 1px solid var(--gold-dim);
         border-radius: 10px;
         padding: 8px 4px 7px;
@@ -2223,7 +2223,7 @@
       }
       .mascot-speech {
         background: #fff8ec;
-        color: #2a2115;
+        color: #1d2740;
         border: 2px solid var(--gold);
         border-radius: 14px 14px 14px 3px;
         padding: 9px 13px;
@@ -2266,7 +2266,7 @@
       /* ===== 다크 테마 커스텀 스크롤바 (모달/패널 공통) ===== */
       * {
         scrollbar-width: thin;
-        scrollbar-color: rgba(232, 179, 61, 0.45) transparent;
+        scrollbar-color: rgba(240, 180, 60, 0.45) transparent;
       }
       *::-webkit-scrollbar {
         width: 6px;
@@ -2276,11 +2276,11 @@
         background: transparent;
       }
       *::-webkit-scrollbar-thumb {
-        background: rgba(232, 179, 61, 0.38);
+        background: rgba(240, 180, 60, 0.38);
         border-radius: 6px;
       }
       *::-webkit-scrollbar-thumb:hover {
-        background: rgba(232, 179, 61, 0.65);
+        background: rgba(240, 180, 60, 0.65);
       }
       *::-webkit-scrollbar-corner {
         background: transparent;
@@ -2288,7 +2288,7 @@
       /* 모달 안쪽은 스크롤바를 거의 숨기고(스크롤 중에만 은은히), 레이아웃 흔들림 방지 */
       .modal-box {
         scrollbar-width: thin;
-        scrollbar-color: rgba(232, 179, 61, 0.3) transparent;
+        scrollbar-color: rgba(240, 180, 60, 0.3) transparent;
         scrollbar-gutter: stable both-edges;
         overscroll-behavior: contain;
       }
@@ -2296,7 +2296,7 @@
         width: 4px;
       }
       .modal-box::-webkit-scrollbar-thumb {
-        background: rgba(232, 179, 61, 0.28);
+        background: rgba(240, 180, 60, 0.28);
       }
       .modal-overlay.show .modal-box {
         animation: modalPop 0.18s ease-out;
@@ -2330,7 +2330,7 @@
       /* ===== 검 강화 안내(접이식) ===== */
       .sg { text-align: left; margin: 0 0 12px; }
       .sg-sum { font-size: 12px; line-height: 1.6; color: var(--paper-dim); text-align: center; margin: 0 0 8px; }
-      .sg-d { background: rgba(255,255,255,.04); border: 1px solid rgba(232,179,61,.25); border-radius: 10px; margin-bottom: 6px; padding: 0 10px; }
+      .sg-d { background: rgba(255,255,255,.04); border: 1px solid rgba(240,180,60,.25); border-radius: 10px; margin-bottom: 6px; padding: 0 10px; }
       .sg-d summary { cursor: pointer; padding: 9px 0; font-size: 12.5px; font-weight: 700; color: var(--gold); list-style: none; }
       .sg-d summary::-webkit-details-marker { display: none; }
       .sg-d summary::after { content: "▾"; float: right; transition: transform .2s; }
@@ -2338,14 +2338,14 @@
       .sg-body { font-size: 11.5px; color: var(--paper-dim); line-height: 1.65; padding-bottom: 9px; }
       .sg-body ul { margin: 0; padding-left: 16px; }
       .sg-body li { margin: 3px 0; }
-      .sg-body b { color: #f4ead2; }
-      .sg-tbl { width: 100%; border-collapse: collapse; text-align: center; font-size: 10.5px; color: #f4ead2; margin-top: 6px; }
-      .sg-tbl th { color: #bba978; font-weight: 700; padding: 3px 2px; border-bottom: 1px solid rgba(230,182,62,.3); }
+      .sg-body b { color: #eef1f8; }
+      .sg-tbl { width: 100%; border-collapse: collapse; text-align: center; font-size: 10.5px; color: #eef1f8; margin-top: 6px; }
+      .sg-tbl th { color: #a7b1c9; font-weight: 700; padding: 3px 2px; border-bottom: 1px solid rgba(230,182,62,.3); }
       .sg-tbl td { padding: 3px 2px; border-bottom: 1px solid rgba(230,182,62,.12); }
       .sg-tbl th:first-child, .sg-tbl td:first-child { text-align: left; }
       .sg-tbl .g { color: #9fe08a; }
       .sg-tbl .r { color: #ff8f80; }
-      .sg-tbl tr.sg-cur td { background: rgba(232,179,61,.18); font-weight: 700; }
+      .sg-tbl tr.sg-cur td { background: rgba(240,180,60,.18); font-weight: 700; }
       .sg-note { font-size: 10.5px; color: #8f8566; margin-top: 5px; line-height: 1.5; }
       .route-grid {
         display: grid;
@@ -2353,7 +2353,7 @@
         gap: 8px;
       }
       .route-card {
-        background: #2a241d;
+        background: #1d2740;
         border: 1px solid #35302a;
         border-radius: 10px;
         padding: 12px 8px;
@@ -2411,7 +2411,7 @@
         align-items: center;
         justify-content: space-between;
         gap: 10px;
-        background: #1c170f;
+        background: #18213a;
         border: 1px solid var(--gold-dim);
         border-radius: 10px;
         padding: 10px 12px;
@@ -2443,7 +2443,7 @@
         opacity: 0.4;
       }
       .daily-row {
-        background: #1c170f;
+        background: #18213a;
         border: 1px solid var(--gold-dim);
         border-radius: 10px;
         padding: 10px 12px;
@@ -2471,7 +2471,7 @@
       .daily-bar-track {
         height: 6px;
         border-radius: 4px;
-        background: #0f0c07;
+        background: #141c30;
         margin-top: 8px;
         overflow: hidden;
       }
@@ -2496,7 +2496,7 @@
         font-size: 13px;
       }
       .close-btn {
-        background: #2a241d;
+        background: #1d2740;
         color: var(--paper);
         border: 1px solid var(--gold-dim);
         border-radius: 20px;
@@ -2571,7 +2571,7 @@
       }
       .trainee-card {
         background: var(--bg-card);
-        border: 2px solid #c99a4a;
+        border: 2px solid #b9c3da;
         border-radius: 12px;
         padding: 12px;
         color: var(--ink);
@@ -2628,10 +2628,10 @@
         font-size: 10px;
         width: 28px;
         text-align: right;
-        color: #8a7a5c;
+        color: #6b7794;
       }
       .train-btn {
-        background: #2a241d;
+        background: #1d2740;
         color: var(--paper);
         border: 1px solid var(--gold-dim);
         border-radius: 8px;
@@ -2856,7 +2856,7 @@
         display: block;
         width: 100%;
         background: var(--danger);
-        color: #fff7e6;
+        color: #f4f6fb;
         border: none;
         border-radius: 10px;
         padding: 9px;
@@ -2874,7 +2874,7 @@
         align-items: center;
         background: var(--bg-card);
         color: var(--ink);
-        border: 1px solid #c99a4a;
+        border: 1px solid #b9c3da;
         border-radius: 10px;
         padding: 8px 12px;
         margin-bottom: 6px;
@@ -2926,10 +2926,10 @@
         line-height: 1.5;
       }
       .casino-tab.active {
-        background: linear-gradient(180deg, #ffd166, #e8b33d);
-        color: #3a2e1f;
+        background: linear-gradient(180deg, #ffd166, #f0b43c);
+        color: #1a2238;
         font-weight: bold;
-        border-color: #e8b33d;
+        border-color: #f0b43c;
       }
       .casino-tab.locked {
         opacity: 0.4;
@@ -2996,8 +2996,8 @@
         transform: scale(0.92);
       }
       .casino-action-btn {
-        background: linear-gradient(180deg, #ffd166, #e8b33d);
-        color: #3a2e1f;
+        background: linear-gradient(180deg, #ffd166, #f0b43c);
+        color: #1a2238;
         border: none;
         border-radius: 14px;
         padding: 9px 20px;
@@ -3071,8 +3071,8 @@
         cursor: pointer;
       }
       .horse-pick.active {
-        background: linear-gradient(180deg, #ffd166, #e8b33d);
-        color: #3a2e1f;
+        background: linear-gradient(180deg, #ffd166, #f0b43c);
+        color: #1a2238;
         font-weight: bold;
       }
 
@@ -3082,7 +3082,7 @@
         min-height: 0;
         display: flex;
         flex-direction: column;
-        background: radial-gradient(ellipse at 50% 0%, #2b2417 0%, #14110c 70%);
+        background: radial-gradient(ellipse at 50% 0%, #1d2740 0%, #141c30 70%);
         overflow: hidden;
       }
       .collection-tabs {
@@ -3090,22 +3090,22 @@
         display: flex;
         gap: 4px;
         padding: 8px 10px 0;
-        background: #14110c;
+        background: #141c30;
       }
       .collection-tab-btn {
         flex: 1;
         padding: 9px 4px;
         font-size: 11.5px;
         font-weight: bold;
-        border: 1px solid #3a2e1f;
+        border: 1px solid #1a2238;
         border-bottom: none;
         border-radius: 8px 8px 0 0;
-        background: #1a1610;
+        background: #141c30;
         color: var(--paper-dim);
         cursor: pointer;
       }
       .collection-tab-btn.active {
-        background: #2b2417;
+        background: #1d2740;
         color: var(--gold);
       }
       #collectionNormalPane,
@@ -3121,8 +3121,8 @@
         justify-content: space-between;
         align-items: center;
         padding: 8px 14px;
-        background: #1a1610;
-        border-bottom: 1px solid #3a2e1f;
+        background: #141c30;
+        border-bottom: 1px solid #1a2238;
         font-size: 11px;
         color: var(--gold);
       }
@@ -3136,14 +3136,14 @@
         padding: 10px 12px 16px;
       }
       .collect-set {
-        background: rgba(28, 23, 15, 0.85);
-        border: 1px solid #3a2e1f;
+        background: rgba(20, 28, 48, 0.85);
+        border: 1px solid #1a2238;
         border-radius: 12px;
         padding: 8px 8px 10px;
       }
       .collect-set.complete {
         border-color: var(--gold);
-        box-shadow: 0 0 0 1px rgba(232, 179, 61, 0.35) inset;
+        box-shadow: 0 0 0 1px rgba(240, 180, 60, 0.35) inset;
       }
       .collect-set-header {
         display: flex;
@@ -3172,8 +3172,8 @@
         gap: 8px;
       }
       .collect-card {
-        background: #221c14;
-        border: 2px solid #4a3a24;
+        background: #141c30;
+        border: 2px solid #3a4a73;
         border-radius: 10px;
         padding: 8px 4px 7px;
         text-align: center;
@@ -3182,7 +3182,7 @@
       }
       .collect-card.owned {
         border-color: var(--gold);
-        background: linear-gradient(180deg, #3a2f1a, #221c14);
+        background: linear-gradient(180deg, #1d2740, #141c30);
       }
       .collect-card.locked {
         opacity: 0.55;
@@ -3204,7 +3204,7 @@
       }
       .collect-bonus {
         font-size: 8.5px;
-        color: #8a7a5c;
+        color: #6b7794;
         margin-top: 1px;
       }
       .collect-owned-badge {
@@ -3235,14 +3235,14 @@
         display: flex;
         align-items: center;
         gap: 8px;
-        background: #2a241d;
-        border: 1px solid #3a332a;
+        background: #1d2740;
+        border: 1px solid #2c3a5c;
         border-radius: 8px;
         padding: 7px 10px;
       }
       .achv-row.done {
         border-color: var(--gold);
-        background: #35301f;
+        background: #2c3a5c;
       }
       .achv-icon {
         font-size: 18px;
@@ -3288,7 +3288,7 @@
         line-height: 1.5;
       }
       .my-rank-card {
-        background: #2a241d;
+        background: #1d2740;
         border: 2px solid var(--gold-dim);
         border-radius: 12px;
         padding: 14px;
@@ -3312,7 +3312,7 @@
       }
       .my-rank-track {
         height: 6px;
-        background: #3a322a;
+        background: #2c3a5c;
         border-radius: 3px;
         margin-top: 6px;
         overflow: hidden;
@@ -3341,8 +3341,8 @@
       }
       .lb-period-tab {
         flex: 1 1 30%;
-        background: #2a241d;
-        border: 1px solid #3a332a;
+        background: #1d2740;
+        border: 1px solid #2c3a5c;
         border-radius: 8px;
         color: var(--paper-dim);
         font-size: 10.5px;
@@ -3364,8 +3364,8 @@
         margin-bottom: 8px;
       }
       .rank-cat-btn {
-        background: #2a241d;
-        border: 1px solid #3a332a;
+        background: #1d2740;
+        border: 1px solid #2c3a5c;
         border-radius: 10px;
         color: var(--paper-dim);
         font-size: 12.5px;
@@ -3513,15 +3513,15 @@
         display: flex;
         align-items: center;
         gap: 8px;
-        background: #2a241d;
-        border: 1px solid #3a332a;
+        background: #1d2740;
+        border: 1px solid #2c3a5c;
         border-radius: 8px;
         padding: 6px 10px;
         font-size: 11px;
       }
       .lb-row.me {
         border-color: var(--gold);
-        background: #35301f;
+        background: #2c3a5c;
       }
       .lb-rank {
         width: 20px;
@@ -3620,7 +3620,7 @@
         justify-content: space-between;
         font-size: 11px;
         color: var(--paper);
-        background: #1c170f;
+        background: #18213a;
         border: 1px solid var(--gold-dim);
         border-radius: 8px;
         padding: 6px 10px;
@@ -3643,7 +3643,7 @@
         text-align: left;
         width: 100%;
         box-sizing: border-box;
-        background: #2a241d;
+        background: #1d2740;
         border: 1px solid var(--gold-dim);
         border-radius: 12px;
         padding: 11px 12px;
@@ -3653,7 +3653,7 @@
         font-family: inherit;
       }
       .fate-card:active {
-        background: #35301f;
+        background: #2c3a5c;
         border-color: var(--gold);
       }
       .fate-icon {
@@ -3684,7 +3684,7 @@
         gap: 10px;
         font-size: 12px;
         padding: 6px 2px;
-        border-bottom: 1px solid #3a332a;
+        border-bottom: 1px solid #2c3a5c;
         color: var(--paper);
         text-align: left;
       }
@@ -3697,7 +3697,7 @@
         font-size: 11.5px;
         line-height: 1.6;
         color: var(--paper);
-        background: #1c170f;
+        background: #18213a;
         border: 1px solid var(--gold-dim);
         border-radius: 10px;
         padding: 9px 10px;
@@ -3709,8 +3709,8 @@
       }
       .hof-tab {
         flex: 1 1 0;
-        background: #2a241d;
-        border: 1px solid #3a332a;
+        background: #1d2740;
+        border: 1px solid #2c3a5c;
         border-radius: 8px;
         color: var(--paper-dim);
         font-size: 10.5px;
@@ -3731,8 +3731,8 @@
         overflow-y: auto;
       }
       .hof-card {
-        background: #2a241d;
-        border: 1px solid #3a332a;
+        background: #1d2740;
+        border: 1px solid #2c3a5c;
         border-radius: 10px;
         padding: 9px 10px;
         margin-bottom: 8px;
@@ -3762,7 +3762,7 @@
         color: var(--gold);
       }
       .hof-line.me {
-        background: #35301f;
+        background: #2c3a5c;
         border-radius: 6px;
       }
       .hof-note {
@@ -3835,7 +3835,7 @@
         border-radius: 16px;
         padding: 14px 10px 11px;
         --lt-glow: 232, 179, 61;
-        background: linear-gradient(160deg, #2b2117, #17110b);
+        background: linear-gradient(160deg, #1d2740, #141c30);
         border: 2px solid var(--gold-dim);
         box-shadow:
           0 0 14px rgba(var(--lt-glow), 0.22),
@@ -3873,7 +3873,7 @@
         margin: 5px 0 3px;
         font-variant-numeric: tabular-nums;
         word-break: keep-all;
-        background: linear-gradient(180deg, #fff6d2, #e8b33d 55%, #b57a12);
+        background: linear-gradient(180deg, #fff6d2, #f0b43c 55%, #b57a12);
         -webkit-background-clip: text;
         background-clip: text;
         color: transparent;
@@ -3988,9 +3988,9 @@
       }
       .lt-tab {
         flex: 1;
-        background: #2a241d;
+        background: #1d2740;
         color: var(--paper-dim);
-        border: 1px solid #3a3025;
+        border: 1px solid #1d2740;
         border-radius: 10px;
         padding: 7px 2px;
         font:
@@ -4062,7 +4062,7 @@
       }
 
       .lt-ask {
-        background: rgba(232, 179, 61, 0.1);
+        background: rgba(240, 180, 60, 0.1);
         border: 1px solid var(--gold-dim);
         border-radius: 10px;
         padding: 8px 10px;
@@ -4138,7 +4138,7 @@
       .lt-num {
         aspect-ratio: 1;
         border-radius: 50%;
-        border: 2px solid #4a3d2b;
+        border: 2px solid #3a4a73;
         background: #17120d;
         color: var(--paper);
         font:
@@ -4162,7 +4162,7 @@
             transparent 30%
           ),
           radial-gradient(circle at 50% 58%, var(--bc), var(--bc2));
-        box-shadow: 0 0 10px rgba(232, 179, 61, 0.5);
+        box-shadow: 0 0 10px rgba(240, 180, 60, 0.5);
       }
       .lt-picked {
         display: flex;
@@ -4251,12 +4251,12 @@
         color: #2a1c00;
         box-shadow:
           0 0 0 2px #fff6d6,
-          0 0 8px rgba(232, 179, 61, 0.9);
+          0 0 8px rgba(240, 180, 60, 0.9);
       }
 
       /* ---------- 기록 / 소식 / 확률표 ---------- */
       .lt-hist {
-        border-top: 1px dashed #4a3d2b;
+        border-top: 1px dashed #3a4a73;
         padding: 9px 0;
       }
       .lt-hist:first-child {
@@ -4330,7 +4330,7 @@
       table.lt-rtp td {
         padding: 6px 2px;
         text-align: right;
-        border-bottom: 1px solid #3a3025;
+        border-bottom: 1px solid #1d2740;
       }
       table.lt-rtp th:first-child,
       table.lt-rtp td:first-child {
@@ -4352,7 +4352,7 @@
         background:
           radial-gradient(
             ellipse at 50% 18%,
-            rgba(232, 179, 61, 0.22),
+            rgba(240, 180, 60, 0.22),
             transparent 55%
           ),
           rgba(6, 4, 2, 0.96);
@@ -4449,7 +4449,7 @@
         justify-content: space-between;
         gap: 8px;
         padding: 6px 0;
-        border-top: 1px dashed #4a3d2b;
+        border-top: 1px dashed #3a4a73;
       }
       .lt-rrow:first-of-type {
         border-top: 0;
@@ -4763,7 +4763,7 @@
         box-shadow:
           inset 0 3px 6px rgba(255, 255, 255, 0.55),
           inset 0 -5px 8px rgba(138, 108, 43, 0.45),
-          0 0 0 3px rgba(232, 179, 61, 0.25),
+          0 0 0 3px rgba(240, 180, 60, 0.25),
           0 6px 14px rgba(0, 0, 0, 0.45);
       }
       /* 모달/카드: 이중 금테 + 은은한 안쪽 빛 */
@@ -4776,13 +4776,13 @@
         );
         border: 1px solid var(--gold);
         box-shadow:
-          0 0 0 3px rgba(232, 179, 61, 0.12),
+          0 0 0 3px rgba(240, 180, 60, 0.12),
           0 18px 40px rgba(0, 0, 0, 0.6),
           inset 0 1px 0 rgba(255, 233, 168, 0.25);
       }
       .modal-box h2 {
         text-shadow:
-          0 0 12px rgba(232, 179, 61, 0.45),
+          0 0 12px rgba(240, 180, 60, 0.45),
           0 2px 0 rgba(0, 0, 0, 0.5);
       }
       .stall {
@@ -4792,7 +4792,7 @@
             rgba(255, 255, 255, 0.55) 0%,
             rgba(255, 255, 255, 0) 40%
           ),
-          linear-gradient(180deg, #fff7e6, #f0e2c0);
+          linear-gradient(180deg, #f4f6fb, #f0e2c0);
         border-color: #d9a94e;
         box-shadow:
           inset 0 1px 0 #fff,
@@ -4919,8 +4919,8 @@
       }
       .collect-set.complete {
         box-shadow:
-          0 0 0 1px rgba(232, 179, 61, 0.5) inset,
-          0 0 14px rgba(232, 179, 61, 0.35),
+          0 0 0 1px rgba(240, 180, 60, 0.5) inset,
+          0 0 14px rgba(240, 180, 60, 0.35),
           0 4px 10px rgba(0, 0, 0, 0.35);
         animation: setGlow 2.8s ease-in-out infinite;
       }
@@ -4928,7 +4928,7 @@
         50% {
           box-shadow:
             0 0 0 1px rgba(255, 233, 168, 0.7) inset,
-            0 0 22px rgba(232, 179, 61, 0.55),
+            0 0 22px rgba(240, 180, 60, 0.55),
             0 4px 10px rgba(0, 0, 0, 0.35);
         }
       }
@@ -4948,7 +4948,7 @@
         border-color: var(--gold);
         box-shadow:
           inset 0 1px 0 rgba(255, 233, 168, 0.5),
-          0 0 10px rgba(232, 179, 61, 0.35),
+          0 0 10px rgba(240, 180, 60, 0.35),
           0 2px 5px rgba(0, 0, 0, 0.35);
       }
       .collect-card.owned::after {
@@ -4997,7 +4997,7 @@
         background-image: var(--gloss);
         box-shadow:
           inset 0 1px 0 rgba(255, 255, 255, 0.4),
-          0 0 10px rgba(232, 179, 61, 0.35);
+          0 0 10px rgba(240, 180, 60, 0.35);
       }
       @media (prefers-reduced-motion: reduce) {
         .collect-set.complete,
@@ -5132,7 +5132,7 @@
       }
       .casino-action-btn {
         background-image:
-          var(--gloss), linear-gradient(180deg, #ffe08a, #e8b33d 55%, #c9962b);
+          var(--gloss), linear-gradient(180deg, #ffe08a, #f0b43c 55%, #c9962b);
         border: 1px solid var(--gold-hi);
         box-shadow:
           inset 0 1px 0 rgba(255, 255, 255, 0.6),
@@ -5340,7 +5340,7 @@
         --sk: #33465c;
       }
       .scene.stage1 {
-        --sk: #6b5a44;
+        --sk: #6b7794;
       }
       .scene.stage2 {
         --sk: #4a3a68;
@@ -5515,6 +5515,7 @@
         filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
       }
     </style>
+    <link rel="stylesheet" href="ui-v2.css?v=2026101501" />
     <!-- ===== 로그인/클라우드 저장용 SDK (Firebase - 구글 로그인) =====
      구글 로그인이 실제로 작동하려면 이 파일이 https 도메인에 호스팅되어 있어야 합니다.
      file:// 로 직접 열면 팝업 로그인이 차단되거나 동작하지 않을 수 있습니다. -->
@@ -5852,7 +5853,7 @@
             <div
               style="
                 height: 10px;
-                background: #3a322a;
+                background: #2c3a5c;
                 border-radius: 5px;
                 margin-top: 10px;
                 overflow: hidden;
@@ -5879,7 +5880,7 @@
               <div
                 style="
                   height: 6px;
-                  background: #3a322a;
+                  background: #2c3a5c;
                   border-radius: 3px;
                   overflow: hidden;
                 "
@@ -5910,7 +5911,7 @@
               <div
                 style="
                   height: 6px;
-                  background: #3a322a;
+                  background: #2c3a5c;
                   border-radius: 3px;
                   overflow: hidden;
                 "
@@ -6137,8 +6138,8 @@
               font-size: 11px;
               line-height: 1.6;
               color: var(--paper-dim);
-              background: #1c170f;
-              border: 1px solid #3a332a;
+              background: #18213a;
+              border: 1px solid #2c3a5c;
               border-radius: 8px;
               padding: 8px 10px;
               margin-bottom: 10px;
@@ -6166,7 +6167,7 @@
               gap: 8px;
               font-size: 11px;
               color: var(--paper-dim);
-              background: #1c170f;
+              background: #18213a;
               border: 1px solid var(--gold-dim);
               border-radius: 8px;
               padding: 9px 10px;
@@ -6571,8 +6572,8 @@
                 width: 100%;
                 padding: 9px;
                 border-radius: 8px;
-                border: 1px solid #3a332a;
-                background: #1c170f;
+                border: 1px solid #2c3a5c;
+                background: #18213a;
                 color: var(--paper);
                 font-size: 11px;
                 box-sizing: border-box;
@@ -6631,8 +6632,8 @@
                 width: 100%;
                 padding: 9px;
                 border-radius: 8px;
-                border: 1px solid #3a332a;
-                background: #1c170f;
+                border: 1px solid #2c3a5c;
+                background: #18213a;
                 color: var(--paper);
                 font-size: 12px;
                 box-sizing: border-box;
@@ -7018,7 +7019,7 @@
               margin: 0 0 10px;
               background: var(--bg-panel);
               color: var(--paper-dim);
-              border: 1px solid #3a332a;
+              border: 1px solid #2c3a5c;
             "
           >
             🛡️ 되돌리기 사용 OFF
@@ -7483,7 +7484,7 @@
               text-align: left;
               font-size: 11px;
               color: var(--paper-dim);
-              background: #1c170f;
+              background: #18213a;
               border: 1px solid var(--gold-dim);
               border-radius: 8px;
               padding: 9px 10px;
@@ -10789,7 +10790,7 @@
             used = voidBossUse[c.key] || 0;
           const usable =
             boss && have > 0 && (c.perBoss == null || used < c.perBoss);
-          return `<button type="button" data-vitem="${c.key}" style="flex:1; padding:8px 4px; border-radius:10px; border:1px solid ${usable ? "var(--gold)" : "#3a332a"}; background:${usable ? "rgba(240,180,41,0.15)" : "var(--bg-panel)"}; color:${usable ? "var(--gold)" : "var(--paper-dim)"}; font-size:12px; line-height:1.35; opacity:${usable ? 1 : 0.65};">
+          return `<button type="button" data-vitem="${c.key}" style="flex:1; padding:8px 4px; border-radius:10px; border:1px solid ${usable ? "var(--gold)" : "#2c3a5c"}; background:${usable ? "rgba(240,180,41,0.15)" : "var(--bg-panel)"}; color:${usable ? "var(--gold)" : "var(--paper-dim)"}; font-size:12px; line-height:1.35; opacity:${usable ? 1 : 0.65};">
       <div>${svgIcon(c.key, 26)}</div>
       <div>${c.name} ×${have}</div>
       <div style="font-size:10px;">${boss ? (c.perBoss != null ? `이번 보스 ${used}/${c.perBoss}` : `이번 보스 ${used}회 사용`) : "보스전 전용"}</div>
@@ -11835,7 +11836,7 @@
         nuke: '<svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="14" fill="#ffd23f" stroke="#7a5a00" stroke-width="1.6"/><g fill="#2a2100"><path d="M16 16L16 6A10 10 0 0 1 24.66 11Z"/><path transform="rotate(120 16 16)" d="M16 16L16 6A10 10 0 0 1 24.66 11Z"/><path transform="rotate(240 16 16)" d="M16 16L16 6A10 10 0 0 1 24.66 11Z"/></g><circle cx="16" cy="16" r="2.6" fill="#ffd23f" stroke="#2a2100" stroke-width="1.4"/><ellipse cx="11" cy="8" rx="5" ry="2" fill="#fff" opacity=".35" transform="rotate(-25 11 8)"/></svg>',
         time: '<svg viewBox="0 0 32 32"><circle cx="16" cy="17" r="12.5" fill="#fff4d6" stroke="#c98a1b" stroke-width="2.2"/><rect x="13" y="1.5" width="6" height="3.5" rx="1" fill="#c98a1b"/><path d="M16 9v8l5 3" fill="none" stroke="#6b4a0f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="26" cy="7" r="5" fill="#3fbf6e" stroke="#fff" stroke-width="1"/><path d="M26 4.5v5M23.5 7h5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg>',
         medal:
-          '<svg viewBox="0 0 32 32"><path d="M9 2h6l3 9h-5z" fill="#d94b3d"/><path d="M23 2h-6l-3 9h5z" fill="#3b78d9"/><circle cx="16" cy="20" r="10" fill="#f0b429" stroke="#8a6c2b" stroke-width="1.6"/><circle cx="16" cy="20" r="6.8" fill="none" stroke="#fff3b0" stroke-width="1.2"/><path d="M16 14.5l1.7 3.5 3.8.5-2.8 2.6.7 3.8-3.4-1.9-3.4 1.9.7-3.8-2.8-2.6 3.8-.5z" fill="#fff3b0"/></svg>',
+          '<svg viewBox="0 0 32 32"><path d="M9 2h6l3 9h-5z" fill="#d94b3d"/><path d="M23 2h-6l-3 9h5z" fill="#3b78d9"/><circle cx="16" cy="20" r="10" fill="#f0b429" stroke="#3a4a73" stroke-width="1.6"/><circle cx="16" cy="20" r="6.8" fill="none" stroke="#fff3b0" stroke-width="1.2"/><path d="M16 14.5l1.7 3.5 3.8.5-2.8 2.6.7 3.8-3.4-1.9-3.4 1.9.7-3.8-2.8-2.6 3.8-.5z" fill="#fff3b0"/></svg>',
         gem: '<svg viewBox="0 0 32 32"><path d="M16 3l11 8-11 18L5 11z" fill="#4fd1ff"/><path d="M16 3l11 8H5z" fill="#a8ecff"/><path d="M16 11H5l11 18z" fill="#2aa6d9"/><path d="M16 11h11L16 29z" fill="#1c86bf"/></svg>',
       };
       function svgIcon(name, px) {
@@ -11854,15 +11855,15 @@
       function swordSvgInline(raw) {
         const has = (x) => raw.indexOf(x) >= 0;
         if (has("❔"))
-          return '<svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="13" fill="#3a332a" stroke="#8a6c2b" stroke-width="1.6"/><text x="16" y="22" text-anchor="middle" font-size="18" font-weight="bold" fill="#e8b33d">?</text></svg>';
+          return '<svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="13" fill="#2c3a5c" stroke="#3a4a73" stroke-width="1.6"/><text x="16" y="22" text-anchor="middle" font-size="18" font-weight="bold" fill="#f0b43c">?</text></svg>';
         if (has("🪵"))
-          return '<svg viewBox="0 0 32 32"><path d="M7 27L25 5" stroke="#6b4a2a" stroke-width="5" stroke-linecap="round"/><path d="M7 27L25 5" stroke="#9a6d3f" stroke-width="2" stroke-linecap="round"/><path d="M17 15l6 2" stroke="#6b4a2a" stroke-width="2.4" stroke-linecap="round"/></svg>';
+          return '<svg viewBox="0 0 32 32"><path d="M7 27L25 5" stroke="#3a4a73" stroke-width="5" stroke-linecap="round"/><path d="M7 27L25 5" stroke="#9a6d3f" stroke-width="2" stroke-linecap="round"/><path d="M17 15l6 2" stroke="#3a4a73" stroke-width="2.4" stroke-linecap="round"/></svg>';
         if (has("🏏"))
           return '<svg viewBox="0 0 32 32"><path d="M8 26L22 8" stroke="#7a5230" stroke-width="7" stroke-linecap="round"/><path d="M8 26L22 8" stroke="#b07f4a" stroke-width="3" stroke-linecap="round"/><circle cx="7" cy="27" r="2.4" fill="#4a3018"/></svg>';
         let a = "#f2f5f8",
           b = "#8fa3b5",
           g = "",
-          gd = "#e8b33d";
+          gd = "#f0b43c";
         if (has("🌈")) {
           a = "#ffb6e6";
           b = "#6fd0ff";
@@ -11933,7 +11934,7 @@
           (dagger ? 10 : 4) +
           'V20" stroke="#fff" stroke-width=".9" opacity=".7"/><rect x="8" y="21" width="16" height="3.2" rx="1.4" fill="' +
           gd +
-          '" stroke="#7a5a00" stroke-width=".8"/><rect x="14.4" y="24" width="3.2" height="5.5" rx="1" fill="#6b4a2a"/><circle cx="16" cy="30" r="1.9" fill="' +
+          '" stroke="#7a5a00" stroke-width=".8"/><rect x="14.4" y="24" width="3.2" height="5.5" rx="1" fill="#3a4a73"/><circle cx="16" cy="30" r="1.9" fill="' +
           gd +
           '" stroke="#7a5a00" stroke-width=".7"/></g></svg>'
         );
@@ -12526,7 +12527,7 @@
             ? "linear-gradient(135deg,#1f6f43,#2e9e62)"
             : "var(--bg-panel)";
           reviveBtn.style.color = on ? "#fff" : "var(--paper-dim)";
-          reviveBtn.style.borderColor = on ? "#7CFC9A" : "#3a332a";
+          reviveBtn.style.borderColor = on ? "#7CFC9A" : "#2c3a5c";
         }
         renderSwordItemRow();
         const enhanceBtn = document.getElementById("swordEnhanceBtn");
@@ -14218,6 +14219,21 @@
       // 간주해 배지를 띄우고, 기존 유저가 접속하면 자동으로 한 번 띄워준다.
       const patchNotes = [
         {
+          version: "2026101412",
+          date: "2026-10-15",
+          items: [
+            "🚶 지나가는 사람들이 끊기거나 갑자기 나타나던 문제를 고쳤어요 (움직임을 더 부드럽게 바꿨어요)",
+          ],
+        },
+        {
+          version: "2026101411",
+          date: "2026-10-15",
+          items: [
+            "🎨 게임 화면 디자인을 새로 단장했어요 (상단 재화판, 업그레이드 카드, 하단 메뉴, 팝업)",
+            "💳 업그레이드 카드에 구매 가능/부족 상태와 레벨업 효과가 생겼어요",
+          ],
+        },
+        {
           version: "2026101410",
           date: "2026-10-14",
           items: [
@@ -14836,7 +14852,7 @@
         el.innerHTML = patchNotes
           .map(
             (n) => `
-    <div style="margin-bottom:14px; padding-bottom:10px; border-bottom:1px solid #3a332a;">
+    <div style="margin-bottom:14px; padding-bottom:10px; border-bottom:1px solid #2c3a5c;">
       <div style="font-size:12px; color:var(--gold); font-weight:bold; margin-bottom:4px;">${n.date} · v${n.version}</div>
       <ul style="margin:0; padding-left:18px;">
         ${n.items.map((i) => `<li style="margin-bottom:4px; font-size:12.5px;">${i}</li>`).join("")}
@@ -15419,7 +15435,7 @@
           if (isActive) sub = Math.ceil(b.remaining) + "초 남음";
           else if (isCooling) sub = Math.ceil(b.cooldown) + "초 대기";
           else sub = b.duration > 0 ? b.duration + "초" : "즉시";
-          btn.innerHTML = `<span class="booster-icon">${b.icon}</span><span class="booster-label">${labelText}</span><span class="booster-play">${isActive ? "작동중" : isCooling ? "대기중" : "▶ 광고보기"}</span><div style="font-size:8px;color:#8A7A5C;margin-top:1px;">${sub}</div>`;
+          btn.innerHTML = `<span class="booster-icon">${b.icon}</span><span class="booster-label">${labelText}</span><span class="booster-play">${isActive ? "작동중" : isCooling ? "대기중" : "▶ 광고보기"}</span><div style="font-size:8px;color:#6b7794;margin-top:1px;">${sub}</div>`;
           if (isCooling || isActive) btn.setAttribute("disabled", "true");
           btn.addEventListener("click", () => activateBooster(key));
           bar.appendChild(btn);
@@ -18790,7 +18806,7 @@
         canvas.height = 1000;
         const ctx = canvas.getContext("2d");
         const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-        grad.addColorStop(0, "#1c1712");
+        grad.addColorStop(0, "#141c30");
         grad.addColorStop(1, "#0b0a08");
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -19269,7 +19285,23 @@
         },
       ];
 
+      // 돌발 이벤트: 선택 제한시간(초). 이 시간 안에 고르지 않으면 이벤트가 아무 효과 없이 사라진다.
+      const EVENT_CHOICE_SECONDS = 10;
+      let eventSeq = 0; // 이벤트마다 1씩 올려서, 지난 이벤트의 타이머가 새 이벤트를 닫지 못하게 한다
+      let eventTimerId = null;
+      function clearEventTimer() {
+        if (eventTimerId) {
+          clearInterval(eventTimerId);
+          eventTimerId = null;
+        }
+        const box = document.getElementById("eventTimerBox");
+        if (box) box.remove();
+      }
+
       function showRandomEventModal(ev) {
+        clearEventTimer();
+        const mySeq = ++eventSeq;
+        const modal = document.getElementById("randomEventModal");
         document.getElementById("eventTitle").textContent = ev.title;
         document.getElementById("eventDesc").textContent = ev.desc;
         const btnA = document.getElementById("eventChoiceA");
@@ -19284,6 +19316,8 @@
         closeBtn.style.display = "none";
 
         const finish = (pick) => {
+          if (mySeq !== eventSeq) return; // 이미 사라진/지난 이벤트
+          clearEventTimer(); // 선택했으니 타이머 종료
           initAudio();
           const text = ev.resolve(pick);
           choices.style.display = "none";
@@ -19297,9 +19331,41 @@
         };
         btnA.onclick = () => finish("A");
         btnB.onclick = () => finish("B");
-        closeBtn.onclick = () =>
-          document.getElementById("randomEventModal").classList.remove("show");
-        document.getElementById("randomEventModal").classList.add("show");
+        closeBtn.onclick = () => {
+          clearEventTimer();
+          modal.classList.remove("show");
+        };
+
+        // ----- 남은 시간 표시줄 + 시간 초과 시 자동 종료 -----
+        const timerBox = document.createElement("div");
+        timerBox.id = "eventTimerBox";
+        timerBox.style.cssText = "margin-top:12px;text-align:center;";
+        timerBox.innerHTML =
+          '<div style="height:6px;background:#0a0f1d;border-radius:999px;overflow:hidden;">' +
+          '<div id="eventTimerFill" style="height:100%;width:100%;background:linear-gradient(90deg,#34c79a,#f0b43c);border-radius:999px;"></div></div>' +
+          '<div id="eventTimerText" style="margin-top:6px;font-size:11.5px;color:var(--paper-dim);"></div>';
+        choices.insertAdjacentElement("afterend", timerBox);
+        const deadline = Date.now() + EVENT_CHOICE_SECONDS * 1000;
+        const tick = () => {
+          if (mySeq !== eventSeq) return clearEventTimer();
+          const left = deadline - Date.now();
+          if (left <= 0) {
+            // 시간 초과: 보상/피해 없이 이벤트를 끝낸다
+            clearEventTimer();
+            modal.classList.remove("show");
+            showToast("⏰ 시간이 지나 이벤트가 사라졌어요");
+            return;
+          }
+          const fill = document.getElementById("eventTimerFill");
+          const text = document.getElementById("eventTimerText");
+          if (fill) fill.style.width = (left / (EVENT_CHOICE_SECONDS * 1000)) * 100 + "%";
+          if (text)
+            text.textContent = `${Math.ceil(left / 1000)}초 안에 고르지 않으면 이벤트가 사라져요`;
+        };
+        tick();
+        eventTimerId = setInterval(tick, 200);
+        modal.classList.remove("show");
+        modal.classList.add("show");
       }
 
       function scheduleNextRandomEvent() {
@@ -21253,27 +21319,27 @@
             : "";
         const nameHtml = `<span${nc ? ` style="color:${nc};font-weight:bold;"` : ' style="font-weight:bold;"'}>${mt.icon ? esc(mt.icon) + " " : ""}${esc(currentUser.name || "익명")}</span>`;
         const row = (icon, label, val) =>
-          `<div style="background:#241f17;border:1px solid #3a332a;border-radius:10px;padding:7px 9px;text-align:left;min-width:0;"><div style="font-size:10px;color:#bba978;">${icon} ${label}</div><div style="font-size:13px;font-weight:700;color:#f4ead2;margin-top:2px;word-break:keep-all;overflow-wrap:anywhere;">${val}</div></div>`;
+          `<div style="background:#18213a;border:1px solid #2c3a5c;border-radius:10px;padding:7px 9px;text-align:left;min-width:0;"><div style="font-size:10px;color:#a7b1c9;">${icon} ${label}</div><div style="font-size:13px;font-weight:700;color:#eef1f8;margin-top:2px;word-break:keep-all;overflow-wrap:anywhere;">${val}</div></div>`;
         const swordVal =
           myP < 0 ? "없음" : `${swordMiniImg(myP)} ${swordPowerHtml(myP)}`;
         const swordSub =
           myP < 0
             ? ""
-            : `<div style="font-size:10px;color:#bba978;font-weight:400;margin-top:1px;">${esc(getSwordPowerName(myP))}</div>`;
+            : `<div style="font-size:10px;color:#a7b1c9;font-weight:400;margin-top:1px;">${esc(getSwordPowerName(myP))}</div>`;
         card.innerHTML = `
-    <div style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:12px;background:#2a241b;border:1px solid rgba(230,182,62,.4);">
+    <div style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:12px;background:#1d2740;border:1px solid rgba(230,182,62,.4);">
       <div id="profAvatar" style="width:64px;height:64px;flex:none;display:flex;align-items:center;justify-content:center;font-size:44px;"></div>
       <div style="text-align:left;min-width:0;">
         <div style="font-size:16px;">${nameHtml}</div>
-        <div style="font-size:11px;color:#bba978;margin-top:3px;">${esc(st.name)}</div>
-        <div style="font-size:11px;color:#bba978;margin-top:1px;">${esc(rt.icon || "")} 카지노 ${esc(rt.name)} 등급</div>
+        <div style="font-size:11px;color:#a7b1c9;margin-top:3px;">${esc(st.name)}</div>
+        <div style="font-size:11px;color:#a7b1c9;margin-top:1px;">${esc(rt.icon || "")} 카지노 ${esc(rt.name)} 등급</div>
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;">
       ${row("💰", "재산", esc(formatWon(money)) + "원")}
       ${row("🏠", "집", mt.icon ? `${esc(mt.icon)} ${esc(mt.name)}` : esc(mt.name))}
       ${row("⚔️", "현재 검", swordVal + swordSub)}
-      ${row("🏅", "검 최고 기록", swordPowerHtml(Math.max(0, swordMonthlyBestLevel || 0)) + '<div style="font-size:10px;color:#bba978;font-weight:400;margin-top:1px;">이번 달</div>')}
+      ${row("🏅", "검 최고 기록", swordPowerHtml(Math.max(0, swordMonthlyBestLevel || 0)) + '<div style="font-size:10px;color:#a7b1c9;font-weight:400;margin-top:1px;">이번 달</div>')}
       ${row("🌌", "공허 최고 웨이브", Math.max(0, voidBestWave || 0).toLocaleString("ko-KR") + " 웨이브")}
       ${row("💎", "차원 조각", Math.floor(voidShards || 0).toLocaleString("ko-KR"))}
       ${row("🎨", "이름 색", nameColor ? `<span style="color:${nc || "inherit"}">${esc(nameColor.name)}</span>` : "기본(무색)")}
@@ -21701,21 +21767,21 @@
         mk(
           "div",
           "받은 우편은 도착 후 30일 안에 받아야 해요",
-          "font-size:11px;color:#bba978;margin:2px 0 10px;",
+          "font-size:11px;color:#a7b1c9;margin:2px 0 10px;",
         );
         const list = allMails();
         if (!list.length)
           mk(
             "div",
             "받을 우편이 없어요",
-            "padding:28px 0;color:#bba978;font-size:13px;",
+            "padding:28px 0;color:#a7b1c9;font-size:13px;",
           );
         const now = Date.now();
         for (const m of list) {
           const item = mk(
             "div",
             "",
-            "text-align:left;background:#2a241b;border:1px solid rgba(230,182,62,.35);border-radius:12px;padding:10px 12px;margin-bottom:8px;",
+            "text-align:left;background:#1d2740;border:1px solid rgba(230,182,62,.35);border-radius:12px;padding:10px 12px;margin-bottom:8px;",
           );
           const top = mk(
             "div",
@@ -21733,7 +21799,7 @@
           mk(
             "div",
             days <= 0 ? "오늘 만료" : `D-${days}`,
-            `font-size:11px;font-weight:800;color:${days <= 3 ? "#ff7a6b" : "#bba978"};white-space:nowrap;`,
+            `font-size:11px;font-weight:800;color:${days <= 3 ? "#ff7a6b" : "#a7b1c9"};white-space:nowrap;`,
             top,
           );
           if (m.gift)
@@ -21759,7 +21825,7 @@
           const btn = mk(
             "button",
             "받기",
-            "margin-top:8px;width:100%;padding:8px;border-radius:999px;border:2px solid #e6b63e;background:#e6b63e;color:#2b2118;font-weight:800;font-size:13px;cursor:pointer;",
+            "margin-top:8px;width:100%;padding:8px;border-radius:999px;border:2px solid #e6b63e;background:#e6b63e;color:#1d2740;font-weight:800;font-size:13px;cursor:pointer;",
             item,
           );
           btn.onclick = () => acceptMail(m.id);
@@ -21769,7 +21835,7 @@
           const all = mk(
             "button",
             `모두 받기 (${list.length})`,
-            "flex:1;padding:10px;border-radius:999px;border:2px solid #e6b63e;background:#e6b63e;color:#2b2118;font-weight:800;font-size:14px;cursor:pointer;",
+            "flex:1;padding:10px;border-radius:999px;border:2px solid #e6b63e;background:#e6b63e;color:#1d2740;font-weight:800;font-size:14px;cursor:pointer;",
             row,
           );
           all.onclick = acceptAllMails;
@@ -21792,7 +21858,7 @@
           const card = document.createElement("div");
           card.className = "mbx-card";
           card.style.cssText =
-            "width:min(92vw,380px);max-height:82vh;overflow:auto;background:#1d1810;border:2px solid #e6b63e;border-radius:16px;padding:16px 14px;color:#f4ead2;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.6);";
+            "width:min(92vw,380px);max-height:82vh;overflow:auto;background:#18213a;border:2px solid #e6b63e;border-radius:16px;padding:16px 14px;color:#eef1f8;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.6);";
           box.appendChild(card);
           box.addEventListener("click", (e) => {
             if (e.target === box) box.remove();
@@ -21912,9 +21978,9 @@
           "position:fixed;inset:0;z-index:100001;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.72);padding:16px;";
         const card = document.createElement("div");
         card.style.cssText =
-          "width:min(92vw,360px);max-height:82vh;overflow:auto;background:#1d1810;border:2px solid #e6b63e;border-radius:16px;padding:16px 14px;color:#f4ead2;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.6);";
+          "width:min(92vw,360px);max-height:82vh;overflow:auto;background:#18213a;border:2px solid #e6b63e;border-radius:16px;padding:16px 14px;color:#eef1f8;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.6);";
         card.innerHTML =
-          '<div style="padding:30px 0;color:#bba978;font-size:13px;">불러오는 중…</div>';
+          '<div style="padding:30px 0;color:#a7b1c9;font-size:13px;">불러오는 중…</div>';
         box.appendChild(card);
         box.addEventListener("click", (e) => {
           if (e.target === box) box.remove();
@@ -21931,20 +21997,21 @@
         }
         if (!list || !list.length) {
           card.innerHTML =
-            '<div style="padding:30px 0;color:#bba978;font-size:13px;">충전 상품을 불러오지 못했어요.<br>잠시 후 다시 시도해 주세요.</div><button id="chgClose" style="padding:9px 34px;border-radius:999px;border:2px solid #e6b63e;background:transparent;color:#e6b63e;font-weight:800;font-size:14px;cursor:pointer;">닫기</button>';
+            '<div style="padding:30px 0;color:#a7b1c9;font-size:13px;">충전 상품을 불러오지 못했어요.<br>잠시 후 다시 시도해 주세요.</div><button id="chgClose" style="padding:9px 34px;border-radius:999px;border:2px solid #e6b63e;background:transparent;color:#e6b63e;font-weight:800;font-size:14px;cursor:pointer;">닫기</button>';
           card.querySelector("#chgClose").onclick = () => box.remove();
           return;
         }
         const nf = (n) => Number(n).toLocaleString("ko-KR");
         let html =
-          '<div style="font-size:18px;font-weight:800;color:#ffd75e;">💳 루비 충전</div><div style="font-size:11px;color:#bba978;margin:6px 0 10px;">충전할 루비를 골라 주세요</div>';
+          '<div style="font-size:18px;font-weight:800;color:#ffd75e;">💳 루비 충전</div><div style="font-size:11px;color:#a7b1c9;margin:6px 0 10px;">충전할 루비를 골라 주세요</div>';
         for (const p of list) {
-          html += `<button class="chgPkg" data-id="${escapeHtml(p.id)}" style="display:flex;justify-content:space-between;align-items:center;width:100%;margin-bottom:8px;padding:11px 12px;border-radius:12px;border:1px solid rgba(230,182,62,.45);background:#2a241b;color:#f4ead2;font-size:14px;font-weight:800;cursor:pointer;">
+          html += `<button class="chgPkg" data-id="${escapeHtml(p.id)}" style="display:flex;justify-content:space-between;align-items:center;width:100%;margin-bottom:8px;padding:11px 12px;border-radius:12px;border:1px solid rgba(230,182,62,.45);background:#1d2740;color:#eef1f8;font-size:14px;font-weight:800;cursor:pointer;">
       <span>${shopRuby(1.2)} ${nf(p.ruby)}${p.bonus > 0 ? ` <span style="color:#9fe08a;font-size:11px;">+${nf(p.bonus)} 보너스</span>` : ""}</span>
       <span style="color:#ffd75e;">₩${nf(p.price_krw)}</span></button>`;
         }
         html +=
           '<div style="font-size:10px;color:#8f8566;line-height:1.5;margin-top:4px;">결제는 포트원 결제창에서 진행돼요. 결제가 끝나면 루비가 바로 지급돼요.<br>루비는 카지노·로또에는 쓸 수 없어요.</div>';
+        html += '<div style="font-size:10px;color:#8f8566;line-height:1.7;margin-top:8px;"><a href="https://detectivekang.github.io/terms.html" target="_blank" rel="noopener" style="color:#bba978;">이용약관</a> · <a href="https://detectivekang.github.io/privacy.html" target="_blank" rel="noopener" style="color:#bba978;">개인정보처리방침</a> · <a href="https://detectivekang.github.io/refund.html" target="_blank" rel="noopener" style="color:#bba978;">환불정책</a> · <a href="https://detectivekang.github.io/shop.html" target="_blank" rel="noopener" style="color:#bba978;">상품 안내</a><br>새로운빛 · 대표 【대표자명】 · 사업자등록번호 【사업자등록번호】<br>통신판매업 【통신판매업신고번호】 · 【고객센터이메일】</div>';
         html +=
           '<button id="chgClose" style="margin-top:12px;padding:9px 34px;border-radius:999px;border:2px solid #e6b63e;background:transparent;color:#e6b63e;font-weight:800;font-size:14px;cursor:pointer;">닫기</button>';
         card.innerHTML = html;
@@ -22079,7 +22146,7 @@
           const card = document.createElement("div");
           card.className = "shp-card";
           card.style.cssText =
-            "width:min(92vw,400px);max-height:84vh;overflow:auto;background:#1d1810;border:2px solid #e6b63e;border-radius:16px;padding:16px 14px;color:#f4ead2;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.6);";
+            "width:min(92vw,400px);max-height:84vh;overflow:auto;background:#18213a;border:2px solid #e6b63e;border-radius:16px;padding:16px 14px;color:#eef1f8;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.6);";
           box.appendChild(card);
           box.addEventListener("click", (e) => {
             if (e.target === box) box.remove();
@@ -22091,7 +22158,7 @@
       async function loadShop(box) {
         const card = box.querySelector(".shp-card");
         card.innerHTML =
-          '<div style="padding:34px 0;color:#bba978;font-size:13px;">불러오는 중…</div>';
+          '<div style="padding:34px 0;color:#a7b1c9;font-size:13px;">불러오는 중…</div>';
         if (!currentUser || !db) {
           renderShop(box, null, "로그인하면 상점을 이용할 수 있어요");
           return;
@@ -22124,7 +22191,7 @@
           return (Number.isInteger(v) ? v : v.toFixed(1)) + "%";
         };
         const th =
-          "padding:3px 2px;color:#bba978;font-weight:700;border-bottom:1px solid rgba(230,182,62,.3);";
+          "padding:3px 2px;color:#a7b1c9;font-weight:700;border-bottom:1px solid rgba(230,182,62,.3);";
         const td =
           "padding:3px 2px;border-bottom:1px solid rgba(230,182,62,.12);";
         let rows = "";
@@ -22136,12 +22203,12 @@
             `<tr><td style="${td}">+${k - 1}→+${k}</td><td style="${td}color:#9fe08a;">${f(st.success)}</td><td style="${td}">${f(st.success >= 100 ? 0 : st.maintain)}</td><td style="${td}color:#ff8f80;">${f(st.success >= 100 ? 0 : st.destroy)}</td>` +
             `<td style="${td}">${f(b("x15"))}</td><td style="${td}">${f(b("x20"))}</td><td style="${td}">${f(b("x25"))}</td></tr>`;
         }
-        return `<details style="text-align:left;margin:8px 0 10px;padding:8px 10px;border-radius:12px;background:#2a241b;border:1px solid rgba(230,182,62,.3);">
+        return `<details style="text-align:left;margin:8px 0 10px;padding:8px 10px;border-radius:12px;background:#1d2740;border:1px solid rgba(230,182,62,.3);">
     <summary style="cursor:pointer;font-weight:800;font-size:12.5px;color:#ffe9a8;">🎲 확률형 아이템 안내 · 검 강화 확률표 보기</summary>
-    <div style="font-size:10.5px;color:#bba978;line-height:1.55;margin-top:6px;">🍀 강화 주문서와 🛡️ 되돌리기는 <b>검 강화(확률)</b>에 쓰이는 확률형 아이템이에요. 💎 차원 조각은 구매 결과가 정해져 있어요(확률 없음).<br>
+    <div style="font-size:10.5px;color:#a7b1c9;line-height:1.55;margin-top:6px;">🍀 강화 주문서와 🛡️ 되돌리기는 <b>검 강화(확률)</b>에 쓰이는 확률형 아이템이에요. 💎 차원 조각은 구매 결과가 정해져 있어요(확률 없음).<br>
     · 주문서는 장전한 다음 <b>강화 1회</b>에만 적용돼요. 성공 확률을 곱한 값(최대 100%)이 되고, 남은 확률은 원래 유지:파괴 비율대로 나눠 가져요.<br>
     · 되돌리기는 <b>사용 ON</b>일 때만, 파괴가 나오면 1회를 쓰고 검을 지켜줘요. (파괴 자체의 확률은 그대로)</div>
-    <div style="overflow-x:auto;margin-top:6px;"><table style="width:100%;border-collapse:collapse;text-align:center;font-size:10.5px;color:#f4ead2;">
+    <div style="overflow-x:auto;margin-top:6px;"><table style="width:100%;border-collapse:collapse;text-align:center;font-size:10.5px;color:#eef1f8;">
       <tr><th style="${th}text-align:left;">단계</th><th style="${th}">성공</th><th style="${th}">유지</th><th style="${th}">파괴</th><th style="${th}">×1.5</th><th style="${th}">×2</th><th style="${th}">×2.5</th></tr>${rows}</table></div>
     <div style="font-size:10px;color:#8f8566;margin-top:5px;">×1.5 · ×2 · ×2.5 칸은 해당 주문서를 썼을 때의 <b>성공 확률</b>이에요.</div>
   </details>`;
@@ -22151,13 +22218,13 @@
         const esc = escapeHtml,
           nf = (n) => Number(n).toLocaleString("ko-KR");
         const btnCss =
-          "padding:7px 4px 6px;border-radius:12px;border:2px solid #e6b63e;background:#e6b63e;color:#2b2118;cursor:pointer;flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;line-height:1.25;";
+          "padding:7px 4px 6px;border-radius:12px;border:2px solid #e6b63e;background:#e6b63e;color:#1d2740;cursor:pointer;flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;line-height:1.25;";
         let html = `<div style="font-size:18px;font-weight:800;color:#ffd75e;">🛒 상점</div>`;
         if (!data) {
-          html += `<div style="padding:26px 0;color:#bba978;font-size:13px;">${esc(msg)}</div>`;
+          html += `<div style="padding:26px 0;color:#a7b1c9;font-size:13px;">${esc(msg)}</div>`;
         } else {
-          html += `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin:10px 0;padding:8px 10px;border-radius:12px;background:#2a241b;border:1px solid rgba(230,182,62,.4);">
-      <div style="font-size:15px;font-weight:800;">${shopRuby(1.2)} ${nf(data.ruby)} <span style="font-size:11px;color:#bba978;font-weight:400;">루비</span></div>
+          html += `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin:10px 0;padding:8px 10px;border-radius:12px;background:#1d2740;border:1px solid rgba(230,182,62,.4);">
+      <div style="font-size:15px;font-weight:800;">${shopRuby(1.2)} ${nf(data.ruby)} <span style="font-size:11px;color:#a7b1c9;font-weight:400;">루비</span></div>
       <button id="shopChargeBtn" style="padding:7px 14px;border-radius:999px;border:2px solid #e6b63e;background:transparent;color:#e6b63e;font-weight:800;font-size:12px;cursor:pointer;">충전하기</button></div>`;
           html += swordRateTableHtml();
           for (const it of data.items || []) {
@@ -22185,32 +22252,32 @@
               const val = Number(it.list_value) || 0;
               const off = val > it.price ? Math.round((1 - it.price / val) * 100) : 0;
               const can = Number(data.ruby) >= it.price;
-              html += `<div style="text-align:left;background:linear-gradient(160deg,#3a2c12,#2a241b);border:2px solid #ffd75e;border-radius:12px;padding:10px 12px;margin-bottom:8px;box-shadow:0 0 14px rgba(255,215,94,.25);">
+              html += `<div style="text-align:left;background:linear-gradient(160deg,#3a2c12,#1d2740);border:2px solid #ffd75e;border-radius:12px;padding:10px 12px;margin-bottom:8px;box-shadow:0 0 14px rgba(255,215,94,.25);">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
           <div style="font-weight:800;font-size:15px;color:#ffe9a8;">${SHOP_ICON[it.grant_item] || "🎁"} ${esc(it.name)}</div>
-          ${off > 0 ? `<div style="font-size:11px;font-weight:900;color:#2b2118;background:#ffd75e;border-radius:999px;padding:2px 8px;white-space:nowrap;">${off}% 할인</div>` : ""}</div>
-        <div style="font-size:11px;color:#bba978;margin-top:3px;">${esc(it.desc || "")} · 이번 시즌 ${it.bought_season || 0}/${it.season_limit == null ? 1 : it.season_limit}회 구매</div>
-        <div style="margin-top:8px;font-size:12.5px;line-height:1.75;color:#f4ead2;">${it.pack
+          ${off > 0 ? `<div style="font-size:11px;font-weight:900;color:#1d2740;background:#ffd75e;border-radius:999px;padding:2px 8px;white-space:nowrap;">${off}% 할인</div>` : ""}</div>
+        <div style="font-size:11px;color:#a7b1c9;margin-top:3px;">${esc(it.desc || "")} · 이번 시즌 ${it.bought_season || 0}/${it.season_limit == null ? 1 : it.season_limit}회 구매</div>
+        <div style="margin-top:8px;font-size:12.5px;line-height:1.75;color:#eef1f8;">${it.pack
           .map((c) => `<div style="display:flex;justify-content:space-between;gap:8px;"><span>${SHOP_ICON[c.item] || "🎁"} ${esc(c.label)}</span><b>${nf(c.amount)}${c.item === "battle_tickets" ? "회" : "개"}</b></div>`)
           .join("")}</div>
-        ${val > 0 ? `<div style="font-size:11px;color:#bba978;margin-top:6px;text-align:right;">단품으로 사면 <s>${shopRuby(0.95)} ${nf(val)}</s></div>` : ""}
+        ${val > 0 ? `<div style="font-size:11px;color:#a7b1c9;margin-top:6px;text-align:right;">단품으로 사면 <s>${shopRuby(0.95)} ${nf(val)}</s></div>` : ""}
         <div style="display:flex;gap:6px;margin-top:8px;">${
           soldOut
-            ? `<div style="flex:1;text-align:center;font-size:12px;color:#bba978;padding:6px;">이번 시즌 구매 완료 (매월 1일에 다시 열려요)</div>`
+            ? `<div style="flex:1;text-align:center;font-size:12px;color:#a7b1c9;padding:6px;">이번 시즌 구매 완료 (매월 1일에 다시 열려요)</div>`
             : `<button class="shopBuyBtn" data-id="${esc(it.id)}" data-q="1" style="${btnCss}${can ? "" : "opacity:.5;"}"><span style="font-size:11px;font-weight:700;">패키지 구매</span><span style="font-size:15px;font-weight:900;">${shopRuby(1)} ${nf(it.price)}</span></button>`
         }</div></div>`;
               continue;
             }
-            html += `<div style="text-align:left;background:#2a241b;border:1px solid rgba(230,182,62,.3);border-radius:12px;padding:10px 12px;margin-bottom:8px;">
+            html += `<div style="text-align:left;background:#1d2740;border:1px solid rgba(230,182,62,.3);border-radius:12px;padding:10px 12px;margin-bottom:8px;">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
           <div style="font-weight:800;font-size:14px;color:#ffe9a8;">${SHOP_ICON[it.grant_item] || "🎁"} ${esc(it.name)}</div>
-          <div style="font-size:11px;color:#bba978;white-space:nowrap;">${hasTiers ? "1회" : "개당"} <b style="font-size:14px;color:#fff;">${shopRuby()} ${nf(it.price)}</b></div></div>
-        <div style="font-size:11px;color:#bba978;margin-top:3px;">${esc(it.desc || "")}${weekLeft == null ? "" : ` · 이번 주 ${it.bought_week || 0}/${it.weekly_limit}${unitTxt} 구매`}${it.grant_item === "battle_tickets" ? (() => { refreshSwordBattleTickets(); return ` · 지금 ${swordBattleTickets}/${SWORD_BATTLE_BANK_CAP}회 보유`; })() : ""}</div>
+          <div style="font-size:11px;color:#a7b1c9;white-space:nowrap;">${hasTiers ? "1회" : "개당"} <b style="font-size:14px;color:#fff;">${shopRuby()} ${nf(it.price)}</b></div></div>
+        <div style="font-size:11px;color:#a7b1c9;margin-top:3px;">${esc(it.desc || "")}${weekLeft == null ? "" : ` · 이번 주 ${it.bought_week || 0}/${it.weekly_limit}${unitTxt} 구매`}${it.grant_item === "battle_tickets" ? (() => { refreshSwordBattleTickets(); return ` · 지금 ${swordBattleTickets}/${SWORD_BATTLE_BANK_CAP}회 보유`; })() : ""}</div>
         <div style="display:flex;gap:6px;margin-top:8px;">${
           soldOut
-            ? `<div style="flex:1;text-align:center;font-size:12px;color:#bba978;padding:6px;">이번 주 매진 (월요일에 다시 열려요)</div>`
+            ? `<div style="flex:1;text-align:center;font-size:12px;color:#a7b1c9;padding:6px;">이번 주 매진 (월요일에 다시 열려요)</div>`
             : opts.length === 0
-              ? `<div style="flex:1;text-align:center;font-size:12px;color:#bba978;padding:6px;">이번 주 남은 한도가 부족해요 (월요일에 다시 열려요)</div>`
+              ? `<div style="flex:1;text-align:center;font-size:12px;color:#a7b1c9;padding:6px;">이번 주 남은 한도가 부족해요 (월요일에 다시 열려요)</div>`
               : opts
                 .map((q) => {
                   const p = shopPriceFor(it, q),
@@ -22223,6 +22290,7 @@
         }</div></div>`;
           }
           html += `<div style="font-size:10px;color:#8f8566;margin-top:6px;line-height:1.5;">구매한 아이템은 바로 지급돼요. 많이 한 번에 사면 할인돼요(버튼에 할인율 표시). 루비는 카지노·로또에는 쓸 수 없어요.<br>💎 차원 조각은 시즌이 바뀌는 매월 1일에 초기화돼요. 🍀 주문서와 🛡️ 되돌리기는 시즌이 바뀌어도 유지돼요.</div>`;
+          html += '<div style="font-size:10px;color:#8f8566;line-height:1.7;margin-top:8px;"><a href="https://detectivekang.github.io/terms.html" target="_blank" rel="noopener" style="color:#bba978;">이용약관</a> · <a href="https://detectivekang.github.io/privacy.html" target="_blank" rel="noopener" style="color:#bba978;">개인정보처리방침</a> · <a href="https://detectivekang.github.io/refund.html" target="_blank" rel="noopener" style="color:#bba978;">환불정책</a> · <a href="https://detectivekang.github.io/shop.html" target="_blank" rel="noopener" style="color:#bba978;">상품 안내</a><br>새로운빛 · 대표 【대표자명】 · 사업자등록번호 【사업자등록번호】<br>통신판매업 【통신판매업신고번호】 · 【고객센터이메일】</div>';
         }
         html += `<button id="shopCloseBtn" style="margin-top:12px;padding:9px 34px;border-radius:999px;border:2px solid #e6b63e;background:transparent;color:#e6b63e;font-weight:800;font-size:14px;cursor:pointer;">닫기</button>`;
         card.innerHTML = html;
@@ -24645,7 +24713,7 @@
         );
         const fx = { c: null, x: null, p: [], raf: 0, fw: 0 };
         const FX_COLORS = [
-          "#E8B33D",
+          "#f0b43c",
           "#fff3c4",
           "#EE6A5E",
           "#5AA3E8",
@@ -25510,7 +25578,7 @@
           }
           x.fillStyle = g;
           x.fillRect(0, 0, 800, 1000);
-          x.strokeStyle = "#e8b33d";
+          x.strokeStyle = "#f0b43c";
           x.lineWidth = 6;
           x.strokeRect(24, 24, 752, 952);
           x.textAlign = "center";
@@ -25859,5 +25927,6 @@
       }
       switchMap(currentMap);
     </script>
+      <script src="ui-v2.js?v=2026101412"></script>
   </body>
 </html>
