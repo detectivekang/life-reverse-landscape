@@ -1253,3 +1253,42 @@ button {
   .map-switch { gap: 2px; padding: 3px; }
   .map-switch .map-btn { font-size: 11.5px; padding: 0 4px; letter-spacing: -0.2px; }
 }
+
+/* ---------- 19. 보정: 로또 추첨 화면 위치 / 가로 모드 겹침·잘림 ---------- */
+/* (a) 로또 추첨·당첨 공지는 아래서 올라오는 시트가 아니라 화면 가운데 연출이다.
+       v2 가 모든 .modal-overlay 를 아래 정렬(flex-end)로 바꿔서 공이 맨 아래에 붙어 보였다 */
+#lottoShow.modal-overlay,
+#lottoAnn.modal-overlay {
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-3);
+}
+
+/* (b) 맵 탭: 글자 폭 아래로는 줄어들지 않게(글자 겹침 방지). 자리가 모자라면 가로 스크롤 */
+.map-switch {
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.map-switch::-webkit-scrollbar { display: none; }
+.map-switch .map-btn {
+  flex: 1 0 auto;
+  min-width: max-content;
+}
+
+/* (c) 가로 모드(낮은 화면): 상단 한 줄에 다 들어가도록 — 탭 칸은 글자 폭만큼, 남는 자리를 레벨 표시가 양보 */
+@media (orientation: landscape) and (max-height: 520px) {
+  .topbar { grid-template-columns: auto minmax(48px, 1fr) max-content auto auto; }
+  .map-switch { padding: 2px; gap: 2px; }
+  .map-switch .map-btn { min-height: 30px; padding: 0 8px; font-size: 11px; letter-spacing: -0.2px; }
+}
+
+/* (d) 아주 낮은 가로 화면(약 420px 이하): 장식용 거리/도로를 접어서 카드가 잘리지 않게 한다 */
+@media (orientation: landscape) and (max-height: 420px) {
+  .sidewalk, .road { display: none; }
+  .stall-row { align-items: center; padding: 6px var(--sp-3); }
+  .stall { flex-basis: 92px; padding: 6px 4px 5px; }
+  .stall-progress-track { display: none; }
+  .stall-icon { width: 28px; height: 28px; }
+  .stall-icon .a-ico { width: 18px; height: 18px; }
+}
