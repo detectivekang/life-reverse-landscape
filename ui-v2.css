@@ -1113,10 +1113,14 @@ button {
 #myRankCard .my-rank-sub { font-size: 11.5px; line-height: 1.45; }
 
 /* 순위 목록: 남는 높이를 전부 사용, 행은 크고 또렷하게 */
-#leaderboardList {
-  flex: 1 1 auto;
-  min-height: 0;
+/* ※ 위의 "#rankModal .modal-box > *" 규칙(flex: 0 0 auto)이 id 하나짜리 선택자보다 강해서,
+     목록이 줄어들지 못해 스크롤이 안 되던 문제 → 선택자를 더 강하게 해서 남는 높이를 채우게 한다 */
+#rankModal #leaderboardList {
+  flex: 1 1 0;
+  min-height: 120px;
   max-height: none;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
   gap: 6px;
   padding: 2px 2px 6px;
   overflow-y: auto;
