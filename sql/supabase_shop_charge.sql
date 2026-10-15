@@ -61,7 +61,8 @@ begin
   if not found then raise exception 'charge: unknown package'; end if;
   -- 결제창만 열고 안 끝낸 주문이 계속 쌓이는 것 방지: 같은 유저의 오래된 ready 주문 정리
   delete from public.payment_orders where user_id = uid and status = 'ready' and created_at < now() - interval '2 days';
-  pid := 'lr-' || replace(gen_random_uuid()::text, '-', '');
+  -- pid := 'lr-' || replace(gen_random_uuid()::text, '-', '');  -- [기존] 하이픈이 있으면 카카오페이가 결제 ID 를 거절한다
+  pid := 'lr' || replace(gen_random_uuid()::text, '-', '');      -- [변경] 영문+숫자만 (카카오페이/카드 모두 통과)
   insert into public.payment_orders (payment_id, user_id, package_id, amount_krw, ruby_total)
   values (pid, uid, pk.id, pk.price_krw, pk.ruby + pk.bonus_ruby);
   return jsonb_build_object('payment_id', pid, 'amount', pk.price_krw, 'name', pk.name, 'ruby', pk.ruby + pk.bonus_ruby);
