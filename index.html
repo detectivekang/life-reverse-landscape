@@ -21895,7 +21895,8 @@
       // ===== 루비 충전 (포트원 V2 결제) =====
       // 흐름: ① charge_prepare 로 서버에 주문 생성(금액은 서버가 정함) → ② 포트원 결제창 → ③ Edge Function(portone-verify)이
       //       포트원 API 로 결제를 확인하고 루비 지급. 브라우저가 "결제됐다"고 말하는 것은 믿지 않는다.
-      const PORTONE_STORE_ID = "store-ae1726c2-237e-405b-af44-6aef5427446e"; // 포트원 콘솔 > 결제 연동 > 연동 정보 > 식별코드 의 Store ID
+      const PORTONE_STORE_ID = "store-07df34ed-0857-4e6f-9c07-927d4ba65371"; // 대표상점
+      //const PORTONE_STORE_ID = "store-ae1726c2-237e-405b-af44-6aef5427446e"; // 포트원 콘솔 > 결제 연동 > 연동 정보 > 식별코드 의 Store ID
       // [기존 - 신용카드 결제용 채널 키 / 혹시 몰라 주석으로 보관]
       // const PORTONE_CHANNEL_KEY =
       //   "channel-key-30c187f9-6341-46b2-825b-d46b2f20513d"; // 테스트 채널 키 (실연동 때 실 채널 키로 교체)
