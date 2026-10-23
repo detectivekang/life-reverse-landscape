@@ -2119,6 +2119,33 @@
       .fab-boost.has-ready .badge {
         display: block;
       }
+      /* ===== 네온 호드(콜라보) 이동 FAB: 구글 로그인했을 때만 보인다. 부스터를 다시 켜면 부스터가 위로 비켜 준다 ===== */
+      .fab-nh {
+        position: absolute;
+        right: 10px;
+        bottom: calc(34px + var(--dock-h));
+        z-index: 45;
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        background: linear-gradient(180deg, #5be7ff, #7a5cff);
+        border: 2px solid #2a3c8a;
+        color: #fff;
+        font-size: 20px;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow:
+          0 2px 8px rgba(0, 0, 0, 0.45),
+          0 0 12px rgba(91, 231, 255, 0.45);
+      }
+      .fab-nh.show {
+        display: flex;
+      }
+      .fab-boost {
+        bottom: calc(86px + var(--dock-h));
+      }
 
       .booster-bar {
         display: grid;
@@ -6112,6 +6139,9 @@
       <button class="fab-boost" id="boostFabBtn" title="부스터">
         🚀<span class="badge"></span>
       </button>
+      <button class="fab-nh" id="nhFabBtn" title="네온 호드로 떠나기" aria-label="네온 호드">
+        🛸
+      </button>
 
       <div class="toast" id="toast"></div>
       <div class="mascot-bubble" id="mascotBubble">
@@ -6505,6 +6535,7 @@
             <button class="rank-cat-btn" data-cat="void">🌌 공허</button>
             <button class="rank-cat-btn" data-cat="wealth">💰 재산</button>
             <button class="rank-cat-btn" data-cat="records">📚 기록</button>
+            <button class="rank-cat-btn" data-cat="nh" style="grid-column: 1 / -1">🛸 네온 호드 (콜라보)</button>
           </div>
           <div class="lb-period-tabs" id="rankSubTabs"></div>
           <button
@@ -6823,6 +6854,22 @@
           <button class="start-btn" id="milestone2OkBtn">
             글로벌 사업 시작하기
           </button>
+        </div>
+      </div>
+
+      <!-- 네온 호드(콜라보) 이동 확인 모달 -->
+      <div class="modal-overlay" id="nhGoModal">
+        <div class="modal-box">
+          <h2>🛸 새로운 세상</h2>
+          <p>새로운 세상으로 떠나시겠습니까?</p>
+          <p style="font-size: 12px; color: var(--paper-dim); line-height: 1.6">
+            네온 호드로 이동해요. 지금 진행 상황은 먼저 저장되고,<br />
+            네온 호드 안의 버튼으로 언제든 인생역전으로 돌아올 수 있어요.
+          </p>
+          <div style="display: flex; gap: 10px; margin-top: 14px">
+            <button class="start-btn" id="nhGoYes" style="flex: 1">네</button>
+            <button class="close-btn" id="nhGoNo" style="flex: 1; margin-top: 0">아니오</button>
+          </div>
         </div>
       </div>
 
@@ -10536,11 +10583,12 @@
         voidGoldenEl = null;
         initAudio();
         playSound("coin");
+        // 보상 밸런스: 차원 조각 보상을 절반으로 줄임 (웨이브 보상 8배 → 4배, 최소 20 → 10)
         const shards = Math.max(
-          20,
+          10,
           Math.floor(
             getVoidRewardForWave(Math.max(1, voidBestWave)) *
-              8 *
+              4 *
               getVoidShardMult(),
           ),
         );
@@ -15608,6 +15656,39 @@
             document.getElementById("moreMenuModal").classList.remove("show");
           });
         });
+      // ===== 네온 호드(콜라보 게임)로 떠나기 =====
+      // 네온 호드는 같은 사이트(/neno-horde/)에 있어서 구글 로그인 세션을 그대로 이어받는다.
+      (function setupNhFab() {
+        const fab = document.getElementById("nhFabBtn");
+        const modal = document.getElementById("nhGoModal");
+        const yes = document.getElementById("nhGoYes");
+        const no = document.getElementById("nhGoNo");
+        if (!fab || !modal || !yes || !no) return;
+        fab.addEventListener("click", () => {
+          if (!currentUser) {
+            showToast("구글 로그인을 하면 새로운 세상으로 떠날 수 있어요");
+            return;
+          }
+          modal.classList.add("show");
+        });
+        no.addEventListener("click", () => modal.classList.remove("show"));
+        modal.addEventListener("click", (e) => {
+          if (e.target === modal) modal.classList.remove("show");
+        });
+        yes.addEventListener("click", () => {
+          yes.disabled = true;
+          try {
+            // 떠나기 전에 내 진행을 클라우드까지 한 번 확실히 저장 (돌아왔을 때 우편/환전 반영 확인용)
+            saveGame({ forceCloud: true, noCheck: true });
+          } catch (e) {
+            console.error("이동 전 저장 실패:", e);
+          }
+          setTimeout(() => {
+            location.href = "neno-horde/";
+          }, 600);
+        });
+      })();
+
       document.getElementById("boostFabBtn").addEventListener("click", () => {
         document.getElementById("boosterModal").classList.add("show");
       });
@@ -18061,6 +18142,7 @@
         { id: "sword", subs: [{ period: "sword", label: "⚔️ 배틀" }] },
         { id: "void", subs: [{ period: "void", label: "🌌 최고 웨이브" }] },
         { id: "wealth", subs: [{ period: "wealth_monthly", label: "📈 월간 수익" }] },
+        { id: "nh", subs: [{ period: "nh_season", label: "🛸 네온 호드" }] },
         {
           id: "records",
           subs: [
@@ -18081,7 +18163,12 @@
         );
       }
       function isWealthPeriod(period) {
-        return period === "wealth_money" || period === "wealth_monthly";
+        // nh_season(네온 호드 시즌 랭킹)도 leaderboard 보드가 아니라 서버 함수(nh_ranking)로 가져오므로 같은 취급
+        return (
+          period === "wealth_money" ||
+          period === "wealth_monthly" ||
+          period === "nh_season"
+        );
       }
       function wealthKindOf(period) {
         return period === "wealth_money" ? "money" : "earned";
@@ -18131,7 +18218,109 @@
       }
       const WEALTH_PENDING_MSG =
         "🚧 재산 랭킹은 준비 중이에요. 조금만 기다려주세요!";
+      // ----- 네온 호드 시즌 랭킹: 서버 함수(nh_collab.sql의 nh_ranking) 호출 -----
+      let nhMissing = false;
+      let nhCache = null;
+      function fetchNhRank() {
+        if (!db || !currentUser) return Promise.resolve(null);
+        if (nhCache && Date.now() - nhCache.at < 8000) return nhCache.promise;
+        const promise = (async () => {
+          try {
+            const { data, error } = await db.rpc("nh_ranking", {
+              p_season: null,
+              p_limit: LEADERBOARD_TOP_N,
+            });
+            if (error) throw error;
+            nhMissing = false;
+            return data && data.ok ? data : null;
+          } catch (e) {
+            if (
+              e &&
+              (e.code === "PGRST202" ||
+                e.code === "42883" ||
+                /could not find the function|does not exist/i.test(
+                  e.message || "",
+                ))
+            )
+              nhMissing = true;
+            else console.error("네온 호드 랭킹 조회 실패:", e);
+            return null;
+          }
+        })();
+        nhCache = { at: Date.now(), promise };
+        promise.then((r) => {
+          if (r === null && nhCache && nhCache.promise === promise)
+            nhCache = null;
+        });
+        return promise;
+      }
+      async function renderNhCard() {
+        const card = document.getElementById("myRankCard");
+        card.innerHTML = `
+    <span class="my-rank-icon">🛸</span>
+    <div style="flex:1;">
+      <div class="my-rank-name">네온 호드 <span style="font-size:10px; color:var(--paper-dim); font-weight:normal;">(시즌 누적 점수)</span></div>
+      <div class="my-rank-sub">네온 호드를 플레이할 때마다 점수가 쌓여요 · 시즌(월)이 바뀌면 새로 시작해요</div>
+      <div class="my-rank-sub" id="myRankPosition" style="color:var(--gold);">내 순위 불러오는 중...</div>
+    </div>
+  `;
+        if (!currentUser) {
+          document.getElementById("myRankPosition").textContent =
+            "로그인하면 전체 순위를 볼 수 있어요.";
+          return;
+        }
+        const res = await fetchNhRank();
+        if (currentLeaderboardPeriod !== "nh_season") return;
+        const el = document.getElementById("myRankPosition");
+        if (!el) return;
+        if (!res)
+          el.textContent = nhMissing
+            ? "🚧 준비 중이에요. 조금만 기다려주세요!"
+            : "순위를 불러오지 못했어요.";
+        else if (!res.me)
+          el.textContent =
+            "이번 시즌 기록이 아직 없어요. 🛸 버튼으로 네온 호드에 들어가 플레이해 보세요!";
+        else
+          el.textContent = `📍 전체 ${res.total.toLocaleString("ko-KR")}명 중 ${res.me.rank.toLocaleString("ko-KR")}위 · ${Number(res.me.score).toLocaleString("ko-KR")}점`;
+      }
+      async function renderNhList() {
+        const lbEl = document.getElementById("leaderboardList");
+        lbEl.innerHTML = `<p style="font-size:11px; color:var(--paper-dim);">불러오는 중...</p>`;
+        const res = await fetchNhRank();
+        if (currentLeaderboardPeriod !== "nh_season") return;
+        if (!res) {
+          lbEl.innerHTML = `<p style="font-size:11px; color:var(--paper-dim);">${nhMissing ? "🚧 네온 호드 랭킹은 준비 중이에요. 조금만 기다려주세요!" : "네온 호드 랭킹을 불러오지 못했어요. 잠시 후 다시 시도해주세요."}</p>`;
+          return;
+        }
+        if (!res.list.length) {
+          lbEl.innerHTML = `<p style="font-size:11px; color:var(--paper-dim);">아직 이번 시즌 네온 호드 기록이 없어요. 첫 번째로 점수를 쌓아보세요!</p>`;
+          return;
+        }
+        const row = (p, me) => `
+    <div class="lb-row${me ? " me" : ""}">
+      <span class="lb-rank">${p.rank}</span><span class="lb-name">${hofEsc(p.name)}${me ? " (나)" : ""}</span>
+      <span class="lb-tier">🛸 ${Number(p.score).toLocaleString("ko-KR")}점</span>
+    </div>`;
+        lbEl.innerHTML = res.list
+          .map((p) => row(p, p.uid === currentUser.uid))
+          .join("");
+        if (res.me && !res.list.some((p) => p.uid === currentUser.uid)) {
+          lbEl.insertAdjacentHTML(
+            "beforeend",
+            `<div style="text-align:center; font-size:10px; color:var(--paper-dim); margin:4px 0;">⋯</div>` +
+              row(
+                {
+                  rank: res.me.rank,
+                  name: currentUser.name,
+                  score: res.me.score,
+                },
+                true,
+              ),
+          );
+        }
+      }
       async function renderWealthCard(period) {
+        if (period === "nh_season") return renderNhCard();
         const card = document.getElementById("myRankCard");
         const kind = wealthKindOf(period),
           isMoney = kind === "money";
@@ -18163,6 +18352,7 @@
           el.textContent = `📍 전체 ${res.total.toLocaleString("ko-KR")}명 중 ${res.me.rank.toLocaleString("ko-KR")}위`;
       }
       async function renderWealthList(period) {
+        if (period === "nh_season") return renderNhList();
         const lbEl = document.getElementById("leaderboardList");
         const kind = wealthKindOf(period),
           icon = kind === "money" ? "💰" : "📈";
@@ -18457,6 +18647,7 @@
           swordcurrent: "현재검",
           wealth_money: "보유금",
           wealth_monthly: "월간 수익",
+          nh_season: "네온 호드",
         };
         const periodLabel = periodLabels[currentLeaderboardPeriod] || "";
         if (!currentUser) {
@@ -21299,6 +21490,8 @@
         }
         const logoutBtn = document.getElementById("logoutBtn");
         if (logoutBtn) logoutBtn.style.display = currentUser ? "block" : "none";
+        const nhFab = document.getElementById("nhFabBtn");
+        if (nhFab) nhFab.classList.toggle("show", !!currentUser);
         const nicknameSection = document.getElementById("nicknameSection");
         const renameBtn = document.getElementById("renameBtn");
         if (!currentUser) profileRenaming = false;
