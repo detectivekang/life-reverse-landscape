@@ -183,7 +183,7 @@ if(typeof module!=='undefined')module.exports=Core;
 
 const Meta=(function(){
 const KEYS=[{k:'vit',n:'Vitality',d:'+10 max HP'},{k:'might',n:'Might',d:'+8% damage'},{k:'haste',n:'Haste',d:'+6% fire rate'},{k:'mag',n:'Magnet',d:'+15% pickup range'},{k:'greed',n:'Greed',d:'+10% gold'},{k:'arm',n:'Armor',d:'-4% damage taken'},{k:'grow',n:'Growth',d:'+6% XP gain'},{k:'rev',n:'Second Chance',d:'1 revive per run',max:1,base:1500}];
-const MAX=5,CHCOST=[0,1500,3000,5000,7000,9000,15000,18000,30000,40000],TEST_GOLD=0;
+const MAX=5,CHCOST=[0,5000,10000,100000,130000,150000,450000,500000,1000000,1200000],TEST_GOLD=0;
 function def(){return{gold:0,vit:0,might:0,haste:0,mag:0,greed:0,arm:0,grow:0,rev:0,own:[1,0,0,0,0,0,0,0,0,0],sel:0,stg:1,ssel:0,all:0,mut:[],ascMax:0,asc:0,rec:{et:0,ek:0},cos:[1,0,0,0,0,0,0,0],csel:0,stats:{runs:0,kills:0,wins:0,time:0,best:0,bosses:[0,0,0]},ach:[]};}
 const kd=k=>KEYS.find(x=>x.k===k)||{};
 function cost(m,k){return(kd(k).base||250)*(m[k]+1);}
