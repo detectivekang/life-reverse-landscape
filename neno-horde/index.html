@@ -38,7 +38,7 @@ const RELICS=[
 {id:'scholar',f:s=>{s.p.xpm*=1.4;}},
 {id:'pouch',f:s=>{s.gm=(s.gm||1)*1.5;}},
 {id:'boots',f:s=>{s.p.boots=1;}}];
-const TIER=[{dm:1,hp:1,un:150},{dm:1.06,hp:1.05,un:140},{dm:1.14,hp:1.1,un:125},{dm:1.25,hp:1.2,un:110}];
+const TIER=[{dm:.88,hp:.9,un:230,ws:3},{dm:1,hp:1,un:185,ws:4},{dm:1.12,hp:1.1,un:150,ws:5},{dm:1.25,hp:1.2,un:120,ws:6}];
 const CH=[
 {n:'Striker',tier:0,u:'pulse',f:p=>{p.xpm*=1.1;}},
 {n:'Bladedancer',tier:0,u:'pulse',f:p=>{p.orbs=2;p.rate=1.5;}},
@@ -50,11 +50,12 @@ const CH=[
 {n:'Guardian',tier:2,u:'aegis',f:p=>{p.mhp=p.hp=160;p.am*=.8;p.thorn=22;p.regen+=.5;p.spd=135;}},
 {n:'Void Reaper',tier:3,u:'void',f:p=>{p.w.laser=1;p.crit=.25;p.lifesteal=.6;}},
 {n:'Solar Sovereign',tier:3,u:'nova',f:p=>{p.w.nova=1;p.orbs=2;p.aoe*=1.3;p.xpm*=1.2;p.luck+=2;}}];
-function create(seed,o){const s=base(seed);o=o||{};s.stage=o.stage||0;s.asc=o.asc||0;s.bn=0;s.bk=0;s.lock=o.locked||{};const p=s.p,m=o.m||{};CH[o.ch||0].f(p);{const tr=TIER[CH[o.ch||0].tier||0];p.dmg*=tr.dm;p.mhp=Math.round(p.mhp*tr.hp);s.un=tr.un;}p.mhp+=(m.vit||0)*10;p.hp=p.mhp;p.dmg*=1+(m.might||0)*.08;p.rate*=1+(m.haste||0)*.06;p.magK=1+(m.mag||0)*.15;p.mag*=p.magK;s.ch=o.ch||0;p.am*=Math.pow(.96,m.arm||0);p.xpm*=1+(m.grow||0)*.06;p.rev=m.rev||0;{const mu=o.mut||[];for(const id of mu){const d=MUT.find(x=>x.id===id);if(d){s.mut[id]=1;s.mb+=d.b;}}if(s.mut.fragile){p.mhp=Math.round(p.mhp*.5);p.hp=p.mhp;p.dmg*=1.4;}if(s.mut.rush)p.xpm*=1.3;if(s.mut.barren)s.pend=2;if(s.mut.hex)s.un=Math.round(s.un*.5);s.lastHp=p.hp;}return s;}
+function create(seed,o){const s=base(seed);o=o||{};s.stage=o.stage||0;s.asc=o.asc||0;s.bn=0;s.bk=0;s.lock=o.locked||{};const p=s.p,m=o.m||{};CH[o.ch||0].f(p);{const tr=TIER[CH[o.ch||0].tier||0];p.dmg*=tr.dm;p.mhp=Math.round(p.mhp*tr.hp);s.un=tr.un;s.ws=tr.ws;}p.mhp+=(m.vit||0)*10;p.hp=p.mhp;p.dmg*=1+(m.might||0)*.08;p.rate*=1+(m.haste||0)*.06;p.magK=1+(m.mag||0)*.15;p.mag*=p.magK;s.ch=o.ch||0;p.am*=Math.pow(.96,m.arm||0);p.xpm*=1+(m.grow||0)*.06;p.rev=m.rev||0;{const mu=o.mut||[];for(const id of mu){const d=MUT.find(x=>x.id===id);if(d){s.mut[id]=1;s.mb+=d.b;}}if(s.mut.fragile){p.mhp=Math.round(p.mhp*.5);p.hp=p.mhp;p.dmg*=1.4;}if(s.mut.rush)p.xpm*=1.3;if(s.mut.barren)s.pend=2;if(s.mut.hex)s.un=Math.round(s.un*.5);s.lastHp=p.hp;}return s;}
 const WD={nova:{n:'Nova',d:'Periodic shockwave around you',pas:'Vitality'},zap:{n:'Lightning',d:'Strikes random enemies',pas:'Rapid Fire'},mine:{n:'Mines',d:'Drops proximity mines',pas:'Magnet'},boom:{n:'Boomerang',d:'Piercing returning blade',pas:'Swift'},blade:{n:'Orbit Blade',d:'Spinning blades',pas:'Power'},bomb:{n:'Bomb',d:'Lobs explosive bombs at enemy clusters',pas:'Multishot'},laser:{n:'Laser',d:'Piercing beam at the nearest enemy',pas:'Critical'},drone:{n:'Drone',d:'Orbiting drones that shoot enemies',pas:'Armor'},meteor:{n:'Meteor',d:'Calls meteors on enemy clusters',pas:'Blast Radius'},flame:{n:'Flame Trail',d:'Leaves burning fire where you walk',pas:'Regeneration'},frost:{n:'Frost Field',d:'Slowing aura + freezing bursts',pas:'Pierce'},grav:{n:'Gravity Well',d:'Pulls enemies in, then implodes',pas:'Growth'}};
 const MAGR=[60,110,170,260,400,1500],lvl=(p,k)=>k==='blade'?p.orbs:(p.w[k]||0);
 function pool(s){const p=s.p,a=UP.filter(u=>(s.got[u.n]||0)<5&&!s.lock[u.n]).map(u=>Object.assign({id:u.n},u));
- for(const k in WD){const d=WD[k],L=lvl(p,k);if(s.lock[d.n]&&!L)continue;
+ const own=Object.keys(WD).filter(k=>lvl(p,k)>0).length,full=own>=(s.ws||99);
+ for(const k in WD){const d=WD[k],L=lvl(p,k);if(s.lock[d.n]&&!L)continue;if(!L&&full)continue;
   if(L<5)a.push({n:d.n+(L?' Lv'+(L+1):' NEW'),id:d.n,lv:L+1,d:d.d,f:()=>{k==='blade'?p.orbs++:p.w[k]++;}});
   else if(!p.ev[k]&&s.got[d.pas])a.push({n:'EVOLVE '+d.n,id:d.n,ev:1,d:'Greatly empowered',f:()=>{p.ev[k]=1;}});}
  const ML=p.magLv;if(ML<5)a.push({n:'Magnet'+(ML?' Lv'+(ML+1):' NEW'),k:'Magnet',id:'Magnet',lv:ML+1,a:[MAGR[ML],MAGR[ML+1]],d:ML>=4?'Pulls ALL gems on screen':'Pickup range '+MAGR[ML]+' > '+MAGR[ML+1],f:()=>{p.magLv++;p.mag=MAGR[p.magLv]*p.magK;}});
@@ -279,6 +280,7 @@ Object.assign(L.zh,{"hint.kills": "累计击杀{0}个敌人", "hint.stage": "通
 const order=['en','ko','ja','zh'],names={en:'English',ko:'\ud55c\uad6d\uc5b4',ja:'\u65e5\u672c\u8a9e',zh:'\u4e2d\u6587'};
 let cur='en';
 function detect(){try{const s=localStorage.getItem('nh_lang');if(s&&L[s])return s;}catch(e){}try{const n=String(navigator.language||'en').slice(0,2).toLowerCase();if(L[n])return n;}catch(e){}return'en';}
+Object.assign(L.en,{wsl:'Weapons {0}/{1}',wsn:'Slots {0}'});Object.assign(L.ko,{wsl:'무기 {0}/{1}',wsn:'무기 슬롯 {0}'});Object.assign(L.ja,{wsl:'武器 {0}/{1}',wsn:'スロット{0}'});Object.assign(L.zh,{wsl:'武器 {0}/{1}',wsn:'武器栏{0}'});
 cur=detect();
 function T(k){const a=Array.prototype.slice.call(arguments,1);return((L[cur]&&L[cur][k])||L.en[k]||k).replace(/\{(\d)\}/g,(m,i)=>a[i]===undefined?'':a[i]);}
 function set(c){if(L[c]){cur=c;try{localStorage.setItem('nh_lang',c);}catch(e){}}}
@@ -489,7 +491,7 @@ function drawMenu(){
   GP.ship(g,x+cc/2,y+20,-1.5708,PC[i%PC.length]);txt('\u2605'.repeat(c.tier+1),x+3,y+10,8,tc,'left');
   txt(T('ch.'+i+'.n'),x+cc/2,y+42,11,'#fff',null,cc-4);txt(!open?T('locked'):meta.own[i]?(sel?T('selected'):T('owned')):Meta.CHCOST[i]+'g',x+cc/2,y+56,10,!open?'#ff9a6a':meta.own[i]?'#7dff9a':'#ffd23b',null,cc-4);if(!open){g.fillStyle='rgba(4,6,20,.5)';GP.rr(g,x,y,cc,chH,12);g.fill();}
   btn(x,y,cc,chH,()=>{if(!open){hintCh=i;return;}hintCh=-1;if(meta.own[i]||Meta.unlock(meta,i))meta.sel=i;Meta.save(meta);});});
- const sc_=Core.CH[meta.sel];if(hintCh>=0&&!(meta.own[hintCh]||Meta.unlocked(meta,'ch:'+hintCh))){const u_=Meta.UNL['ch:'+hintCh];txt(T('ch.'+hintCh+'.n')+' – '+T('hint.'+u_.t,u_.n),xL+cw_/2,200,12,'#ff9a6a',null,cw_);}else txt('\u2605'.repeat(sc_.tier+1)+' '+T('ch.'+meta.sel+'.n')+' \u2013 '+T('ch.'+meta.sel+'.d'),xL+cw_/2,200,12,TC[sc_.tier],null,cw_);
+ const sc_=Core.CH[meta.sel];if(hintCh>=0&&!(meta.own[hintCh]||Meta.unlocked(meta,'ch:'+hintCh))){const u_=Meta.UNL['ch:'+hintCh];txt(T('ch.'+hintCh+'.n')+' – '+T('hint.'+u_.t,u_.n),xL+cw_/2,200,12,'#ff9a6a',null,cw_);}else txt('\u2605'.repeat(sc_.tier+1)+' '+T('ch.'+meta.sel+'.n')+' \u2013 '+T('ch.'+meta.sel+'.d')+' \u00b7 '+T('wsn',Core.TIER[sc_.tier].ws),xL+cw_/2,200,12,TC[sc_.tier],null,cw_);
  const NS=Core.ST.length,cs=(cw_-8*(NS-1))/NS;
  Core.ST.forEach((q,i)=>{const x=xL+i*(cs+8),y=208,h=32,ok=i<meta.stg,sel=meta.ssel===i;GP.panel(g,x,y,cs,h,GP.PAL[i].a,sel);txt(ok?T('st.'+i):T('locked'),x+cs/2,y+21,11,ok?'#fff':'#667',null,cs-6);btn(x,y,cs,h,()=>{if(ok){meta.ssel=i;Meta.save(meta);}});});
  const ay=246,aok=meta.stg>=4;GP.panel(g,xL,ay,cw_,30,'#ff6a3a',false);
@@ -601,7 +603,7 @@ function frame(now){
   const bw=Math.min(W*.46,220);GP.bar(g,12,14,bw,14,p.hp/p.mhp,'#ff2e5a','#ff9a6a');txt(Math.ceil(Math.max(0,p.hp))+' / '+p.mhp,12+bw/2,25,10,'#fff');
   GP.bar(g,0,0,W,5,p.xp/p.next,'#2ee6ff','#7dffdc');
   const t=Math.floor(st.t);GP.ntxt(g,Math.floor(t/60)+':'+String(t%60).padStart(2,'0'),W/2,54,30,'#7fd0ff');
-  txt(T('kills',st.kills),12,46,12,'#8aa4d0','left');GP.dot(g,18,60,4,'#ffd23b');txt(String(st.coins),28,64,12,'#ffd23b','left');st.rl.forEach((id,i)=>{GP.path(g,GP.ngon(18+i*14,78,5.5,4,.785));g.fillStyle=GP.rgba(RC[id]||'#ffd23b',.95);g.fill();});txt(T('lv',p.lv),W-12,28,17,'#9fd0ff','right');
+  txt(T('kills',st.kills),12,46,12,'#8aa4d0','left');GP.dot(g,18,60,4,'#ffd23b');txt(String(st.coins),28,64,12,'#ffd23b','left');st.rl.forEach((id,i)=>{GP.path(g,GP.ngon(18+i*14,78,5.5,4,.785));g.fillStyle=GP.rgba(RC[id]||'#ffd23b',.95);g.fill();});txt(T('lv',p.lv),W-12,28,17,'#9fd0ff','right');{const wn=Object.keys(Core.WD).filter(k=>k==='blade'?p.orbs>0:(p.w[k]||0)>0).length;txt(T('wsl',wn,st.ws||'-'),12,98,11,wn>=(st.ws||99)?'#ffb06a':'#8aa4d0','left');}
   if(mode==='play'){g.fillStyle='rgba(255,255,255,.55)';GP.rr(g,W-34,42,7,22,3);g.fill();GP.rr(g,W-22,42,7,22,3);g.fill();ultBtn();}
   const bo=st.en.find(e=>e.boss);if(bo){GP.bar(g,W*.2,72,W*.6,10,bo.hp/bo.mhp,'#ff3b6b','#ffd23b');txt(T('boss'),W*.2,68,11,'#ffb0c0','left');if(st.t-st.bossT>90-3*st.asc)txt(T('enraged'),W*.8,68,11,'#ff4060','right');}
   if(st.boss&&st.t-st.bt<3&&mode==='play'){g.globalAlpha=Math.min(1,(3-(st.t-st.bt))/1.5);GP.ntxt(g,T('boss_in'),W/2,H*.34,Math.min(W*.1,44),'#ff4060');g.globalAlpha=1;}}
