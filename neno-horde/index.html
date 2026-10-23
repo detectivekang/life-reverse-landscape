@@ -283,7 +283,7 @@ Object.assign(L.zh,{"hint.kills": "累计击杀{0}个敌人", "hint.stage": "通
 const order=['en','ko','ja','zh'],names={en:'English',ko:'\ud55c\uad6d\uc5b4',ja:'\u65e5\u672c\u8a9e',zh:'\u4e2d\u6587'};
 let cur='en';
 function detect(){try{const s=localStorage.getItem('nh_lang');if(s&&L[s])return s;}catch(e){}try{const n=String(navigator.language||'en').slice(0,2).toLowerCase();if(L[n])return n;}catch(e){}return'en';}
-Object.assign(L.en,{danger:'DANGER x{0}',wsl:'Weapons {0}/{1}',wsn:'Slots {0}'});Object.assign(L.ko,{danger:'위험도 x{0}',wsl:'무기 {0}/{1}',wsn:'무기 슬롯 {0}'});Object.assign(L.ja,{danger:'危険度 x{0}',wsl:'武器 {0}/{1}',wsn:'スロット{0}'});Object.assign(L.zh,{danger:'危险度 x{0}',wsl:'武器 {0}/{1}',wsn:'武器栏{0}'});
+Object.assign(L.en,{giveup:'Give Up',giveup2:'Tap again to give up',gaveup:'GAVE UP',danger:'DANGER x{0}',wsl:'Weapons {0}/{1}',wsn:'Slots {0}'});Object.assign(L.ko,{giveup:'포기하기',giveup2:'한 번 더 누르면 포기',gaveup:'포기',danger:'위험도 x{0}',wsl:'무기 {0}/{1}',wsn:'무기 슬롯 {0}'});Object.assign(L.ja,{giveup:'リタイア',giveup2:'もう一度押すとリタイア',gaveup:'リタイア',danger:'危険度 x{0}',wsl:'武器 {0}/{1}',wsn:'スロット{0}'});Object.assign(L.zh,{giveup:'放弃',giveup2:'再点一次确认放弃',gaveup:'已放弃',danger:'危险度 x{0}',wsl:'武器 {0}/{1}',wsn:'武器栏{0}'});
 Object.assign(L.en,{'card.Recover':'Recover','cd.Recover':'Heal 50% HP','card.Treasure':'Treasure','cd.Treasure':'+60 coins','card.Overcharge':'Overcharge','cd.Overcharge':'Ultimate fully charged'});Object.assign(L.ko,{'card.Recover':'회복','cd.Recover':'체력 50% 회복','card.Treasure':'보물','cd.Treasure':'코인 +60','card.Overcharge':'과충전','cd.Overcharge':'궁극기 즉시 충전'});Object.assign(L.ja,{'card.Recover':'回復','cd.Recover':'HPを50%回復','card.Treasure':'財宝','cd.Treasure':'コイン+60','card.Overcharge':'オーバーチャージ','cd.Overcharge':'必殺技を即時チャージ'});Object.assign(L.zh,{'card.Recover':'恢复','cd.Recover':'恢复50%生命','card.Treasure':'宝藏','cd.Treasure':'金币+60','card.Overcharge':'过充','cd.Overcharge':'终极技能立即充满'});
 cur=detect();
 function T(k){const a=Array.prototype.slice.call(arguments,1);return((L[cur]&&L[cur][k])||L.en[k]||k).replace(/\{(\d)\}/g,(m,i)=>a[i]===undefined?'':a[i]);}
@@ -408,7 +408,7 @@ function gamepad(){if(typeof navigator==='undefined'||!navigator.getGamepads)ret
  if(e(9)){if(mode==='play'&&!st.pick)pauseGame();else if(mode==='pause')mode=from;}
  gpPrev=gp.buttons.map(x=>x.pressed);
  let x=gp.axes[0]||0,y=gp.axes[1]||0;if(Math.hypot(x,y)<.2)x=y=0;x+=(b(15)?1:0)-(b(14)?1:0);y+=(b(13)?1:0)-(b(12)?1:0);return{x,y};}
-function pauseGame(){if(mode==='play'){from='play';mode='pause';jo=null;jv={x:0,y:0};}}
+function pauseGame(){if(mode==='play'){gvAt=-1e9;from='play';mode='pause';jo=null;jv={x:0,y:0};}}
 function hit(e){for(const b of btns)if(e.clientX>=b.x&&e.clientX<=b.x+b.w&&e.clientY>=b.y&&e.clientY<=b.y+b.h){b.fn();return true;}return false;}
 function burst(x,y,n,c){for(let i=0;i<n;i++){const a=Math.random()*6.283,s=40+Math.random()*140;parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,l:.35+Math.random()*.3,c});}}
 function start(){hintCh=-1;if(!(meta.own[meta.sel]||Meta.unlocked(meta,'ch:'+meta.sel)))meta.sel=0;st=Core.create(Date.now(),{ch:meta.sel,m:meta,stage:meta.ssel,asc:meta.asc||0,locked:Meta.lockedCards(meta),mut:meta.mut||[]});mode='play';parts=[];snd(520,.15,'square',.08);musicStart();hpm.clear();nums=[];NHL.runStart(st.stage);}
@@ -460,6 +460,7 @@ const GP=Gfx,PC=['#7fe8ff','#ff5ad0','#ffb02e','#7dff4f','#ff6a3a','#7fd8ff','#f
 let last=performance.now();
 function btn(x,y,w,h,fn){btns.push({x,y,w,h,fn});}
 function isW(n){return /Nova|Lightning|Mines|Boomerang|Orbit Blade|Bomb|Laser|Drone|Meteor|Flame|Frost|Gravity/.test(n);}
+let gvAt=-1e9;
 function drawPause(){btns=[];const w=Math.min(W-40,320),x=(W-w)/2;let y=H*.2;GP.ntxt(g,T('paused'),W/2,y,34,'#38e1ff');y+=30;
  const row=(l,fn,c)=>{GP.panel(g,x,y,w,48,c||'#38e1ff',false);txt(l,W/2,y+31,18,c?'#ffb0c0':'#fff',null,w-24);btn(x,y,w,48,fn);y+=58;};
  row(T('resume'),()=>{mode=from;});
@@ -467,7 +468,7 @@ function drawPause(){btns=[];const w=Math.min(W-40,320),x=(W-w)/2;let y=H*.2;GP.
  row(T('sound')+': '+Math.round(set.vol*100)+'%',()=>{set.vol=set.vol>.5?.5:set.vol>0?0:1;saveSet();});
  row(T('shake')+': '+(set.shake?T('on'):T('off')),()=>{set.shake=set.shake?0:1;saveSet();});
  row(T('language')+': '+I18N.name(),()=>{I18N.cycle(1);});
- if(from==='menu')row(T('stats_btn'),()=>{mode='stats';});else row(T('quit'),()=>{musicStop();mode='menu';},'#ff4a6a');}
+ if(from==='menu')row(T('stats_btn'),()=>{mode='stats';});else{if(st&&st.stage===3&&!st.over){const arm=performance.now()-gvAt<3000;row(T(arm?'giveup2':'giveup'),()=>{if(st.over)return;if(performance.now()-gvAt<3000){gvAt=-1e9;st.over=true;st.gu=1;end(false);}else gvAt=performance.now();},'#ffb02e');}row(T('quit'),()=>{musicStop();mode='menu';},'#ff4a6a');}}
 function drawStats(){btns=[];const s=meta.stats,w=Math.min(W-30,380),x=(W-w)/2;GP.ntxt(g,T('stats_t'),W/2,40,28,'#38e1ff');
  txt(T('stats_line',s.runs,s.kills,s.wins,s.best),W/2,64,13,'#9bb8ff',null,W-20);
  Meta.ACH.forEach((a,i)=>{const y=86+i*44,ok=meta.ach.includes(a.id);GP.panel(g,x,y,w,38,ok?'#7dff4f':'#445588',ok);txt(T('ach.'+a.id+'.n'),x+12,y+16,15,ok?'#9dffb0':'#8890b0','left',w-50);txt(T('ach.'+a.id+'.d'),x+12,y+32,11,'#8fa6e0','left',w-50);if(ok)txt('\u2713',x+w-18,y+26,18,'#7dff4f','right');});
@@ -616,7 +617,7 @@ function frame(now){
    g.fillStyle=GP.rgba(col,.14);GP.rr(g,cx()+10,y+12,60,60,12);g.fill();GP.icon(g,u.n,cx()+40,y+42,17,u.rel?(RC[u.id]||col):col);
    txt(cname(u),cx()+84,y+37,21,'#fff','left',cw()-110);txt(cdesc(u),cx()+84,y+62,14,'#a8c0f0','left',cw()-110);txt(String(i+1),cx()+cw()-18,y+26,13,'#6a7aa8','right');});}
  if(mode==='over'){g.fillStyle='rgba(2,3,14,.72)';g.fillRect(0,0,W,H);const w=Math.min(W-40,340),x=(W-w)/2;GP.panel(g,x,H*.2,w,H*.52,st.win?'#7dff4f':'#ff3b6b',true);
-  GP.ntxt(g,st.win?T('victory'):T('defeated'),W/2,H*.2+58,Math.min(W*.11,46),st.win?'#7dff4f':'#ff3b6b');
+  GP.ntxt(g,st.win?T('victory'):T(st.gu?'gaveup':'defeated'),W/2,H*.2+58,Math.min(W*.11,46),st.win?'#7dff4f':'#ff3b6b');
   txt(T('time',Math.floor(st.t/60)+':'+String(Math.floor(st.t)%60).padStart(2,'0')),W/2,H*.2+100,18,'#fff',null,w-20);txt(T('kills_lv',st.kills,p.lv),W/2,H*.2+126,18,'#fff',null,w-20);txt(T('best',best),W/2,H*.2+150,13,'#8fb0ff');if(st.stage===3)txt((st.newRec?T('record')+'  ':'')+T('rec_time',fmt(meta.rec.et)),W/2,H*.2+168,13,'#ffd23b',null,w-20);
   GP.ntxt(g,T('gold_plus',st.gold),W/2,H*.2+196,28,'#ffd23b');txt(NHL.overLine(),W/2,H*.2+214,12,'#7dffdc',null,w-20);(st.ach||[]).forEach((a,i)=>txt(T('ach_new',T('ach.'+a.id+'.n')),W/2,H*.2+228+i*24,15,'#9dffb0',null,w-20));(st.unl||[]).slice(0,5).forEach((k,i)=>txt(T('unlocked_new',k.startsWith('ch:')?T('ch.'+k.slice(3)+'.n'):T('card.'+k.slice(5))),W/2,H*.2+228+((st.ach||[]).length+i)*24,15,'#ffd23b',null,w-20));
   if(t0>.6){g.globalAlpha=.55+.45*Math.sin(clock*4);txt(T('continue'),W/2,H*.82,22,'#7dffdc');g.globalAlpha=1;}}
