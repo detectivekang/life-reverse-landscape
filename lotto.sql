@@ -181,11 +181,17 @@ end $$;
 
 -- ---------- 현재 상태 (전광판 + 내 티켓 + 최근 추첨 기록) ----------
 create or replace function public.lotto_get_state(p_history int default 10) returns jsonb
-language plpgsql stable security definer set search_path = public as $$
+language plpgsql security definer set search_path = public as $$
 declare
   v_uid uuid := auth.uid(); v_cur date := lotto_cur_round(); v_st public.lotto_state%rowtype;
   v_sold int; v_mine jsonb; v_rounds jsonb; v_last date;
 begin
+  -- [추첨 누락 방지] 8시가 지났는데 아직 추첨 안 된 회차가 있으면, 상태를 조회하는 순간 바로 추첨한다.
+  -- (예전에는 "8시 정각에 접속해 있던 사람의 브라우저"만 추첨을 요청해서, 아무도 없으면 추첨이 밀렸어요)
+  -- 평소(밀린 회차 없음)에는 한 줄 읽기만 하고 아무것도 쓰지 않는다.
+  if (select next_round from public.lotto_state where id = 1) < v_cur then
+    perform public.lotto_settle();
+  end if;
   select * into v_st from public.lotto_state where id = 1;
   select count(*) into v_sold from public.lotto_tickets where round_date = v_cur;
   select coalesce(jsonb_agg(jsonb_build_object('id', id, 'nums', to_jsonb(nums), 'kind', kind) order by id), '[]'::jsonb)

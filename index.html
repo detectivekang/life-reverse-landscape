@@ -26130,7 +26130,18 @@
             if (!seen)
               toast(`🎟️ 10분 뒤 로또 추첨! 내 티켓 ${S.mine.length}장`);
           }
-          if (remainMs <= -jitter && !settling && Date.now() >= settleAfter)
+          // [추첨 누락 방지] 8시를 "지나는 순간"뿐 아니라, 접속했을 때 이미 밀린 회차가 있어도 추첨을 요청한다.
+          // (마지막 추첨일과 이번 회차 사이에 하루 이상 빈 날이 있으면 = 밀린 회차가 있다는 뜻)
+          let behind = false;
+          if (S.last_drawn && S.round) {
+            const dayMs = (d) => Date.parse(String(d).slice(0, 10) + "T00:00:00Z");
+            behind = dayMs(S.round) - dayMs(S.last_drawn) > 86400000;
+          }
+          if (
+            (remainMs <= -jitter || behind) &&
+            !settling &&
+            Date.now() >= settleAfter
+          )
             settleAndRefresh();
         }
 
