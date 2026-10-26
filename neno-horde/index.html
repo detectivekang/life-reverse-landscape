@@ -195,7 +195,7 @@ function buy(m,k){const c=cost(m,k);if(m[k]>=(kd(k).max||MAX)||m.gold<c)return f
 function unlock(m,i){if(m.own[i])return true;if(m.gold<CHCOST[i])return false;m.gold-=CHCOST[i];m.own[i]=1;return true;}
 function earn(m,s){const g=Math.floor((s.kills*.15+s.t*.1+(s.win?150:0)+(s.coins||0)+(s.bk||0)*25)*(1+m.greed*.1)*(1+(s.mb||0))*(s.gm||1)*(1+Math.min(s.stage||0,2)*.5)*(1+.25*(s.asc||0)));m.gold+=g;return g;}
 function winStage(m,i,asc){if(i+1===m.stg&&m.stg<4)m.stg++;if(i===2&&asc===(m.ascMax||0)&&(m.ascMax||0)<10)m.ascMax=(m.ascMax||0)+1;}
-const COS=[{id:'def',cost:0},{id:'crimson',col:'#ff3b5c',cost:250},{id:'gold',col:'#ffd23b',cost:400},{id:'emerald',col:'#2effa0',cost:400},{id:'violet',col:'#b45cff',cost:600},{id:'prism',col:'#ffffff',cost:900},{id:'inferno',col:'#ff6a1a',cost:1200,fx:'flicker'},{id:'rainbow',cost:2000,fx:'rainbow'}];
+const COS=[{id:'def',cost:0},{id:'crimson',col:'#ff3b5c',cost:25000},{id:'gold',col:'#ffd23b',cost:40000},{id:'emerald',col:'#2effa0',cost:40000},{id:'violet',col:'#b45cff',cost:60000},{id:'prism',col:'#ffffff',cost:90000},{id:'inferno',col:'#ff6a1a',cost:120000,fx:'flicker'},{id:'rainbow',cost:2000000,fx:'rainbow'}];
 function buyCos(m,i){if(m.cos[i])return true;if(m.gold<COS[i].cost)return false;m.gold-=COS[i].cost;m.cos[i]=1;return true;}
 const ACH=[
 {id:'run',n:'Rookie',d:'Finish a run',t:m=>m.stats.runs>=1},
