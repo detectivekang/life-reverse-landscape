@@ -661,6 +661,11 @@ const NHL=(function(){
    e_limit:'已达今日兑换上限',e_not:'已验证的金币不足',e_gen:'兑换失败',season:'{0} 赛季',rkEmpty:'本赛季暂无记录',me:'我',pts:'{0}分',
    load:'加载中...',refresh:'刷新',offline:'离线 - 无法使用排名/兑换',run_ok:'排名 +{0}分  /  可兑换 +{1}金币',run_no:'不计入（需登录游玩）',run_err:'无法验证本局',run_wait:'正在确认结果...',
    cloud:'已读取云存档',cloudUp:'云存档已更新',confirmGo:'前往中...'}};
+ Object.assign(X.en,{shopT:'Daily Shop',reset:'Resets daily',buy:'BUY',sold:'SOLD OUT',today:'Today {0}/{1}',buyOk:'{0} sent to your Life Reverse mailbox!',it_shard:'Dimension Shards x10,000',it_undo:'Undo Shield',it_s15:'Enhance Scroll x1.5',it_s2:'Enhance Scroll x2',it_s25:'Enhance Scroll x2.5'});
+ Object.assign(X.ko,{shopT:'오늘의 상점',reset:'매일 초기화',buy:'구매',sold:'매진',today:'오늘 {0}/{1}',buyOk:'{0} → 인생역전 우편함으로 보냈어요!',it_shard:'차원 조각 10,000개',it_undo:'되돌리기',it_s15:'강화 주문서 x1.5',it_s2:'강화 주문서 x2',it_s25:'강화 주문서 x2.5'});
+ Object.assign(X.ja,{shopT:'今日のショップ',reset:'毎日リセット',buy:'購入',sold:'売切',today:'本日 {0}/{1}',buyOk:'{0} を人生逆転のメールボックスへ送りました！',it_shard:'次元の欠片 10,000個',it_undo:'巻き戻し',it_s15:'強化の巻物 x1.5',it_s2:'強化の巻物 x2',it_s25:'強化の巻物 x2.5'});
+ Object.assign(X.zh,{shopT:'今日商店',reset:'每日重置',buy:'购买',sold:'售罄',today:'今日 {0}/{1}',buyOk:'{0} 已发送到人生逆转邮箱！',it_shard:'次元碎片 10,000个',it_undo:'回溯',it_s15:'强化卷轴 x1.5',it_s2:'强化卷轴 x2',it_s25:'强化卷轴 x2.5'});
+ const OFFERS=[{id:'shard',ic:'\u{1F48E}',price:10000,lim:1},{id:'undo',ic:'\u{1F6E1}',price:5000,lim:2},{id:'s15',ic:'\u{1F340}',price:5000,lim:1},{id:'s2',ic:'\u{1F340}',price:10000,lim:1},{id:'s25',ic:'\u{1F340}',price:20000,lim:1}];
  const tt=(k,...a)=>{const d=X[I18N.cur]||X.en;let s=d[k]!=null?d[k]:X.en[k]!=null?X.en[k]:k;a.forEach((v,i)=>{s=s.replace('{'+i+'}',v);});return s;};
  const nf=n=>Math.floor(Number(n)||0).toLocaleString();
  let db=null,user=null,loaded=false,info=null,rank=null,busy=false,runId=null,lastRun=null,tab=0,exAmt=100,msg='',msgAt=0,syncT=null,infoAt=0,rankAt=0;
@@ -695,6 +700,16 @@ const NHL=(function(){
   try{const r=await db.rpc('nh_wallet_info');if(!r.error&&r.data&&r.data.ok)info=r.data;}catch(e){}}
  async function refreshRank(force){if(!db||!user)return;if(!force&&performance.now()-rankAt<8000)return;rankAt=performance.now();
   try{const r=await db.rpc('nh_ranking',{p_season:null,p_limit:30});if(!r.error&&r.data&&r.data.ok)rank=r.data;}catch(e){}}
+ async function doBuy(o){if(busy||!db||!user)return;const bought=(info&&info.shop&&info.shop[o.id])|0;
+  if(bought>=o.lim){note(tt('e_limit'));return;}
+  if(!info||info.exchangeable<o.price||meta.gold<o.price){note(tt('e_not'));return;}
+  busy=true;try{const r=await db.rpc('nh_buy',{p_item:o.id});if(r.error)throw r.error;const d=r.data||{};
+   meta.gold=Math.max(0,meta.gold-(d.gold>0?d.gold:o.price));Meta.save(meta);clearTimeout(syncT);push();
+   note(tt('buyOk',tt('it_'+o.id)));snd(900,.15,'triangle',.08);
+   const sh=Object.assign({},info.shop);sh[o.id]=bought+1;
+   info=Object.assign({},info,{exchangeable:d.exchangeable!=null?d.exchangeable:info.exchangeable-o.price,shop:d.bought||sh});infoAt=0;refreshInfo(true);}
+  catch(e){const m=(e&&e.message)||'';note(tt(/NH_DAILY_LIMIT/.test(m)?'e_limit':/NH_NOT_ENOUGH/.test(m)?'e_not':'e_gen'));}
+  busy=false;}
  async function doExchange(){if(busy||!db||!user)return;const mx=maxEx();if(exAmt<1||exAmt>mx){note(tt(info&&info.day_left<=0?'e_limit':'e_not'));return;}
   busy=true;try{const r=await db.rpc('nh_exchange',{p_gold:exAmt});if(r.error)throw r.error;const d=r.data;
    meta.gold=Math.max(0,meta.gold-d.gold);Meta.save(meta);clearTimeout(syncT);push();note(tt('exOk',nf(d.shards)));snd(900,.15,'triangle',.08);
@@ -728,13 +743,18 @@ const NHL=(function(){
    if(!user){txt(tt('nologin'),W/2,y+52,13,'#ff9a6a',null,w);}
    else if(!info){txt(tt('load'),W/2,y+52,13,'#8fb0ff',null,w);}
    else{
-    txt(tt('okg',nf(info.exchangeable))+'   \u00B7   '+tt('left',nf(info.day_left)),W/2,y+44,12,'#7dffdc',null,w);
-    if(info.exchangeable<=0)txt(tt('exNone'),W/2,y+62,10,'#8fa6e0',null,w);
-    const mx=maxEx(),cw=(w-24)/4,cy_=y+86;txt(tt('rate'),x+4,cy_-6,11,'#8fb0ff','left',w);
-    [100,500,1000].forEach((a,i)=>chip(x+i*(cw+8),cy_,cw,32,String(a),exAmt===a,()=>{exAmt=a;}));
-    chip(x+3*(cw+8),cy_,cw,32,tt('max')+' '+nf(mx),false,()=>{exAmt=Math.max(1,mx);},'#ffd23b');
-    const by=cy_+42,ok=exAmt>=1&&exAmt<=mx&&!busy;GP.rr(g,x,by,w,44,14);g.fillStyle=ok?'rgba(39,232,176,.9)':'rgba(255,255,255,.08)';g.fill();
-    txt(tt('doEx')+'  '+nf(exAmt)+' \u2192 \u{1F48E} '+nf(exAmt),x+w/2,by+29,16,ok?'#04211c':'#778',null,w-20);btn(x,by,w,44,doExchange);}
+    txt(tt('okg',nf(info.exchangeable)),W/2,y+44,12,'#7dffdc',null,w);
+    if(info.exchangeable<=0)txt(tt('exNone'),W/2,y+60,10,'#8fa6e0',null,w);
+    const sy=y+66;txt(tt('shopT')+'  \u00B7  '+tt('reset'),x+4,sy+8,11,'#8fb0ff','left',w);
+    const rh=Math.max(36,Math.min(54,Math.floor((H-sy-34)/OFFERS.length)));
+    OFFERS.forEach((o,i)=>{const yy=sy+16+i*rh,h=rh-5,bought=(info.shop&&info.shop[o.id])|0,left=o.lim-bought,afford=info.exchangeable>=o.price&&meta.gold>=o.price,ok=left>0&&afford&&!busy;
+     GP.panel(g,x,yy,w,h,left>0?'#445588':'#2a3150',false);
+     txt(o.ic+' '+tt('it_'+o.id),x+10,yy+h*.46,13,left>0?'#fff':'#778','left',w-118);
+     txt(nf(o.price)+'g  \u00B7  '+tt('today',bought,o.lim),x+10,yy+h*.8,10,left>0?'#ffd23b':'#667','left',w-118);
+     const bw=84,bx=x+w-bw-8,bh=Math.min(34,h-8),by=yy+(h-bh)/2;
+     GP.rr(g,bx,by,bw,bh,12);g.fillStyle=ok?'rgba(39,232,176,.9)':'rgba(255,255,255,.08)';g.fill();
+     txt(left>0?tt('buy'):tt('sold'),bx+bw/2,by+bh/2+5,13,ok?'#04211c':'#778',null,bw-8);
+     btn(bx,by,bw,bh,()=>doBuy(o));});}
   }else{
    if(!user){txt(tt('nologin'),W/2,y+30,13,'#ff9a6a',null,w);}
    else if(!rank){txt(tt('load'),W/2,y+30,13,'#8fb0ff',null,w);}
