@@ -661,11 +661,11 @@ const NHL=(function(){
    e_limit:'已达今日兑换上限',e_not:'已验证的金币不足',e_gen:'兑换失败',season:'{0} 赛季',rkEmpty:'本赛季暂无记录',me:'我',pts:'{0}分',
    load:'加载中...',refresh:'刷新',offline:'离线 - 无法使用排名/兑换',run_ok:'排名 +{0}分  /  可兑换 +{1}金币',run_no:'不计入（需登录游玩）',run_err:'无法验证本局',run_wait:'正在确认结果...',
    cloud:'已读取云存档',cloudUp:'云存档已更新',confirmGo:'前往中...'}};
- Object.assign(X.en,{shopT:'Daily Shop',reset:'Resets daily',buy:'BUY',sold:'SOLD OUT',today:'Today {0}/{1}',buyOk:'{0} sent to your Life Reverse mailbox!',it_shard:'Dimension Shards x10,000',it_undo:'Undo Shield',it_s15:'Enhance Scroll x1.5',it_s2:'Enhance Scroll x2',it_s25:'Enhance Scroll x2.5'});
- Object.assign(X.ko,{shopT:'오늘의 상점',reset:'매일 초기화',buy:'구매',sold:'매진',today:'오늘 {0}/{1}',buyOk:'{0} → 인생역전 우편함으로 보냈어요!',it_shard:'차원 조각 10,000개',it_undo:'되돌리기',it_s15:'강화 주문서 x1.5',it_s2:'강화 주문서 x2',it_s25:'강화 주문서 x2.5'});
- Object.assign(X.ja,{shopT:'今日のショップ',reset:'毎日リセット',buy:'購入',sold:'売切',today:'本日 {0}/{1}',buyOk:'{0} を人生逆転のメールボックスへ送りました！',it_shard:'次元の欠片 10,000個',it_undo:'巻き戻し',it_s15:'強化の巻物 x1.5',it_s2:'強化の巻物 x2',it_s25:'強化の巻物 x2.5'});
- Object.assign(X.zh,{shopT:'今日商店',reset:'每日重置',buy:'购买',sold:'售罄',today:'今日 {0}/{1}',buyOk:'{0} 已发送到人生逆转邮箱！',it_shard:'次元碎片 10,000个',it_undo:'回溯',it_s15:'强化卷轴 x1.5',it_s2:'强化卷轴 x2',it_s25:'强化卷轴 x2.5'});
- const OFFERS=[{id:'shard',ic:'\u{1F48E}',price:10000,lim:1},{id:'undo',ic:'\u{1F6E1}',price:5000,lim:2},{id:'s15',ic:'\u{1F340}',price:5000,lim:1},{id:'s2',ic:'\u{1F340}',price:10000,lim:1},{id:'s25',ic:'\u{1F340}',price:20000,lim:1}];
+ Object.assign(X.en,{shopT:'Daily Shop',reset:'Resets daily',buy:'BUY',sold:'SOLD OUT',today:'Today {0}/{1}',buyOk:'{0} sent to your Life Reverse mailbox!',it_shard:'Dimension Shards x10,000',it_undo:'Undo Shield',it_s15:'Enhance Scroll x1.5',it_s2:'Enhance Scroll x2',it_s25:'Enhance Scroll x2.5',it_bt:'Sword Battle x1'});
+ Object.assign(X.ko,{shopT:'오늘의 상점',reset:'매일 초기화',buy:'구매',sold:'매진',today:'오늘 {0}/{1}',buyOk:'{0} → 인생역전 우편함으로 보냈어요!',it_shard:'차원 조각 10,000개',it_undo:'되돌리기',it_s15:'강화 주문서 x1.5',it_s2:'강화 주문서 x2',it_s25:'강화 주문서 x2.5',it_bt:'검 배틀 1회'});
+ Object.assign(X.ja,{shopT:'今日のショップ',reset:'毎日リセット',buy:'購入',sold:'売切',today:'本日 {0}/{1}',buyOk:'{0} を人生逆転のメールボックスへ送りました！',it_shard:'次元の欠片 10,000個',it_undo:'巻き戻し',it_s15:'強化の巻物 x1.5',it_s2:'強化の巻物 x2',it_s25:'強化の巻物 x2.5',it_bt:'剣バトル 1回'});
+ Object.assign(X.zh,{shopT:'今日商店',reset:'每日重置',buy:'购买',sold:'售罄',today:'今日 {0}/{1}',buyOk:'{0} 已发送到人生逆转邮箱！',it_shard:'次元碎片 10,000个',it_undo:'回溯',it_s15:'强化卷轴 x1.5',it_s2:'强化卷轴 x2',it_s25:'强化卷轴 x2.5',it_bt:'剑斗 1次'});
+ const OFFERS=[{id:'shard',ic:'\u{1F48E}',price:10000,lim:1},{id:'undo',ic:'\u{1F6E1}',price:5000,lim:2},{id:'s15',ic:'\u{1F340}',price:5000,lim:1},{id:'s2',ic:'\u{1F340}',price:10000,lim:1},{id:'s25',ic:'\u{1F340}',price:20000,lim:1},{id:'bt',ic:'\u2694',price:500,lim:10}];
  const tt=(k,...a)=>{const d=X[I18N.cur]||X.en;let s=d[k]!=null?d[k]:X.en[k]!=null?X.en[k]:k;a.forEach((v,i)=>{s=s.replace('{'+i+'}',v);});return s;};
  const nf=n=>Math.floor(Number(n)||0).toLocaleString();
  let db=null,user=null,loaded=false,info=null,rank=null,busy=false,runId=null,lastRun=null,tab=0,exAmt=100,msg='',msgAt=0,syncT=null,infoAt=0,rankAt=0;

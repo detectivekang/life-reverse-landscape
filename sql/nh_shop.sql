@@ -29,10 +29,10 @@ create or replace function public.nh_buy(p_item text)
 returns jsonb language plpgsql security definer set search_path = public as $$
 declare
   -- ===== 우편 item 코드 (null = 아직 미확인, 구매 막힘) =====
-  c_item_undo constant text := null;   -- 되돌리기
-  c_item_s15  constant text := null;   -- 강화 주문서 x1.5
-  c_item_s2   constant text := null;   -- 강화 주문서 x2
-  c_item_s25  constant text := null;   -- 강화 주문서 x2.5
+  c_item_undo constant text := 'revive';      -- 되돌리기
+  c_item_s15  constant text := 'boost_x15';   -- 강화 주문서 x1.5
+  c_item_s2   constant text := 'boost_x20';   -- 강화 주문서 x2
+  c_item_s25  constant text := 'boost_x25';   -- 강화 주문서 x2.5
   -- ===== 우편 한 건당 최대 수량 =====
   c_chunk     constant int  := 5000;
   -- ==========================================================
@@ -51,6 +51,7 @@ begin
     when 's15'   then price := 5000;  lim := 1; g_item := c_item_s15;    amt := 1;     gname := '강화 주문서 x1.5';
     when 's2'    then price := 10000; lim := 1; g_item := c_item_s2;     amt := 1;     gname := '강화 주문서 x2';
     when 's25'   then price := 20000; lim := 1; g_item := c_item_s25;    amt := 1;     gname := '강화 주문서 x2.5';
+    when 'bt'    then price := 500;   lim := 10; g_item := 'battle_tickets'; amt := 1;   gname := '검 배틀 1회';
     else raise exception 'NH_BAD_ITEM';
   end case;
   if g_item is null then raise exception 'NH_ITEM_UNAVAILABLE'; end if;
