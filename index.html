@@ -24,7 +24,7 @@
       // 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
       // 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
       (function () {
-        var CURRENT_VERSION = "2026102902";
+        var CURRENT_VERSION = "2026102903";
         try {
           if (sessionStorage.getItem("lrVersionChecked") === CURRENT_VERSION)
             return;
@@ -10034,9 +10034,11 @@
       }
       function applyVoidItemDrop(it) {
         if (it.kind === "boost") {
-          swordBoostItems[it.key] = (swordBoostItems[it.key] || 0) + 1;
+          if (swOn()) swGainQueue(it.key, 1, "d");
+          else swordBoostItems[it.key] = (swordBoostItems[it.key] || 0) + 1;
         } else if (it.kind === "revive") {
-          swordReviveCharges += it.amount;
+          if (swOn()) swGainQueue("rv", it.amount, "d");
+          else swordReviveCharges += it.amount;
         }
         if (!voidSimQuiet) renderSwordPanel();
         if (it.chance <= 1 && !voidSimQuiet) {
@@ -11651,6 +11653,7 @@
         }
         const resultEl = document.getElementById("swordBattleResult");
         ensureSwordBattleSeason();
+        if (swOn()) await swRefresh(); // 배틀 전에 내 검을 서버 값으로 맞춘다
         if (!swordOwned) {
           showToast("⚔️ 먼저 검을 만들어주세요!");
           return;
@@ -12209,7 +12212,366 @@
         subtree: true,
       });
       emoSwapTree(document.body);
-      function craftNewSword() {
+      // =====================================================================
+      // 검 / 각성 / 되돌리기 / 강화 주문서 "서버 판정"  (sql/sword_server.sql 과 한 세트)
+      // 로그인 상태에서는 이 값들의 진짜 주인이 서버(sword_state)다.
+      //  · 아래 변수(swordLevel, swordAwaken, swordReviveCharges, swordBoostItems ...)는 서버가 알려준 값을 보여주는 "복사본"일 뿐이다.
+      //  · 강화·합성·각성·교체·제작은 전부 서버 함수가 판정하고, 서버는 아주 작은 JSON(보유/레벨/각성/아이템 수)만 돌려준다.
+      //  · 저장 파일(saves)을 고치거나 값을 바꿔도 다음 동기화 때 서버 값으로 되돌아가고, 랭킹도 서버 값을 넘지 못한다.
+      //  · 로그인하지 않았거나 서버에 SQL 이 아직 없으면 예전 방식(로컬) 그대로 동작한다.
+      // =====================================================================
+      let swServerOn = false; // 서버 판정 사용 중
+      let swBootDone = false; // 이번 로그인에서 서버 연결 시도가 끝났는지
+      let swBootBusy = null;
+      let swUid = "";
+      let swBusy = false; // 서버 요청이 진행 중일 때 연타 방지
+      let swSnap = null; // 마지막으로 받은 서버 상태
+      let swFlushTimer = 0;
+      const swPend = { d: [0, 0, 0, 0], m: [0, 0, 0, 0] }; // 서버에 아직 못 알린 "무료 획득" [되돌리기, x1.5, x2, x2.5]. d=드롭 등, m=시즌 우편 보상
+      function swOn() {
+        return swServerOn && !!currentUser && !!db;
+      }
+      function swApply(st) {
+        if (!st || typeof st !== "object" || st.n) return;
+        swSnap = st;
+        swordOwned = !!st.o;
+        swordLevel = swordOwned ? st.l | 0 : 0;
+        swordAwaken = swordOwned && swordLevel >= LEGENDARY_SWORD_LEVEL ? st.a | 0 : 0;
+        swordStoreOwned = !!st.so;
+        swordStoreLevel = swordStoreOwned ? st.sl | 0 : 0;
+        swordStoreAwaken = swordStoreOwned && swordStoreLevel >= LEGENDARY_SWORD_LEVEL ? st.sa | 0 : 0;
+        const b = Array.isArray(st.b) ? st.b : [0, 0, 0];
+        const pd = swPend.d,
+          pm = swPend.m; // 아직 서버에 안 보낸 획득분은 화면에서 빠지지 않게 더해 둔다
+        swordReviveCharges = Math.min(9999, Math.max(0, st.rv | 0) + pd[0] + pm[0]);
+        swordBoostItems = {
+          x15: Math.min(9999, (b[0] | 0) + pd[1] + pm[1]),
+          x20: Math.min(9999, (b[1] | 0) + pd[2] + pm[2]),
+          x25: Math.min(9999, (b[2] | 0) + pd[3] + pm[3]),
+        };
+        if (swordBoostArmed && !(swordBoostItems[swordBoostArmed] > 0)) swordBoostArmed = "";
+        if (swordOwned) {
+          const pw = getSwordPower(swordLevel, swordAwaken);
+          swordBestLevel = Math.max(swordBestLevel, pw);
+          swordMonthlyBestLevel = Math.max(swordMonthlyBestLevel, pw);
+        }
+      }
+      function swReapply() {
+        // 저장 파일을 다시 적용한 직후에도 서버 값이 이기도록 덮어쓴다
+        if (swServerOn && swSnap) swApply(swSnap);
+      }
+      async function swCall(name, args) {
+        const { data, error } = await db.rpc(name, args || {});
+        if (error) throw error;
+        return data;
+      }
+      function swErrToast(e) {
+        const m = String((e && e.message) || "");
+        if (/too fast|client guard|rate/i.test(m)) showToast("⏱️ 너무 빠르게 누르고 있어요. 잠시 후 다시 해주세요.");
+        else if (/not initialized/i.test(m)) {
+          showToast("🔄 서버와 동기화 중이에요. 잠시 후 다시 시도해주세요.");
+          swBootDone = false;
+          swBoot();
+        } else showToast("📡 서버에 연결하지 못했어요. 잠시 후 다시 시도해주세요.");
+      }
+      // 로그인 직후/클라우드 로드 직후 호출: 서버 상태를 받아 화면 값으로 쓴다. 서버에 내 기록이 없으면 지금 값을 시작값으로 1회 등록한다.
+      function swBoot() {
+        if (swBootBusy) return swBootBusy;
+        swBootBusy = (async () => {
+          const uid = currentUser && db ? String(currentUser.uid || "") : "";
+          if (uid !== swUid) {
+            swUid = uid;
+            swServerOn = false;
+            swSnap = null;
+            swBootDone = false;
+          }
+          if (!uid) {
+            swBootDone = true;
+            return;
+          }
+          try {
+            let st = await swCall("sw_get");
+            if (st && st.n) {
+              st = await swCall("sw_init", {
+                p_o: !!swordOwned,
+                p_l: swordLevel | 0,
+                p_a: swordAwaken | 0,
+                p_so: !!swordStoreOwned,
+                p_sl: swordStoreLevel | 0,
+                p_sa: swordStoreAwaken | 0,
+                p_rv: swordReviveCharges | 0,
+                p_b15: swordBoostItems.x15 | 0,
+                p_b20: swordBoostItems.x20 | 0,
+                p_b25: swordBoostItems.x25 | 0,
+              });
+            }
+            swServerOn = true;
+            swApply(st);
+            swBootDone = true;
+            try {
+              renderSwordPanel();
+            } catch (e) {}
+          } catch (e) {
+            swBootDone = true;
+            const m = String((e && e.message) || "");
+            if (!(e && (e.code === "PGRST202" || /could not find the function|schema cache/i.test(m)))) {
+              console.error("검 서버 동기화 실패(30초 뒤 다시 시도):", e);
+              setTimeout(() => {
+                swBootDone = false;
+                if (currentUser && db) swBoot();
+              }, 30000);
+            }
+          }
+        })().finally(() => {
+          swBootBusy = null;
+        });
+        return swBootBusy;
+      }
+      async function swRefresh() {
+        if (!swOn()) return;
+        try {
+          swApply(await swCall("sw_get"));
+          renderSwordPanel();
+        } catch (e) {}
+      }
+      async function swGate() {
+        if (currentUser && db && !swBootDone) await swBoot();
+        return swOn();
+      }
+      // 서버에 요청 1번 → 받은 상태를 화면 값에 반영. 실패하면 null (화면 값은 그대로)
+      async function swAct(name, args) {
+        if (swBusy) return null;
+        swBusy = true;
+        try {
+          const st = await swCall(name, args);
+          swApply(st);
+          return st;
+        } catch (e) {
+          swErrToast(e);
+          return null;
+        } finally {
+          swBusy = false;
+        }
+      }
+      // 무료로 얻는 되돌리기/주문서(공허 드롭·운명 카드·시즌 우편 보상): 화면엔 바로 반영하고, 서버에는 모아서(15초) 한 번에 알린다.
+      // 서버가 하루/한 달 상한을 적용하므로, 상한을 넘는 만큼은 다음 동기화 때 서버 값으로 정리된다.
+      function swGainQueue(kind, n, src) {
+        n = Math.floor(Number(n)) || 0;
+        if (n <= 0) return;
+        const i = kind === "rv" ? 0 : kind === "x15" ? 1 : kind === "x20" ? 2 : 3;
+        (src === "m" ? swPend.m : swPend.d)[i] += n;
+        if (i === 0) swordReviveCharges = Math.min(9999, swordReviveCharges + n);
+        else swordBoostItems[kind] = Math.min(9999, (swordBoostItems[kind] || 0) + n);
+        if (!swFlushTimer || src === "m") {
+          clearTimeout(swFlushTimer);
+          swFlushTimer = setTimeout(swFlush, src === "m" ? 1200 : 15000);
+        }
+      }
+      async function swFlush() {
+        swFlushTimer = 0;
+        if (!swOn()) return;
+        for (const src of ["d", "m"]) {
+          const arr = swPend[src];
+          if (!arr.some((x) => x > 0)) continue;
+          const send = arr.slice();
+          arr.fill(0);
+          try {
+            swApply(await swCall("sw_gain", { p_rv: send[0], p_b15: send[1], p_b20: send[2], p_b25: send[3], p_src: src }));
+          } catch (e) {
+            for (let i = 0; i < 4; i++) arr[i] += send[i]; // 실패하면 다시 쌓아 두고 나중에 재시도
+            if (!swFlushTimer) swFlushTimer = setTimeout(swFlush, 30000);
+            return;
+          }
+        }
+        try {
+          renderSwordPanel();
+        } catch (e) {}
+      }
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) swFlush(); // 앱을 닫기 직전에 모아 둔 획득분을 서버에 알린다
+      });
+      // 2분마다 서버 값으로 다시 맞춘다 (아주 작은 요청 1번. 화면 값을 고쳐 둬도 금방 되돌아온다)
+      setInterval(() => {
+        if (swOn() && !swBusy && !document.hidden) swRefresh();
+      }, 120000);
+
+      async function swCraftMain() {
+        if (swordOwned) return;
+        const st = await swAct("sw_craft", { p_slot: "m" });
+        if (!st) return;
+        renderSwordPanel();
+        playSound("coin");
+        showToast(`${getSwordTierIcon(0)} 새 검 등장: ${getSwordDisplayName()}!`);
+        syncLeaderboard();
+      }
+      async function swCraftStore() {
+        if (swordStoreOwned) return;
+        const st = await swAct("sw_craft", { p_slot: "s" });
+        if (!st) return;
+        renderSwordPanel();
+        playSound("coin");
+        showToast(`🗃️ 보관함에 새 검을 넣었어요: ${getSwordDisplayName(true, 0)}`);
+        saveGame({ forceCloud: true });
+      }
+      async function swSwap() {
+        if (!swordOwned && !swordStoreOwned) {
+          showToast("⚔️ 교체할 검이 없어요!");
+          return;
+        }
+        const st = await swAct("sw_swap");
+        if (!st) return;
+        renderSwordPanel();
+        playSound("coin");
+        showToast(`🔄 검을 교체했어요! 메인: ${getSwordDisplayName()}`);
+        syncLeaderboard({ forceSync: true });
+        saveGame({ forceCloud: true });
+      }
+      async function swFuse() {
+        if (!(swordOwned && swordLevel === SWORD_MAX_LEVEL && swordStoreOwned && swordStoreLevel === SWORD_MAX_LEVEL)) {
+          showToast("🌌 메인과 보관함에 모두 +20강 검이 있어야 합성할 수 있어요!");
+          return;
+        }
+        const st = await swAct("sw_fuse");
+        if (!st) return;
+        playSound("levelUp");
+        showSwordLegendaryFx();
+        mascotSay(["🌌 두 자루의 전설이 하나로 합쳐졌다!! +21강 궁극의 무기 탄생!!"]);
+        syncLeaderboard({ forceSync: true });
+        renderSwordPanel();
+        saveGame({ forceCloud: true });
+      }
+      async function swAwaken() {
+        if (!swordOwned || swordLevel !== LEGENDARY_SWORD_LEVEL) {
+          showToast("🌌 메인 검이 +21강 전설검일 때만 각성할 수 있어요!");
+          return;
+        }
+        if (swordAwaken >= SWORD_AWAKEN_MAX) {
+          showToast("🌈 이미 각성 최고예요!");
+          return;
+        }
+        if (!(swordStoreOwned && swordStoreLevel === SWORD_MAX_LEVEL)) {
+          showToast(`🗃️ 제물로 바칠 +${SWORD_MAX_LEVEL}강 검이 보관함에 있어야 해요!`);
+          return;
+        }
+        const next = swordAwaken + 1;
+        const rate = getSwordAwakenRate(next);
+        if (!confirm(`제물(+${SWORD_MAX_LEVEL}강 검)로 각성 ${next}에 도전할까요?\n성공률 ${rate}% · 제물은 사라져요 (실패해도 +21강 검은 그대로)`)) return;
+        const st = await swAct("sw_awaken");
+        if (!st) return;
+        if (st.r === 1) {
+          playSound("levelUp");
+          showSwordAwakenFx(next);
+          if (next >= SWORD_AWAKEN_MAX) mascotSay(["🌈 각성 20 달성!! 전설 위의 전설!"]);
+          else if (next % 5 === 0 || next >= 16)
+            mascotSay([`🌌 각성 ${next} 성공!! 신의 영역이에요!`, `${getAwakenTier(next).icon} 각성 ${next}... 소름!`]);
+          else showToast(`🌌 각성 ${next} 성공!`);
+          syncLeaderboard({ forceSync: true });
+        } else {
+          playSound("swordBreak");
+          mascotSay([`💥 각성 ${next} 실패... 제물은 사라졌지만 +21강 검은 무사해요!`]);
+          showToast(`💥 각성 실패... 제물만 사라졌어요 (+21강 검은 그대로)`);
+        }
+        renderSwordPanel();
+        saveGame({ forceCloud: true });
+      }
+      async function swEnhance() {
+        if (swBusy) return;
+        if (!swordOwned) {
+          showToast("⚔️ 먼저 검을 만들어주세요!");
+          return;
+        }
+        if (swordLevel >= SWORD_MAX_LEVEL) {
+          showToast("⚔️ 이미 최고 강화 단계예요! 검 배틀로 실력을 뽐내보세요!");
+          return;
+        }
+        const nextStage = SWORD_STAGES[swordLevel + 1];
+        const cost = nextStage.cost;
+        if (money < cost) {
+          showToast(`💰 강화 비용이 부족해요! (필요: ${formatWon(cost)}원)`);
+          return;
+        }
+        const prevLevel = swordLevel;
+        let key = "";
+        let res = null;
+        swBusy = true;
+        try {
+          if (swPend.d.some((x) => x > 0) || swPend.m.some((x) => x > 0)) await swFlush(); // 방금 얻은 주문서도 쓸 수 있게 먼저 서버에 알린다
+          key = getActiveSwordBoostKey(nextStage);
+          money -= cost;
+          try {
+            res = await swCall("sw_enhance", { p_boost: key, p_revive: !!swordReviveOn });
+          } catch (e) {
+            money += cost; // 서버가 처리하지 못했으니 비용을 돌려준다
+            swErrToast(e);
+            return;
+          }
+        } finally {
+          swBusy = false;
+        }
+        if (!res || typeof res.r !== "number") return;
+        swApply(res);
+        if (res.ub && key && !(swordBoostItems[key] > 0)) {
+          const bi = SWORD_BOOST_BY_KEY[key];
+          setTimeout(() => showToast(`🍀 ${bi ? bi.name : "주문서"}를 다 썼어요. 장전이 풀렸어요`), 900);
+        }
+        if (res.r === 1) {
+          playSound("levelUp");
+          celebrateSwordEnhance(swordLevel);
+          syncLeaderboard({ forceSync: true });
+          if (swordLevel === SWORD_MAX_LEVEL) {
+            mascotSay(["🏆🏆🏆 미쳤다!! 드디어 전설의 +20강이 완성됐어!! 이 달 검 랭킹 1등은 따놓은 당상이야!! 🏆🏆🏆"]);
+          } else if (swordLevel === 19) {
+            mascotSay(["👑 +19강?! 진짜 미쳤는데?! 한 방만 더 가면 전설이야!!"]);
+          } else if (swordLevel === 18) {
+            mascotSay(["🔥🔥 +18강 성공! 실화냐?! 완전 미쳤다 진짜!!"]);
+          } else if (swordLevel === 17) {
+            mascotSay(["🔥 +17강 성공!! 이거 실화야?! 대박이다!!"]);
+          } else if (swordLevel === 16) {
+            mascotSay(["⚡ +16강 성공! 오오 여기서부터가 진짜지!"]);
+          } else if (swordLevel === 15 || swordLevel === 10) {
+            mascotSay([`⚔️ +${swordLevel}강 성공! 슬슬 위험해지니 조심하세요!`]);
+          } else {
+            showToast(`✨ 강화 성공! ${getSwordDisplayName()}`);
+          }
+        } else if (res.r === 2) {
+          playSound("swordFail");
+          showToast(`💦 강화 실패... (레벨 유지, 비용만 소모${res.ub ? " · 🍀 아이템도 소모" : ""})`);
+        } else if (res.r === 4) {
+          playSound("coin");
+          mascotSay([`🛡️ 되돌리기 능력이 파괴를 막아냈어요! (남은 횟수 ${swordReviveCharges}회)`]);
+          showToast(`🛡️ 파괴 직전 되돌리기 능력 발동! 검이 무사해요. (남은 횟수 ${swordReviveCharges}회)`);
+        } else {
+          swordBreakCount++;
+          playSound("swordBreak");
+          mascotSay([
+            `💥 검이 산산조각났어요... +${prevLevel}강까지 갔었는데 아쉬워요.`,
+            `💥 콰장창! 검이 부서졌어요. 다시 도전해봐요!`,
+          ]);
+          syncLeaderboard();
+        }
+        renderSwordPanel();
+        saveGame(res.r >= 3 || res.ub ? { forceCloud: true } : undefined);
+      }
+      // 버튼이 부르는 이름은 그대로 두고, 서버 판정이 켜져 있으면 서버 버전으로 보낸다.
+      async function craftNewSword() {
+        return (await swGate()) ? swCraftMain() : craftNewSwordLocal();
+      }
+      async function craftStorageSword() {
+        return (await swGate()) ? swCraftStore() : craftStorageSwordLocal();
+      }
+      async function swapSwordSlots() {
+        return (await swGate()) ? swSwap() : swapSwordSlotsLocal();
+      }
+      async function fuseLegendarySword() {
+        return (await swGate()) ? swFuse() : fuseLegendarySwordLocal();
+      }
+      async function awakenSword() {
+        return (await swGate()) ? swAwaken() : awakenSwordLocal();
+      }
+      async function enhanceSword() {
+        return (await swGate()) ? swEnhance() : enhanceSwordLocal();
+      }
+      function craftNewSwordLocal() {
         swordOwned = true;
         swordLevel = 0;
         swordAwaken = 0;
@@ -12221,7 +12583,7 @@
         syncLeaderboard();
       }
       // 보관함에 새 검을 뽑아 넣는다 (메인 뽑기와 동일하게 무료). 메인 뽑기(craftNewSword)는 그대로 두고 손대지 않는다.
-      function craftStorageSword() {
+      function craftStorageSwordLocal() {
         if (swordStoreOwned) return; // 버튼이 숨어 있어야 정상이지만 이중 클릭 방지로 한 번 더 확인
         swordStoreOwned = true;
         swordStoreLevel = 0;
@@ -12234,7 +12596,7 @@
         saveGame({ forceCloud: true });
       }
       // 메인 ↔ 보관 교체. 강화/배틀/현재검 랭킹이 보는 값은 항상 "메인"이므로, 교체만으로 어느 검을 굴릴지 바꿀 수 있다.
-      function swapSwordSlots() {
+      function swapSwordSlotsLocal() {
         if (!swordOwned && !swordStoreOwned) {
           showToast("⚔️ 교체할 검이 없어요!");
           return;
@@ -12249,7 +12611,7 @@
         saveGame({ forceCloud: true });
       }
       // 메인·보관 둘 다 +20강일 때만 가능: 두 자루를 합쳐 +21강 전설검 하나로 만들고, 보관함은 빈다.
-      function fuseLegendarySword() {
+      function fuseLegendarySwordLocal() {
         if (
           !(
             swordOwned &&
@@ -12321,7 +12683,7 @@
         app.appendChild(banner);
         setTimeout(() => banner.remove(), 2400);
       }
-      function awakenSword() {
+      function awakenSwordLocal() {
         if (!swordOwned || swordLevel !== LEGENDARY_SWORD_LEVEL) {
           showToast("🌌 메인 검이 +21강 전설검일 때만 각성할 수 있어요!");
           return;
@@ -12390,7 +12752,7 @@
         renderSwordPanel();
         saveGame();
       });
-      function enhanceSword() {
+      function enhanceSwordLocal() {
         if (!swordOwned) {
           showToast("⚔️ 먼저 검을 만들어주세요!");
           return;
@@ -14304,6 +14666,15 @@
       // 간주해 배지를 띄우고, 기존 유저가 접속하면 자동으로 한 번 띄워준다.
       const patchNotes = [
         {
+          version: "2026102903",
+          date: "2026-10-29",
+          items: [
+            "🛡️ <b>검 레벨·각성 단계·되돌리기·강화 주문서가 서버에서 안전하게 관리돼요!</b> 강화·합성·각성·교체 결과를 서버가 직접 판정해서, 저장 파일이나 값을 고치는 방식의 조작은 더 이상 통하지 않아요",
+            "📡 로그인한 상태에서만 서버 판정이 적용돼요. 처음 접속하면 지금 가진 검과 아이템이 자동으로 등록되고, 서버 기록과 맞지 않는 비정상 값은 보정될 수 있어요",
+            "⏱️ 너무 빠른 연속 강화는 잠시 제한될 수 있어요 (1분에 150회, 1시간에 3,000회까지)",
+          ],
+        },
+        {
           version: "2026102902",
           date: "2026-10-29",
           items: [
@@ -15890,6 +16261,7 @@
         buildSwordGuideOnce();
         renderSwordPanel();
         document.getElementById("swordModal").classList.add("show");
+        swRefresh(); // 열 때마다 서버 값으로 맞춘다(화면 값을 고쳐 둔 경우 되돌아옴)
       });
       document.getElementById("swordCloseBtn").addEventListener("click", () => {
         document.getElementById("swordModal").classList.remove("show");
@@ -17283,7 +17655,8 @@
         fateOffer = [];
         if (f.startMoney) creditMoney(f.startMoney);
         if (f.startRevive) {
-          swordReviveCharges += f.startRevive;
+          if (swOn()) swGainQueue("rv", f.startRevive, "d");
+          else swordReviveCharges += f.startRevive;
           renderSwordPanel();
         }
         if (f.startPoints) {
@@ -20356,6 +20729,7 @@
         swordStoreLevel = 0;
         swordStoreAwaken = 0;
         swordMonthlyBestLevel = 0;
+        if (swOn()) setTimeout(swRefresh, 1500); // 서버는 매달 검만 초기화(되돌리기·주문서 보존)하므로 서버 값으로 다시 맞춘다
         swordBattleWins = 0; // 검배틀 랭킹(승점)도 새 시즌부터 다시 0에서 시작
         nameColor = null; // 이름 색상도 새 시즌부터 기본(무색)으로
         mansionLevel = 0; // 저택 꾸미기도 새 시즌부터 레벨 0부터 다시
@@ -21462,7 +21836,7 @@
         NET_LIMIT_PER_KEY = 60,
         NET_LIMIT_TOTAL = 200;
       const NET_FREE =
-        /\/auth\/v1\/|rpc\/(shop_buy|shop_catalog|charge_prepare|charge_catalog|admin_grants_claim)\b/;
+        /\/auth\/v1\/|rpc\/(shop_buy|shop_catalog|charge_prepare|charge_catalog|admin_grants_claim|sw_enhance)\b/;
       const NET_STATS = {},
         netKeyTimes = {};
       let netTotalTimes = [];
@@ -21697,6 +22071,10 @@
       function logout() {
         authSignOut();
         currentUser = null;
+        swServerOn = false;
+        swBootDone = false;
+        swSnap = null;
+        swUid = "";
         cloudSeenKnown = false;
         deviceDisplaced = false;
         document.getElementById("deviceConflictModal").classList.remove("show");
@@ -22049,24 +22427,34 @@
             return "";
         }
       }
-      function applyMailRewards(rewards) {
+      // swCredited: 서버가 이미 보유량에 넣어 준 우편(상점 구매·운영자 지급)이면 true → 여기서 다시 더하지 않고 문구만 만든다.
+      function applyMailRewards(rewards, swCredited) {
         const out = [];
         for (const r of rewards || []) {
           const n = Math.floor(Number(r.n)) || 0;
           if (r.t === "revive" && n > 0) {
-            swordReviveCharges = Math.min(9999, swordReviveCharges + n);
+            if (swCredited) {
+              /* 서버가 이미 반영함 */
+            } else if (swOn()) swGainQueue("rv", n, "m");
+            else swordReviveCharges = Math.min(9999, swordReviveCharges + n);
             out.push(`🛡️ 되돌리기 +${n}`);
           } else if (r.t === "floor" && n > 0) {
             const want = Math.min(9999, n);
-            if (swordReviveCharges < want) {
+            if (swCredited || swOn()) {
+              out.push(`🛡️ 되돌리기 최소 ${want}개 보장`);
+            } else if (swordReviveCharges < want) {
               out.push(`🛡️ 되돌리기 ${swordReviveCharges} → ${want}개`);
               swordReviveCharges = want;
             } else out.push("🛡️ 되돌리기는 이미 충분히 보유 중");
           } else if (r.t === "boost" && MAIL_BOOST_LABEL[r.k] && n > 0) {
-            swordBoostItems[r.k] = Math.min(
-              9999,
-              (swordBoostItems[r.k] || 0) + n,
-            );
+            if (swCredited) {
+              /* 서버가 이미 반영함 */
+            } else if (swOn()) swGainQueue(r.k, n, "m");
+            else
+              swordBoostItems[r.k] = Math.min(
+                9999,
+                (swordBoostItems[r.k] || 0) + n,
+              );
             out.push(mailRewardLabel(r));
           } else if (r.t === "color") {
             const m = Number(r.m);
@@ -22120,9 +22508,11 @@
         mailClaiming.add(id);
         try {
           let rewards = m.rewards;
+          let swCredited = false; // 서버가 검 아이템을 직접 넣어 준 우편인지
           if (m.src === "server") {
             if (!db || !currentUser || deviceDisplaced || accountBanned)
               return null;
+            if (!swBootDone) await swBoot(); // 서버 보유량을 먼저 맞춰 둔다(중복 지급 방지)
             let legacy = false;
             try {
               const { data, error } = await db.rpc("admin_grants_claim", {
@@ -22154,13 +22544,17 @@
                 });
                 if (!nm) return null;
                 rewards = nm.rewards;
+                if (data.sw) {
+                  swCredited = true; // 서버가 되돌리기/주문서를 이미 넣었다 → 응답의 보유량으로 맞춘다
+                  if (swOn()) swApply(data.sw);
+                }
               }
             } catch (e) {
               return null;
             }
             void legacy;
           }
-          const got = applyMailRewards(rewards);
+          const got = applyMailRewards(rewards, swCredited);
           if (m.src === "local") mailbox = mailbox.filter((x) => x.id !== id);
           else {
             grantAppliedIds.push(id);
@@ -22998,6 +23392,10 @@
       }
 
       async function cloudLoadGame() {
+        await cloudLoadGameBase();
+        await swBoot(); // 저장 파일을 불러온 뒤, 검·각성·아이템은 서버 값으로 맞춘다
+      }
+      async function cloudLoadGameBase() {
         if (!currentUser || !db) return;
         cloudSeenKnown = false;
         try {
@@ -24243,6 +24641,11 @@
       }
 
       function applySaveData(data, opts) {
+        const r = applySaveDataBase(data, opts);
+        swReapply(); // 저장 파일에 들어 있던 검/아이템 값은 믿지 않고 서버 값으로 되돌린다
+        return r;
+      }
+      function applySaveDataBase(data, opts) {
         opts = opts || {};
         // 클라우드에서 온 데이터(tamperFlag 없음)를 적용하면 플래그가 풀리고, 의심되는 로컬 저장본을 적용하면 켜진다.
         saveTamperFlag = !!(opts.tampered || (data && data.tamperFlag));
