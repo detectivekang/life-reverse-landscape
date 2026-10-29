@@ -22501,39 +22501,50 @@
       // → 같은 우편을 세이브 조작/연타/다중 탭으로 여러 번 받는 것을 서버가 막고, 지급 수량도 서버가 돌려준 값만 쓴다.
       // 서버에 함수가 아직 없으면(SQL 적용 전) 예전 방식으로 받는다. 저장은 호출한 쪽이 한 번에 한다.
       const mailClaiming = new Set();
+      // 반환값: 배열 = 받음(문구 목록, 비어 있을 수도 있음) / null = 이미 받았거나 기한 지남(목록에서 정리됨) / false = 일시 실패(우편은 그대로 남김)
       async function takeMail(id) {
         const m = allMails().find((x) => x.id === id);
         if (!m) return null;
-        if (mailClaiming.has(id)) return null;
+        if (mailClaiming.has(id)) return false;
         mailClaiming.add(id);
         try {
           let rewards = m.rewards;
           let swCredited = false; // 서버가 검 아이템을 직접 넣어 준 우편인지
+          let swState = null;
           if (m.src === "server") {
             if (!db || !currentUser || deviceDisplaced || accountBanned)
-              return null;
+              return false;
             if (!swBootDone) await swBoot(); // 서버 보유량을 먼저 맞춰 둔다(중복 지급 방지)
-            let legacy = false;
+            let data = null;
             try {
-              const { data, error } = await db.rpc("admin_grants_claim", {
-                p_id: id,
-              });
-              if (error) {
+              const res = await db.rpc("admin_grants_claim", { p_id: id });
+              if (res.error) {
+                // (SQL 적용 전이면 예전 방식으로 받는다 → 아래에서 data 없이 그대로 지급)
                 if (
-                  error.code === "PGRST202" ||
+                  res.error.code === "PGRST202" ||
                   /could not find the function|schema cache/i.test(
-                    String(error.message || ""),
+                    String(res.error.message || ""),
                   )
                 )
-                  legacy = true;
-                else return null;
-              } else if (!data) {
-                // 이미 받았거나 기한이 지난 우편
+                  data = undefined;
+                else return false;
+              } else if (!res.data) {
+                // 서버가 "이미 받았거나 기한이 지났다"고 함 → 목록에서 지운다
                 serverMails = serverMails.filter((x) => x.id !== id);
+                if (!grantAppliedIds.includes(id)) grantAppliedIds.push(id);
                 return null;
-              } else {
+              } else data = res.data;
+            } catch (e) {
+              return false; // 통신 실패: 서버가 처리하지 않았으니 그대로 남겨 둔다
+            }
+            // ★ 여기부터는 서버가 이미 "받음"으로 처리한 상태. 이후 무슨 일이 생겨도 우편은 목록에서 반드시 빠져야 한다.
+            serverMails = serverMails.filter((x) => x.id !== id);
+            if (!grantAppliedIds.includes(id)) grantAppliedIds.push(id);
+            if (grantAppliedIds.length > 50) grantAppliedIds.shift();
+            if (data) {
+              try {
                 const nm = normalizeServerMail({
-                  id: data.id,
+                  id: data.id || id,
                   item: data.item,
                   amount: data.amount,
                   title: m.title,
@@ -22542,24 +22553,25 @@
                   created_at: new Date(m.createdAt).toISOString(),
                   expires_at: new Date(m.expiresAt).toISOString(),
                 });
-                if (!nm) return null;
-                rewards = nm.rewards;
+                if (nm) rewards = nm.rewards;
                 if (data.sw) {
                   swCredited = true; // 서버가 되돌리기/주문서를 이미 넣었다 → 응답의 보유량으로 맞춘다
-                  if (swOn()) swApply(data.sw);
+                  swState = data.sw;
                 }
+              } catch (e) {
+                console.warn("[우편] 수령 응답 해석 실패", e);
               }
-            } catch (e) {
-              return null;
             }
-            void legacy;
           }
-          const got = applyMailRewards(rewards, swCredited);
+          let got = [];
+          try {
+            if (swState && swOn()) swApply(swState);
+            got = applyMailRewards(rewards, swCredited);
+          } catch (e) {
+            console.warn("[우편] 보상 반영 중 오류", e);
+          }
           if (m.src === "local") mailbox = mailbox.filter((x) => x.id !== id);
           else {
-            grantAppliedIds.push(id);
-            if (grantAppliedIds.length > 50) grantAppliedIds.shift();
-            serverMails = serverMails.filter((x) => x.id !== id);
             try {
               saveGame();
             } catch (e) {} // 서버가 "받음"으로 처리한 직후 로컬에 바로 저장 (앱이 꺼져도 유실되지 않게)
@@ -22569,43 +22581,80 @@
           mailClaiming.delete(id);
         }
       }
-      function finishMailAccept(labels) {
+      function refreshMailboxUI() {
         try {
-          renderSwordPanel();
+          updateMailBadge();
         } catch (e) {}
-        try {
-          renderSwordBattlePanel();
-        } catch (e) {}
-        try {
-          renderVoidShop();
-        } catch (e) {}
-        try {
-          updateTalentPointBadge();
-        } catch (e) {}
-        updateMailBadge();
-        if (labels.length) showToast("📬 " + labels.join(" · "));
-        saveGame({ forceCloud: true }); // 지급 결과를 바로 저장
-        setTimeout(syncAdminGrants, 2500); // 서버에 "받았어요"를 알린다
         const box = document.getElementById("mailboxModal");
-        if (box) renderMailbox(box);
+        if (box) {
+          try {
+            renderMailbox(box);
+          } catch (e) {}
+        }
+      }
+      function finishMailAccept(labels) {
+        // 목록/배지를 가장 먼저 갱신한다 (아래 저장·렌더 중 하나가 실패해도 받은 우편은 화면에서 사라지게)
+        refreshMailboxUI();
+        for (const fn of [
+          renderSwordPanel,
+          renderSwordBattlePanel,
+          renderVoidShop,
+          updateTalentPointBadge,
+        ]) {
+          try {
+            fn();
+          } catch (e) {}
+        }
+        if (labels.length) showToast("📬 " + labels.join(" · "));
+        try {
+          saveGame({ forceCloud: true }); // 지급 결과를 바로 저장
+        } catch (e) {
+          console.warn("[우편] 저장 실패", e);
+        }
+        setTimeout(syncAdminGrants, 2500); // 서버에 "받았어요"를 알린다
       }
       async function acceptMail(id) {
-        const got = await takeMail(id);
-        if (got) finishMailAccept(got);
+        let got = false;
+        try {
+          got = await takeMail(id);
+        } catch (e) {
+          console.warn("[우편] 받기 실패", e);
+        }
+        if (Array.isArray(got)) finishMailAccept(got);
         else {
-          showToast("⏰ 기간이 지났거나 이미 받은 우편이에요");
-          updateMailBadge();
-          const box = document.getElementById("mailboxModal");
-          if (box) renderMailbox(box);
+          if (got === null) showToast("📭 이미 받았거나 기간이 지난 우편이라 목록에서 정리했어요");
+          else showToast("📡 우편을 받지 못했어요. 잠시 후 다시 시도해 주세요");
+          refreshMailboxUI();
         }
       }
+      let mailAcceptAllBusy = false;
       async function acceptAllMails() {
+        if (mailAcceptAllBusy) return;
+        mailAcceptAllBusy = true;
         const labels = [];
-        for (const m of allMails()) {
-          const got = await takeMail(m.id);
-          if (got) labels.push(...got);
+        let received = 0,
+          cleaned = 0,
+          failed = 0;
+        try {
+          for (const m of allMails()) {
+            let got = false;
+            try {
+              got = await takeMail(m.id);
+            } catch (e) {
+              console.warn("[우편] 받기 실패", e);
+            }
+            if (Array.isArray(got)) {
+              received++;
+              labels.push(...got);
+            } else if (got === null) cleaned++;
+            else failed++;
+          }
+        } finally {
+          mailAcceptAllBusy = false;
+          finishMailAccept(labels);
         }
-        finishMailAccept(labels);
+        if (!received && cleaned) showToast("📭 이미 받았거나 기간이 지난 우편은 목록에서 정리했어요");
+        else if (failed) showToast(`📡 ${failed}통은 받지 못했어요. 잠시 후 다시 눌러 주세요`);
       }
       function renderMailbox(box) {
         const card = box.querySelector(".mbx-card");
