@@ -24,7 +24,7 @@
       // 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
       // 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
       (function () {
-        var CURRENT_VERSION = "2026102901";
+        var CURRENT_VERSION = "2026102902";
         try {
           if (sessionStorage.getItem("lrVersionChecked") === CURRENT_VERSION)
             return;
@@ -14304,6 +14304,13 @@
       // 간주해 배지를 띄우고, 기존 유저가 접속하면 자동으로 한 번 띄워준다.
       const patchNotes = [
         {
+          version: "2026102902",
+          date: "2026-10-29",
+          items: [
+            "🛸 <b>네온 호드 랭킹에도 시즌 등급과 보상이 보여요!</b> 랭킹 창의 네온 호드 탭에서 내 등급(챔피언~브론즈), 지금 마감하면 받는 보상, 시즌 등급 보상표를 확인할 수 있고 랭킹 줄마다 등급 표시가 붙어요",
+          ],
+        },
+        {
           version: "2026102901",
           date: "2026-10-29",
           items: [
@@ -18380,6 +18387,8 @@
       <div class="my-rank-name">네온 호드 <span style="font-size:10px; color:var(--paper-dim); font-weight:normal;">(시즌 누적 점수)</span></div>
       <div class="my-rank-sub">네온 호드를 플레이할 때마다 점수가 쌓여요 · 시즌(월)이 바뀌면 새로 시작해요</div>
       <div class="my-rank-sub" id="myRankPosition" style="color:var(--gold);">내 순위 불러오는 중...</div>
+      <div class="season-grade-line" id="myRankGrade"></div>
+      ${seasonGuideHtml("nh")}
     </div>
   `;
         if (!currentUser) {
@@ -18395,11 +18404,17 @@
           el.textContent = nhMissing
             ? "🚧 준비 중이에요. 조금만 기다려주세요!"
             : "순위를 불러오지 못했어요.";
-        else if (!res.me)
+        else if (!res.me) {
           el.textContent =
             "이번 시즌 기록이 아직 없어요. 🛸 버튼으로 네온 호드에 들어가 플레이해 보세요!";
-        else
+          renderSeasonGradeLine("nh_season", null);
+        } else {
           el.textContent = `📍 전체 ${res.total.toLocaleString("ko-KR")}명 중 ${res.me.rank.toLocaleString("ko-KR")}위 · ${Number(res.me.score).toLocaleString("ko-KR")}점`;
+          renderSeasonGradeLine("nh_season", {
+            rank: res.me.rank,
+            total: Number(res.total) || 0,
+          });
+        }
       }
       async function renderNhList() {
         const lbEl = document.getElementById("leaderboardList");
@@ -18417,7 +18432,7 @@
         const row = (p, me) => `
     <div class="lb-row${me ? " me" : ""}">
       <span class="lb-rank">${p.rank}</span><span class="lb-name">${hofEsc(p.name)}${me ? " (나)" : ""}</span>
-      <span class="lb-tier">🛸 ${Number(p.score).toLocaleString("ko-KR")}점</span>
+      <span class="lb-tier">${seasonGradeTag(p.rank, Number(res.total) || 0)}🛸 ${Number(p.score).toLocaleString("ko-KR")}점</span>
     </div>`;
         lbEl.innerHTML = res.list
           .map((p) => row(p, p.uid === currentUser.uid))
@@ -18678,7 +18693,16 @@
         const rw = getVoidSeasonRewards(gid, rank);
         return `차원 조각 ${rw.shards.toLocaleString("ko-KR")}개` + (rw.title ? " + 전용 칭호" : "");
       }
+      function neoSeasonRewardText(gid, rank) {
+        const rw = getNeoSeasonRewards(gid, rank);
+        const a = [];
+        if (rw.revive > 0) a.push(`되돌리기 ${rw.revive}회`);
+        if (rw.scroll[1] > 0) a.push(`${MAIL_BOOST_LABEL[rw.scroll[0]]} 주문서 ${rw.scroll[1]}개`);
+        if (rw.shards > 0) a.push(`차원 조각 ${rw.shards.toLocaleString("ko-KR")}개`);
+        return a.join(" + ");
+      }
       function seasonRewardText(kind, gid, rank) {
+        if (kind === "nh") return neoSeasonRewardText(gid, rank);
         return kind === "sword" ? swordSeasonRewardText(gid) : voidSeasonRewardText(gid, rank);
       }
       // 한 단계 위 등급이 되려면 몇 명을 앞서야 하는지
@@ -18696,14 +18720,14 @@
       function renderSeasonGradeLine(period, info) {
         const el = document.getElementById("myRankGrade");
         if (!el) return;
-        const kind = period === "sword" ? "sword" : "void";
+        const kind = period === "sword" ? "sword" : period === "nh_season" ? "nh" : "void";
         if (!currentUser) {
           el.innerHTML = "";
           return;
         }
         const gid = info && info.rank ? getSeasonRankGrade(info.rank, info.total) : null;
         if (!gid) {
-          el.innerHTML = `🎯 ${kind === "sword" ? "승점을 올리면" : "웨이브를 깨면"} 시즌 등급이 정해지고, 등급별 보상을 받아요.`;
+          el.innerHTML = `🎯 ${kind === "sword" ? "승점을 올리면" : kind === "nh" ? "네온 호드 점수를 쌓으면" : "웨이브를 깨면"} 시즌 등급이 정해지고, 등급별 보상을 받아요.`;
           return;
         }
         const g = SEASON_RANK_GRADES[gid];
@@ -18731,11 +18755,13 @@
             const txt =
               kind === "void" && gid === "master"
                 ? "차원 조각 2위 10,000 / 3위 6,000개"
-                : seasonRewardText(kind, gid, 1);
+                : kind === "nh" && gid === "master"
+                  ? `되돌리기 ${getNeoSeasonRewards("master", 2).revive}회 + ${MAIL_BOOST_LABEL[getNeoSeasonRewards("master", 2).scroll[0]]} 주문서 ${getNeoSeasonRewards("master", 2).scroll[1]}개 + 차원 조각 2위 ${getNeoSeasonRewards("master", 2).shards.toLocaleString("ko-KR")} / 3위 ${getNeoSeasonRewards("master", 3).shards.toLocaleString("ko-KR")}개`
+                  : seasonRewardText(kind, gid, 1);
             return `<tr><td>${g.icon} ${g.name}</td><td>${cond}</td><td>${txt}</td></tr>`;
           })
           .join("");
-        return `<details class="season-guide"><summary>🎁 시즌 등급 보상 보기 ▾</summary><table>${body}</table><div style="margin-top:3px;">시즌 종료 후 우편함으로 지급 · 기록(${kind === "sword" ? "승점" : "웨이브"})이 있는 참가자 전원 대상</div></details>`;
+        return `<details class="season-guide"><summary>🎁 시즌 등급 보상 보기 ▾</summary><table>${body}</table><div style="margin-top:3px;">시즌 종료 후 우편함으로 지급 · 기록(${kind === "sword" ? "승점" : kind === "nh" ? "점수" : "웨이브"})이 있는 참가자 전원 대상${kind === "nh" ? "<br>네온 호드 보상 = 검배틀 보상의 절반 + 공허 보상의 절반" : ""}</div></details>`;
       }
       document.getElementById("rankLoginBtn").addEventListener("click", () => {
         document.getElementById("loginModal").classList.add("show");
