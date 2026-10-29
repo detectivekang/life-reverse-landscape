@@ -5651,6 +5651,13 @@
         </div>
         <div class="top-actions">
           <button class="icon-btn" id="loginBtn" title="프로필">👤</button>
+          <button class="icon-btn" id="inviteTopBtn" title="친구 초대 (선물 받기)">
+            🧑‍🤝‍🧑<span
+              class="badge"
+              id="inviteNewBadge"
+              style="display: none"
+            ></span>
+          </button>
           <button class="icon-btn" id="dailyBtn" title="일일 미션">
             📅<span
               class="badge"
@@ -6606,9 +6613,9 @@
               line-height: 1.6;
             "
           >
-            아래 내 초대 링크로 친구가 처음 로그인하면,
-            <b style="color: var(--gold)">나와 친구 모두</b> 🎟️행운의 코인
-            30개를 받아요!
+            아래 내 초대 링크로 친구가 구글 로그인으로 가입하면,
+            <b style="color: var(--gold)">나와 친구 모두</b> 우편함으로
+            🛡️되돌리기 3개 + 강화 주문서 ×1.5 3개를 받아요!
           </p>
           <div
             id="inviteLoginNote"
@@ -19470,6 +19477,24 @@
       document
         .getElementById("inviteFriendBtn")
         .addEventListener("click", openInviteModal);
+      // 상단 🎁 버튼: 눈에 잘 띄게 메인 화면에 둔다. 한 번 열어 보기 전까지는 빨간 점이 떠 있다.
+      (function () {
+        const btn = document.getElementById("inviteTopBtn");
+        const dot = document.getElementById("inviteNewBadge");
+        if (!btn) return;
+        let seen = false;
+        try {
+          seen = localStorage.getItem("lrInviteSeen") === "1";
+        } catch (e) {}
+        if (dot && !seen) dot.style.display = "";
+        btn.addEventListener("click", () => {
+          if (dot) dot.style.display = "none";
+          try {
+            localStorage.setItem("lrInviteSeen", "1");
+          } catch (e) {}
+          openInviteModal();
+        });
+      })();
       document
         .getElementById("inviteCloseBtn")
         .addEventListener("click", () => {
@@ -22002,8 +22027,7 @@
           new URLSearchParams(location.search).get("ref"),
         );
       }
-      const REFERRAL_REWARD_COINS = 30;
-      let db = null;
+            let db = null;
       let currentUser = null; // { uid, provider: 'google', name }
       let customNickname = localStorage.getItem("lifeReverseNickname") || "";
 
@@ -23608,51 +23632,41 @@
         }, wait);
       }
 
-      // 신규 계정이 초대 링크로 들어온 경우: 초대받은 나 + 초대한 사람 모두에게 코인 지급.
-      // 초대한 사람 몫은 그 사람 계정에 직접 못 쓰니(보안 규칙상 본인 문서만 쓸 수 있음),
-      // "받아야 할 보상" 기록만 남겨두고 그 사람이 다음에 로그인할 때 스스로 수령한다.
+      // 신규 계정이 초대 링크로 들어온 경우: 서버(referral_redeem)가 초대받은 나 + 초대한 사람 모두에게
+      // 선물 우편(admin_grants)을 넣어 준다. 클라이언트는 아이템을 직접 더하지 않는다
+      // (중복/조작 방지는 서버가 보장 — sql/referral_gift.sql).
       async function applyReferralSignup(referrerUid) {
+        const clearPending = () => {
+          try {
+            localStorage.removeItem("lifeReversePendingRef");
+          } catch (e) {}
+        };
         try {
-          luckyCoins += REFERRAL_REWARD_COINS;
-          saveGame({ forceCloud: true });
-          await dbSetDoc("referrals", currentUser.uid, {
-            referrerUid,
-            claimed: false,
-            createdAt: dbServerTimestamp(),
+          const { data, error } = await db.rpc("referral_redeem", {
+            p_referrer: String(referrerUid),
           });
-          showToast(
-            `🎁 초대 링크로 가입! 행운의 코인 +${REFERRAL_REWARD_COINS}개를 받았어요!`,
-          );
+          if (error) {
+            // SQL 이 아직 적용 전이면 다음 로그인에 다시 시도하도록 코드를 남겨 둔다
+            console.warn("[초대] 선물 요청 실패", error.message);
+            return;
+          }
+          const st = data && data.status;
+          if (st === "ok") {
+            clearPending();
+            showToast("🎁 친구 초대 선물이 우편함에 도착했어요!");
+            setTimeout(syncAdminGrants, 500);
+          } else if (st === "login") {
+            /* 로그인 직후가 아니면 다음에 다시 */
+          } else {
+            clearPending(); // already / not_new / invalid → 다시 시도해도 소용없다
+          }
         } catch (e) {
-          console.error("초대 보상 기록 실패:", e);
+          console.error("초대 선물 요청 실패:", e);
         }
       }
 
-      // 로그인할 때마다, 내가 초대한 사람들 중 아직 안 받은 보상이 있는지 확인해서 셀프 수령한다.
-      async function claimReferralRewards() {
-        if (!currentUser || !db) return;
-        try {
-          const docs = await dbGetDocsWhere(
-            "referrals",
-            "referrerUid",
-            currentUser.uid,
-          );
-          const unclaimed = docs.filter((d) => d.claimed === false);
-          if (!unclaimed.length) return;
-          let totalCoins = 0;
-          for (const d of unclaimed) {
-            await dbUpdateDoc("referrals", d.id, { claimed: true });
-            totalCoins += REFERRAL_REWARD_COINS;
-          }
-          luckyCoins += totalCoins;
-          saveGame({ forceCloud: true });
-          showToast(
-            `🎁 내가 초대한 친구가 가입했어요! 행운의 코인 +${totalCoins}개를 받았어요!`,
-          );
-        } catch (e) {
-          console.error("초대 보상 수령 실패:", e);
-        }
-      }
+      // (예전 방식: 초대한 사람이 코인을 직접 수령) → 이제는 서버가 우편으로 보내 주므로 할 일이 없다.
+      async function claimReferralRewards() {}
 
       // ===== 미니게임 랭킹보드 (공개 랭킹 - 로그인 상태에서만 동기화) =====
       // 주간/월간 랭킹은 기간 키가 컬렉션 이름에 포함되어 있어서, 기간이 바뀌면
@@ -25337,6 +25351,9 @@
           };
           on("shareCardBtn", "click", () =>
             track("share_click", { k: "record" }),
+          );
+          on("inviteTopBtn", "click", () =>
+            track("invite_click", { k: "open_top" }),
           );
           on("inviteFriendBtn", "click", () =>
             track("invite_click", { k: "open" }),
