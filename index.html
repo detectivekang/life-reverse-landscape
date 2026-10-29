@@ -24,7 +24,7 @@
       // 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
       // 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
       (function () {
-        var CURRENT_VERSION = "2026102601";
+        var CURRENT_VERSION = "2026102901";
         try {
           if (sessionStorage.getItem("lrVersionChecked") === CURRENT_VERSION)
             return;
@@ -8283,6 +8283,7 @@
       }
       let voidShopResetKey = ""; // 상점 강화 초기화를 마지막으로 쓴 시즌(월) 키 — 시즌당 1회
       let claimedVoidSeasonRewards = []; // 공허 랭킹 시즌 보상을 이미 받은 시즌(월) 목록 (중복 지급 방지)
+      let claimedNeoSeasonRewards = []; // 네온 호드(네오) 랭킹 시즌 보상을 이미 받은 시즌(월) 목록 (중복 지급 방지)
       let seasonTitles = []; // 시즌 랭킹 1위 전용 칭호 [{id, key}] (우편으로 받으면 쌓임)
       const VOID_SHOP_REFUND_VERSION = 1;
       let voidShopRefundVersion = VOID_SHOP_REFUND_VERSION; // 새 게임은 이미 최신 버전으로 시작
@@ -8326,7 +8327,7 @@
       let bestMonthlyCasino = 0; // 역대 최고 월간 카지노 수익
       let seasonCount = 0; // 정산까지 마친 시즌 수
       let seasonResetKey = ""; // 시즌 초기화(검·이름색·저택 등)까지 확실히 끝난 시즌(월) 키 - 월 키가 어긋난 저장본도 잡아내는 안전장치용
-      const SEASON_FORCE_RESET_KEYS = ["2026-10"]; // 이 시즌엔 월 키가 어긋나 초기화를 놓친 저장본도 접속 시 한 번 강제로 초기화한다
+      const SEASON_FORCE_RESET_KEYS = ["2026-10", "2026-11"]; // 이 시즌엔 월 키가 어긋나 초기화를 놓친 저장본도 접속 시 한 번 강제로 초기화한다
       let pendingSeasonReport = null; // 아직 화면에 안 띄운 시즌 정산 보고서 (저장 안 함)
       let seasonNeedsSave = false; // 정산 직후 클라우드에 바로 저장해야 함 (저장 안 함)
       let seasonUiReady = false; // 게임 화면이 준비돼서 모달을 띄워도 되는지 (저장 안 함)
@@ -14303,6 +14304,17 @@
       // 간주해 배지를 띄우고, 기존 유저가 접속하면 자동으로 한 번 띄워준다.
       const patchNotes = [
         {
+          version: "2026102901",
+          date: "2026-10-29",
+          items: [
+            "🗓️ <b>새 시즌(11월)부터 초기화 범위가 넓어져요!</b> 기존의 돈·사업·검·검배틀 승점·이름색·저택에 더해 <b>🌌 공허, 📦 컬렉션(일반·각성), 💍 무한강화</b>도 매달 처음부터 다시 시작해요",
+            "✅ 💎 <b>차원 조각</b>, 🍀 <b>검 강화 주문서</b>, 🛡️ <b>되돌리기</b>는 시즌이 바뀌어도 <b>그대로 보존</b>돼요. 특성·업적·메달도 그대로예요",
+            "🛸 <b>네온 호드 시즌 랭킹 보상이 생겼어요!</b> 네온 호드 랭킹은 매달 새 시즌으로 다시 시작하고(골드·환전 기록은 그대로), 시즌이 끝나면 등급에 따라 보상을 우편함으로 드려요",
+            "🎁 네온 호드 보상 = <b>검배틀 보상의 절반 + 공허 보상의 절반</b> (되돌리기 + 강화 주문서 + 차원 조각). 예) 1위: 되돌리기 8회 + ×2.5 주문서 4개 + 차원 조각 10,000개",
+            "📬 보상은 로그인한 상태로 접속하면 우편함에 도착해요. 30일 안에 받아가세요",
+          ],
+        },
+        {
           version: "2026102601",
           date: "2026-10-26",
           items: [
@@ -17409,7 +17421,7 @@
           (r.late
             ? "접속하지 않은 사이 월이 바뀌어서, 접속한 지금 정산했어요."
             : "월이 바뀌어 시즌이 정산됐어요.") +
-          "<br>돈·사업·검은 초기화되고, 컬렉션·특성·업적·메달은 그대로예요.";
+          "<br>돈·사업·검·공허·컬렉션·무한강화는 초기화되고, 특성·업적·메달·💎차원 조각·검 주문서·되돌리기는 그대로예요.";
         document.getElementById("seasonBody").innerHTML = `
     <div class="season-grade">${r.grade}</div>
     <div style="font-size:11px; color:var(--paper-dim); margin-top:-4px; margin-bottom:8px;">시즌 등급 · ${r.titleIcon} ${hofEsc(r.titleName)}</div>
@@ -17839,6 +17851,7 @@
           saveGame({ forceCloud: true });
         }
         if (medalPendingKey && currentUser && db) processPendingMedals();
+        if (currentUser && db) processNeoSeasonReward();
         if (isModalShown("seasonModal") && lastSeasonReportKey())
           renderSeasonMedalBox(lastSeasonReportKey());
       }
@@ -17889,12 +17902,12 @@
         {
           ms: 3600000,
           id: "1h",
-          text: "⏰ 시즌 정산까지 1시간! 정산되면 돈·사업·검이 초기화돼요.",
+          text: "⏰ 시즌 정산까지 1시간! 정산되면 돈·사업·검·공허·컬렉션·무한강화가 초기화돼요.",
         },
         {
           ms: 600000,
           id: "10m",
-          text: "🚨 10분 뒤 시즌 정산! 돈·사업·검이 초기화돼요.",
+          text: "🚨 10분 뒤 시즌 정산! 돈·사업·검·공허·컬렉션·무한강화가 초기화돼요.",
           modal: true,
         },
         {
@@ -17907,8 +17920,8 @@
       function openSeasonWarn() {
         const pv = previewSeasonSettle();
         document.getElementById("seasonWarnBody").innerHTML = `
-    <div>🔄 <b>초기화</b> : 돈 · 사업 · 검</div>
-    <div>✅ <b>그대로</b> : 컬렉션 · 특성 · 업적 · 메달</div>
+    <div>🔄 <b>초기화</b> : 돈 · 사업 · 검 · 공허 · 컬렉션 · 무한강화</div>
+    <div>✅ <b>그대로</b> : 특성 · 업적 · 메달 · 💎차원 조각 · 검 주문서 · 되돌리기</div>
     <div>🎁 <b>지금 정산되면</b> : ${pv ? `시즌 등급 <b>${pv.grade}</b> (${pv.title.icon} ${hofEsc(pv.title.name)}) · 보상 <b>+${pv.total}P</b>${pv.bonusMult > 1 ? ` (🎉 감사 보너스 ×${pv.bonusMult} 포함)` : ""}` : "총 수입 1억 미만이라 이번 정산은 면제돼요"}</div>
     <div style="color:var(--paper-dim); margin-top:4px;">📴 게임을 꺼 둬도 다음에 접속하는 순간(며칠 늦어도) 똑같이 정산돼요. 정산이 끝나면 보고서 창이 떠요.</div>`;
         const end = new Date(getSeasonEndMs());
@@ -17979,7 +17992,7 @@
         ) {
           localStorage.setItem("lrSeasonWarnDay", todayKey);
           showToast(
-            `⏰ 시즌 종료까지 ${left}일! 1일 0시에 돈·사업·검이 초기화되고 정산 보상을 받아요.`,
+            `⏰ 시즌 종료까지 ${left}일! 1일 0시에 돈·사업·검·공허·컬렉션·무한강화가 초기화되고 정산 보상을 받아요.`,
           );
         }
       }, 1500);
@@ -20306,7 +20319,8 @@
         }
       }
 
-      // 새 시즌에 초기화되는 "이번 시즌 기록" 모음: 보유검/검 강화/보관함 검/검배틀 승점/이름 색상/저택 꾸미기/주간 집계
+      // 새 시즌에 초기화되는 "이번 시즌 기록" 모음: 보유검/검 강화/보관함 검/검배틀 승점/이름 색상/저택 꾸미기/주간 집계/공허/컬렉션/무한강화
+      // (차원 조각·검 강화 주문서·되돌리기는 보존)
       // (돈·사업은 settleSeason()의 강제 환생이 담당한다)
       function resetSeasonScopedData() {
         swordOwned = false;
@@ -20323,15 +20337,25 @@
         // (기존엔 ISO 주간 주기만 따라가서, 시즌이 주 중간에 시작되면 지난주 딴 돈이
         // 그대로 "이번 주" 랭킹에 섞여 보이는 문제가 있었음)
         weeklyWinnings = 0;
-        // 공허맵도 새 시즌부터 웨이브 1·차원 조각·유물·상점 강화를 전부 처음 상태로 다시 시작한다.
-        // (검 강화 아이템·되돌리기 보유분은 resetVoidProgress()가 그대로 유지해줌)
+        // 공허맵도 새 시즌부터 웨이브 1·유물·상점 강화·소모품을 처음 상태로 다시 시작한다.
+        // 단, 💎 차원 조각(차원보석) 보유량은 그대로 보존한다. (검 강화 주문서·되돌리기 보유분도 resetVoidProgress()가 그대로 유지해줌)
+        const keepVoidShards = voidShards;
         resetVoidProgress();
+        voidShards = keepVoidShards;
+        // 컬렉션(일반·각성)과 무한강화(행운의 목걸이)도 새 시즌부터 처음부터 다시 모은다.
+        // (업적·특성·메달은 그대로 유지. 이미 달성한 컬렉션 업적은 다시 지급되지 않음)
+        ownedCollectibles = [];
+        ownedAwakening = [];
+        infiniteUpgradeLevel = 0;
         // 화면 갱신에서 오류가 나더라도(불러오기 도중 등) 위에서 바꾼 상태는 이미 확정돼 있어야 한다
         [
           renderMansionModal,
           renderNameColorModal,
           renderSwordPanel,
           renderVoidMap,
+          renderCollection,
+          renderAwakening,
+          renderInfiniteUpgradeModal,
         ].forEach((fn) => {
           try {
             fn();
@@ -20545,6 +20569,95 @@
           saveGame({ forceCloud: true });
         } catch (e) {
           console.error("공허 시즌 보상 확인 실패(나중에 다시 시도):", e);
+        }
+      }
+
+      // 네온 호드(네오) 랭킹(월간 시즌 점수) 시즌 종료 시 등급별 보상.
+      // 보상 = 검배틀 등급 보상의 절반 + 공허 등급 보상의 절반 (되돌리기·강화 주문서·차원 조각, 소수는 올림).
+      // 검배틀/공허 보상표를 그대로 읽어 계산하므로 두 표를 조정하면 네오 보상도 같이 따라간다. 전용 칭호·이름색 부스트는 없음.
+      const NEO_REWARD_FIRST_SEASON = "2026-10"; // 이 시즌부터 지급 (앱 업데이트 직후 옛 시즌 보상이 한꺼번에 나가지 않게)
+      function getNeoSeasonRewards(gradeId, rank) {
+        const sw = SWORD_SEASON_REWARDS[gradeId] || { revive: 0, scroll: ["x15", 0] };
+        const vd = getVoidSeasonRewards(gradeId, rank);
+        return {
+          revive: Math.ceil((sw.revive || 0) / 2),
+          scroll: [sw.scroll[0], Math.ceil((sw.scroll[1] || 0) / 2)],
+          shards: Math.ceil((vd.shards || 0) / 2),
+        };
+      }
+      // 성공(지급했거나 지급할 게 없음)이면 true, 일시적 실패(네트워크 등)면 false를 돌려줘서 나중에 다시 시도하게 한다.
+      async function checkNeoSeasonReward(prevKey) {
+        if (!currentUser || !db) return false;
+        if (claimedNeoSeasonRewards.includes(prevKey)) return true;
+        if (prevKey < NEO_REWARD_FIRST_SEASON) return true;
+        try {
+          const { data, error } = await db.rpc("nh_ranking", {
+            p_season: prevKey,
+            p_limit: 1,
+          });
+          if (error || !data || !data.ok) throw error || new Error("nh_ranking 응답 없음");
+          const total = Number(data.total) || 0;
+          const rank = data.me && typeof data.me.rank === "number" ? data.me.rank : null;
+          claimedNeoSeasonRewards.push(prevKey);
+          const gradeId = rank ? getSeasonRankGrade(rank, total) : null;
+          if (!gradeId) {
+            saveGame({ forceCloud: true });
+            return true;
+          }
+          const g = SEASON_RANK_GRADES[gradeId];
+          const rw = getNeoSeasonRewards(gradeId, rank);
+          const rewards = [];
+          const parts = [];
+          if (rw.revive > 0) {
+            rewards.push({ t: "revive", n: rw.revive });
+            parts.push(`되돌리기 ${rw.revive}회`);
+          }
+          if (rw.scroll[1] > 0) {
+            rewards.push({ t: "boost", k: rw.scroll[0], n: rw.scroll[1] });
+            parts.push(`${MAIL_BOOST_LABEL[rw.scroll[0]]} 강화 주문서 ${rw.scroll[1]}개`);
+          }
+          if (rw.shards > 0) {
+            rewards.push({ t: "shards", n: rw.shards });
+            parts.push(`차원 조각 ${rw.shards.toLocaleString("ko-KR")}개`);
+          }
+          addLocalMail({
+            title: `🛸 지난 시즌 네온 호드 ${g.icon}${g.name} 보상 (${rank}위)`,
+            gift: parts.join(" + "),
+            message: `전체 ${total.toLocaleString("ko-KR")}명 중 ${rank}위! 네온 호드 시즌 랭킹 보상이에요.`,
+            rewards,
+          });
+          showToast(
+            `📬 지난 시즌 네온 호드 ${g.icon}${g.name}(${rank}위) 보상이 우편함에 도착했어요! (30일 안에 받으세요)`,
+          );
+          mascotSay([
+            `🛸 지난 시즌 네온 호드 ${g.name} 등급 보상이 우편함에 도착했어! 30일 안에 받아가~`,
+          ]);
+          saveGame({ forceCloud: true });
+          return true;
+        } catch (e) {
+          console.error("네온 호드 시즌 보상 확인 실패(나중에 다시 시도):", e);
+          return false;
+        }
+      }
+      // seasonTick(2초마다)에서 부른다. 지난달 키를 직접 계산하므로 월 정산 시점과 상관없이 로그인 후 한 번 확인되고,
+      // 실패하면 1분 뒤 다시 시도한다(세션당 최대 5번).
+      let neoRewardBusy = false;
+      let neoRewardTries = 0;
+      let neoRewardNextAt = 0;
+      async function processNeoSeasonReward() {
+        if (neoRewardBusy || !currentUser || !db || neoRewardTries >= 5) return;
+        if (Date.now() < neoRewardNextAt) return;
+        const key = prevMonthKey(getMonthKey(new Date()));
+        if (!key || key < NEO_REWARD_FIRST_SEASON || claimedNeoSeasonRewards.includes(key)) return;
+        neoRewardBusy = true;
+        try {
+          const ok = await checkNeoSeasonReward(key);
+          if (!ok) {
+            neoRewardTries++;
+            neoRewardNextAt = Date.now() + 60000;
+          }
+        } finally {
+          neoRewardBusy = false;
         }
       }
 
@@ -23862,6 +23975,7 @@
           swordColorBoostMult,
           claimedSwordSeasonRewards,
           claimedVoidSeasonRewards,
+          claimedNeoSeasonRewards,
           seasonTitles,
           voidShopResetKey,
           swordStoreOwned,
@@ -24314,6 +24428,9 @@
         claimedSwordSeasonRewards = data.claimedSwordSeasonRewards || [];
         claimedVoidSeasonRewards = Array.isArray(data.claimedVoidSeasonRewards)
           ? data.claimedVoidSeasonRewards
+          : [];
+        claimedNeoSeasonRewards = Array.isArray(data.claimedNeoSeasonRewards)
+          ? data.claimedNeoSeasonRewards
           : [];
         seasonTitles = Array.isArray(data.seasonTitles)
           ? data.seasonTitles
