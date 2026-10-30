@@ -22541,26 +22541,36 @@
         });
       }
       const mailClaiming = new Map(); // 우편 id → 받기 시작한 시각(ms)
+      let mailLastFail = ""; // 마지막으로 못 받은 이유(토스트/콘솔에 보여 준다)
+      function mailFail(why) {
+        mailLastFail = why;
+        console.warn("[우편] 받기 실패:", why);
+        return false;
+      }
       // 반환값: 배열 = 받음(문구 목록, 비어 있을 수도 있음) / null = 이미 받았거나 기한 지남(목록에서 정리됨) / false = 일시 실패(우편은 그대로 남김)
       async function takeMail(id) {
         const m = allMails().find((x) => x.id === id);
         if (!m) return null;
         const startedAt = mailClaiming.get(id);
-        if (startedAt && Date.now() - startedAt < 20000) return false; // 20초 넘게 걸리면 잠금을 무시한다
+        if (startedAt && Date.now() - startedAt < 20000)
+          return mailFail("이미 처리 중"); // 20초 넘게 걸리면 잠금을 무시한다
         mailClaiming.set(id, Date.now());
         try {
           let rewards = m.rewards;
           let swCredited = false; // 서버가 검 아이템을 직접 넣어 준 우편인지
           let swState = null;
           if (m.src === "server") {
-            if (!db || !currentUser || deviceDisplaced || accountBanned)
-              return false;
+            if (!db) return mailFail("서버 연결 전");
+            if (!currentUser) return mailFail("로그인이 필요해요");
+            if (deviceDisplaced) return mailFail("다른 기기에서 접속 중");
+            if (accountBanned) return mailFail("이용이 제한된 계정");
             if (!swBootDone) {
-              // 서버 보유량을 먼저 맞춰 둔다(중복 지급 방지). 너무 오래 걸리면 이번엔 포기하고 우편은 그대로 둔다
+              // 서버 보유량을 먼저 맞춰 본다. 늦거나 실패해도 수령은 계속한다
+              // (서버가 돌려주는 보유량으로 맞추기 때문에 중복 지급은 생기지 않는다)
               try {
                 await mailWithTimeout(swBoot(), 8000);
               } catch (e) {
-                return false;
+                console.warn("[우편] 검 서버 연결 지연/실패 - 수령은 계속", e);
               }
             }
             let data = null;
@@ -22578,7 +22588,11 @@
                   )
                 )
                   data = undefined;
-                else return false;
+                else
+                  return mailFail(
+                    "서버 오류: " +
+                      String(res.error.message || res.error.code || "알 수 없음").slice(0, 80),
+                  );
               } else if (!res.data) {
                 // 서버가 "이미 받았거나 기한이 지났다"고 함 → 목록에서 지운다
                 serverMails = serverMails.filter((x) => x.id !== id);
@@ -22586,7 +22600,12 @@
                 return null;
               } else data = res.data;
             } catch (e) {
-              return false; // 통신 실패: 서버가 처리하지 않았으니 그대로 남겨 둔다
+              // 통신 실패: 서버가 처리하지 않았으니 그대로 남겨 둔다
+              return mailFail(
+                e && e.message === "timeout"
+                  ? "서버 응답 없음(시간 초과)"
+                  : "통신 오류: " + String((e && e.message) || e).slice(0, 80),
+              );
             }
             // ★ 여기부터는 서버가 이미 "받음"으로 처리한 상태. 이후 무슨 일이 생겨도 우편은 목록에서 반드시 빠져야 한다.
             serverMails = serverMails.filter((x) => x.id !== id);
@@ -22674,7 +22693,12 @@
         if (Array.isArray(got)) finishMailAccept(got);
         else {
           if (got === null) showToast("📭 이미 받았거나 기간이 지난 우편이라 목록에서 정리했어요");
-          else showToast("📡 우편을 받지 못했어요. 잠시 후 다시 시도해 주세요");
+          else
+            showToast(
+              "📡 우편을 받지 못했어요" +
+                (mailLastFail ? " (" + mailLastFail + ")" : "") +
+                ". 잠시 후 다시 시도해 주세요",
+            );
           refreshMailboxUI();
         }
       }
@@ -22708,7 +22732,12 @@
           finishMailAccept(labels);
         }
         if (!received && cleaned) showToast("📭 이미 받았거나 기간이 지난 우편은 목록에서 정리했어요");
-        else if (failed) showToast(`📡 ${failed}통은 받지 못했어요. 잠시 후 다시 눌러 주세요`);
+        else if (failed)
+          showToast(
+            `📡 ${failed}통은 받지 못했어요` +
+              (mailLastFail ? ` (${mailLastFail})` : "") +
+              ". 잠시 후 다시 눌러 주세요",
+          );
       }
       function renderMailbox(box) {
         const card = box.querySelector(".mbx-card");
