@@ -22524,13 +22524,30 @@
       // 우편 하나를 받는다. 서버 우편은 "서버가 먼저 1회 수령 처리"(admin_grants_claim)에 성공해야만 지급한다.
       // → 같은 우편을 세이브 조작/연타/다중 탭으로 여러 번 받는 것을 서버가 막고, 지급 수량도 서버가 돌려준 값만 쓴다.
       // 서버에 함수가 아직 없으면(SQL 적용 전) 예전 방식으로 받는다. 저장은 호출한 쪽이 한 번에 한다.
-      const mailClaiming = new Set();
+      // 서버 응답이 안 오면 우편 버튼이 영영 잠기지 않도록, 기다리는 시간에 상한을 둔다
+      function mailWithTimeout(promise, ms) {
+        return new Promise((resolve, reject) => {
+          const t = setTimeout(() => reject(new Error("timeout")), ms);
+          Promise.resolve(promise).then(
+            (v) => {
+              clearTimeout(t);
+              resolve(v);
+            },
+            (e) => {
+              clearTimeout(t);
+              reject(e);
+            },
+          );
+        });
+      }
+      const mailClaiming = new Map(); // 우편 id → 받기 시작한 시각(ms)
       // 반환값: 배열 = 받음(문구 목록, 비어 있을 수도 있음) / null = 이미 받았거나 기한 지남(목록에서 정리됨) / false = 일시 실패(우편은 그대로 남김)
       async function takeMail(id) {
         const m = allMails().find((x) => x.id === id);
         if (!m) return null;
-        if (mailClaiming.has(id)) return false;
-        mailClaiming.add(id);
+        const startedAt = mailClaiming.get(id);
+        if (startedAt && Date.now() - startedAt < 20000) return false; // 20초 넘게 걸리면 잠금을 무시한다
+        mailClaiming.set(id, Date.now());
         try {
           let rewards = m.rewards;
           let swCredited = false; // 서버가 검 아이템을 직접 넣어 준 우편인지
@@ -22538,10 +22555,20 @@
           if (m.src === "server") {
             if (!db || !currentUser || deviceDisplaced || accountBanned)
               return false;
-            if (!swBootDone) await swBoot(); // 서버 보유량을 먼저 맞춰 둔다(중복 지급 방지)
+            if (!swBootDone) {
+              // 서버 보유량을 먼저 맞춰 둔다(중복 지급 방지). 너무 오래 걸리면 이번엔 포기하고 우편은 그대로 둔다
+              try {
+                await mailWithTimeout(swBoot(), 8000);
+              } catch (e) {
+                return false;
+              }
+            }
             let data = null;
             try {
-              const res = await db.rpc("admin_grants_claim", { p_id: id });
+              const res = await mailWithTimeout(
+                db.rpc("admin_grants_claim", { p_id: id }),
+                12000,
+              );
               if (res.error) {
                 // (SQL 적용 전이면 예전 방식으로 받는다 → 아래에서 data 없이 그대로 지급)
                 if (
@@ -22651,10 +22678,13 @@
           refreshMailboxUI();
         }
       }
-      let mailAcceptAllBusy = false;
+      let mailAcceptAllBusy = 0; // 시작 시각(ms), 0이면 대기 중
       async function acceptAllMails() {
-        if (mailAcceptAllBusy) return;
-        mailAcceptAllBusy = true;
+        if (mailAcceptAllBusy && Date.now() - mailAcceptAllBusy < 30000) {
+          showToast("📬 우편을 받는 중이에요. 잠시만 기다려 주세요");
+          return;
+        }
+        mailAcceptAllBusy = Date.now();
         const labels = [];
         let received = 0,
           cleaned = 0,
@@ -22674,7 +22704,7 @@
             else failed++;
           }
         } finally {
-          mailAcceptAllBusy = false;
+          mailAcceptAllBusy = 0;
           finishMailAccept(labels);
         }
         if (!received && cleaned) showToast("📭 이미 받았거나 기간이 지난 우편은 목록에서 정리했어요");
