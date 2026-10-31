@@ -192,7 +192,7 @@ button {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
+  text-overflow: clip; /* 말줄임(…) 대신 JS(fitHudText)가 글자 크기를 줄여 다 보이게 한다 */
   min-width: 0;
   text-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
 }
@@ -207,7 +207,11 @@ button {
   border-radius: var(--r-pill);
   padding: 2px 9px;
   overflow: hidden;
-  text-overflow: ellipsis;
+  text-overflow: clip;
+  white-space: normal; /* 길면 잘리지 않고 다음 줄로 넘어간다 */
+  overflow-wrap: anywhere;
+  line-height: 1.25;
+  border-radius: 12px;
 }
 .top-actions {
   grid-area: actions;
