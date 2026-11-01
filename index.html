@@ -24090,6 +24090,7 @@
       // 예전엔 내 순위를 구하려고 랭킹판 전체 행을 다운로드했다(전송량의 주범). 서버 함수는 상위 N명 행만 돌려주고
       // 순위/인원은 서버에서 센다. 서버 함수가 아직 없으면(PGRST202 등) 예전 방식으로 자동으로 돌아간다.
       let lbViewMissingUntil = 0;
+      let swRankMissingUntil = 0;
       const lbViewCache = {};
       const LB_VIEW_CACHE_MS = 15000;
       function fetchBoardView(period) {
@@ -24099,6 +24100,32 @@
         const hit = lbViewCache[key];
         if (hit && Date.now() - hit.at < LB_VIEW_CACHE_MS) return hit.promise;
         const promise = (async () => {
+          // 검 랭킹(강화/현재검)은 각자 올린 값이 아니라 서버가 인정한 검 상태(sword_state)로 보여준다.
+          // 서버 함수(sword_rank_view)가 아직 없으면 아래 예전 방식으로 그대로 돌아간다.
+          if (
+            (period === "swordmonthly" || period === "swordcurrent") &&
+            Date.now() >= swRankMissingUntil
+          ) {
+            try {
+              const { data, error } = await db.rpc("sword_rank_view", {
+                p_kind: period === "swordcurrent" ? "current" : "monthly",
+                p_n: LEADERBOARD_FETCH_LIMIT,
+                p_me: currentUser.uid,
+                p_blocklist: Array.from(RANK_BLOCKLIST),
+              });
+              if (error) throw error;
+              if (data && data.ok && Array.isArray(data.top)) return data;
+            } catch (e) {
+              if (
+                e &&
+                (e.code === "PGRST202" ||
+                  e.code === "42883" ||
+                  /could not find the function|does not exist/i.test(e.message || ""))
+              )
+                swRankMissingUntil = Date.now() + 600000;
+              else console.warn("검 랭킹 서버 조회 실패(예전 방식으로 대체):", e);
+            }
+          }
           try {
             const colName = getLeaderboardCollectionName(period);
             const { data, error } = await db.rpc("leaderboard_view", {
@@ -24154,7 +24181,7 @@
           let docs = view
             ? view.top.map((row) => ({ id: row.user_id, ...toCamelRow(row) }))
             : await dbGetDocsOrdered(colName, sortField, LEADERBOARD_FETCH_LIMIT);
-          if (period === "swordcurrent") {
+          if (period === "swordcurrent" && !(view && view.src === "sword_state")) {
             const seasonStart = getSeasonStartMs();
             docs = docs.filter(
               (d) =>
