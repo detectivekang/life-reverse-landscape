@@ -11597,30 +11597,54 @@
       ];
       // 상대 후보 목록은 60초 동안 재사용한다 (상대 점수를 바꾸지 않으니 조금 오래된 목록이어도 괜찮고, 배틀마다 서버를 조회하지 않아도 된다)
       let swordBattleOppCache = { at: 0, docs: [] };
+      let swordBattleLastOppUid = null; // 직전 상대: 연달아 같은 사람이 나오지 않게 한다
       async function findSwordBattleOpponent() {
         if (currentUser && db) {
           try {
             let docs = swordBattleOppCache.docs;
             if (!docs.length || Date.now() - swordBattleOppCache.at > 60000) {
-              docs = await dbGetDocsOrdered("leaderboard_sword", "updatedAt", 50);
+              // 필요한 컬럼만 받는다 (전송량 절약)
+              docs = await dbGetDocsOrdered(
+                "leaderboard_sword",
+                "updatedAt",
+                100,
+                "user_id,name,amount,sword_level,updated_at",
+              );
               swordBattleOppCache = { at: Date.now(), docs };
             }
-            const candidates = docs
+            // 이번 시즌이 시작된 뒤로 한 번도 갱신 안 된 문서는 아직 재접속해서 초기화되지 않은
+            // 유저의 지난 시즌 검이다. 접속 여부와 상관없이 0검으로 취급한다.
+            // (1일 이후에 접속해서 검을 만든 유저는 updatedAt이 이번 시즌이라 그대로 반영된다)
+            const seasonStart = getSeasonStartMs();
+            let candidates = docs
               .filter(
                 (d) =>
                   d.id !== currentUser.uid &&
                   typeof d.swordLevel === "number" &&
                   d.swordLevel >= 0,
               )
-              .map((d) => ({
-                uid: d.id,
-                name: d.name || "이름 없는 검객",
-                level: Math.min(SWORD_MAX_POWER, d.swordLevel),
-                battleScore: d.amount || 0,
-                isReal: true,
-              }));
-            if (candidates.length > 0)
-              return candidates[Math.floor(Math.random() * candidates.length)];
+              .map((d) => {
+                const stale =
+                  typeof d.updatedAt !== "number" || d.updatedAt < seasonStart;
+                return {
+                  uid: d.id,
+                  name: d.name || "이름 없는 검객",
+                  level: stale ? 0 : Math.min(SWORD_MAX_POWER, d.swordLevel),
+                  battleScore: d.amount || 0,
+                  isReal: true,
+                };
+              });
+            // 후보가 둘 이상이면 직전 상대는 뺀다
+            if (candidates.length > 1)
+              candidates = candidates.filter(
+                (c) => c.uid !== swordBattleLastOppUid,
+              );
+            if (candidates.length > 0) {
+              const pick =
+                candidates[Math.floor(Math.random() * candidates.length)];
+              swordBattleLastOppUid = pick.uid;
+              return pick;
+            }
           } catch (e) {
             console.error("검배틀 상대 조회 실패:", e);
           }
