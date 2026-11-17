@@ -248,16 +248,16 @@ return{create,step,choose,UP,CH,pool,T,ST,spawnAt,BOSS,WD,droneN,cast,TIER,MUT,R
 if(typeof module!=='undefined')module.exports=Core;
 
 const Meta=(function(){
-const KEYS=[{k:'vit',n:'Vitality',d:'+10 max HP'},{k:'might',n:'Might',d:'+8% damage'},{k:'haste',n:'Haste',d:'+6% fire rate'},{k:'mag',n:'Magnet',d:'+15% pickup range'},{k:'greed',n:'Greed',d:'+10% gold',max:5},{k:'arm',n:'Armor',d:'-4% damage taken'},{k:'grow',n:'Growth',d:'+6% XP gain'},{k:'rev',n:'Second Chance',d:'1 revive per run',max:1,base:1500},{k:'spd',n:'Swift',d:'+3% move speed'},{k:'crit',n:'Precision',d:'+1.5% crit'},{k:'regen',n:'Recovery',d:'+0.12 HP/s'},{k:'luck',n:'Fortune',d:'+drop chance'},{k:'aoe',n:'Reach',d:'+3% area'},{k:'thorn',n:'Thorns',d:'+4 contact dmg/s'},{k:'ls',n:'Vampirism',d:'+0.03 HP/kill'},{k:'ult',n:'Overdrive',d:'-2% ult charge'}];
-const MAX=20,CHCOST=[0,25000,50000,500000,650000,750000,2250000,2500000,5000000,6000000,150000,200000,900000,1000000,1100000,1200000,4000000,5000000,300000,8000000],TEST_GOLD=0;
+const KEYS=[{k:'vit',n:'Vitality',d:'+10 max HP'},{k:'might',n:'Might',d:'+8% damage'},{k:'haste',n:'Haste',d:'+6% fire rate'},{k:'mag',n:'Magnet',d:'+15% pickup range'},{k:'greed',n:'Greed',d:'+10% gold',max:5},{k:'arm',n:'Armor',d:'-4% damage taken'},{k:'grow',n:'Growth',d:'+6% XP gain'},{k:'rev',n:'Second Chance',d:'1 revive per run',max:1,base:15000},{k:'spd',n:'Swift',d:'+3% move speed'},{k:'crit',n:'Precision',d:'+1.5% crit'},{k:'regen',n:'Recovery',d:'+0.12 HP/s'},{k:'luck',n:'Fortune',d:'+drop chance'},{k:'aoe',n:'Reach',d:'+3% area'},{k:'thorn',n:'Thorns',d:'+4 contact dmg/s'},{k:'ls',n:'Vampirism',d:'+0.03 HP/kill'},{k:'ult',n:'Overdrive',d:'-2% ult charge'}];
+const MAX=20,CHCOST=[0,250000,500000,5000000,6500000,7500000,22500000,25000000,50000000,60000000,1500000,2000000,9000000,10000000,11000000,12000000,40000000,50000000,3000000,80000000],TEST_GOLD=0;
 function def(){return{gold:0,vit:0,might:0,haste:0,mag:0,greed:0,arm:0,grow:0,rev:0,spd:0,crit:0,regen:0,luck:0,aoe:0,thorn:0,ls:0,ult:0,dly:0,xs:0,mas:{},dd:{d:'',w:'',s:0,ls:''},own:[1,0,0,0,0,0,0,0,0,0],sel:0,stg:1,ssel:0,all:0,mut:[],ascMax:0,asc:0,rec:{et:0,ek:0},cos:[1,0,0,0,0,0,0,0],csel:0,stats:{runs:0,kills:0,wins:0,time:0,best:0,bosses:[0,0,0,0,0,0]},ach:[]};}
 const kd=k=>KEYS.find(x=>x.k===k)||{};
-function cost(m,k){return Math.round((kd(k).base||500)*Math.pow(1.4,m[k]|0));}
+function cost(m,k){return Math.round((kd(k).base||5000)*Math.pow(1.5,m[k]|0));}
 function buy(m,k){const c=cost(m,k);if((m[k]|0)>=(kd(k).max||MAX)||m.gold<c)return false;m.gold-=c;m[k]=(m[k]|0)+1;return true;}
 function unlock(m,i){if(m.own[i])return true;if(m.gold<CHCOST[i])return false;m.gold-=CHCOST[i];m.own[i]=1;return true;}
 function earn(m,s){const g=Math.floor((s.kills*.15+s.t*.1+(s.win?150:0)+(s.coins||0)+(s.bk||0)*25)*(1+m.greed*.1)*(1+(s.mb||0))*(s.gm||1)*(1+(s.stage>3?s.stage-1:Math.min(s.stage||0,2))*.5)*(1+.25*(s.asc||0)));m.gold+=g;return g;}
 function winStage(m,i,asc){if(i===2&&asc>=3&&(m.xs|0)<1)m.xs=1;if(i===4&&(m.xs|0)<2)m.xs=2;if(i+1===m.stg&&m.stg<4)m.stg++;if(i===2&&asc===(m.ascMax||0)&&(m.ascMax||0)<25)m.ascMax=(m.ascMax||0)+1;}
-const COS=[{id:'def',cost:0},{id:'crimson',col:'#ff3b5c',cost:125000},{id:'gold',col:'#ffd23b',cost:200000},{id:'emerald',col:'#2effa0',cost:200000},{id:'violet',col:'#b45cff',cost:300000},{id:'prism',col:'#ffffff',cost:450000},{id:'inferno',col:'#ff6a1a',cost:600000,fx:'flicker'},{id:'rainbow',cost:10000000,fx:'rainbow'}];
+const COS=[{id:'def',cost:0},{id:'crimson',col:'#ff3b5c',cost:1250000},{id:'gold',col:'#ffd23b',cost:2000000},{id:'emerald',col:'#2effa0',cost:2000000},{id:'violet',col:'#b45cff',cost:3000000},{id:'prism',col:'#ffffff',cost:4500000},{id:'inferno',col:'#ff6a1a',cost:6000000,fx:'flicker'},{id:'rainbow',cost:100000000,fx:'rainbow'}];
 function buyCos(m,i){if(m.cos[i])return true;if(m.gold<COS[i].cost)return false;m.gold-=COS[i].cost;m.cos[i]=1;return true;}
 const ACH=[
 {id:'run',n:'Rookie',d:'Finish a run',t:m=>m.stats.runs>=1},
