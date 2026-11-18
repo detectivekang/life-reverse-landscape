@@ -1,8 +1,8 @@
 /* 인생역전 -> 네온 호드 골드 환전 (1조 = 1골드, 1경 = 1만 골드)
-   ui-v2.js 와 같은 방식의 추가 스크립트다. index.html 맨 아래 ui-v2.js 다음 줄에 이렇게 넣으면 된다:
+   ui-v2.js 와 같은 방식의 추가 스크립트다. (이번 배포의 index.html 에는 이미 연결되어 있다.) 직접 넣는다면 ui-v2.js 다음 줄에:
        <script src="nh-exchange.js"></script>
    서버: sql/nh_deposit.sql 을 먼저 실행해야 한다.
-   하는 일: 더보기 메뉴에 "네온 호드 환전" 버튼을 붙이고, 업데이트 공지(v2026111501)를 patchNotes 에 추가하고, 서버가 입금을 승인(OK)해 준 뒤에만 money 를 깎는다.
+   하는 일: 더보기 메뉴에 "네온 호드 환전" 버튼을 붙이고, 서버가 입금을 승인(OK)해 준 뒤에만 money 를 깎는다.
    실패하면 돈은 그대로다. 게임 코드는 건드리지 않는다. */
 (function () {
   "use strict";
@@ -125,27 +125,6 @@
   }
   function close() { var m = $("nhxModal"); if (m) m.classList.remove("show"); }
 
-  /* ---- 공지: 이 파일이 로드되면 patchNotes 맨 앞에 한 번만 추가한다 (같은 version 이 이미 있으면 건너뛴다) ---- */
-  var NOTICE_VERSION = "2026111501";
-  var NOTICE = { version: NOTICE_VERSION, date: "2026-11-15", items: [
-    "🛸 <b>네온 호드 2 업데이트!</b> 새 스테이지 2곳(🧊 빙하 핵 · ☣️ 독성 제련소), 새 보스 4종, 새 무기 6종(총 18종), 새 캐릭터 10명(총 20명), 유물 28종, 업적 41개가 추가됐어요",
-    "⚔️ <b>더 어려워진 도전!</b> 승급이 25단계까지 열리고, 정예 적과 변이 18종이 생겼어요. 매일 바뀌는 🗓️ <b>일일 도전</b>은 하루 첫 클리어에 보너스 골드를 줘요",
-    "📈 <b>성장 요소가 늘었어요!</b> 능력치 강화가 16종으로 늘고 최대 20레벨까지 올릴 수 있어요(후반일수록 비싸요). 캐릭터별 <b>마스터리</b>(10레벨, 공격력·체력 최대 +10%)도 생겼어요",
-    "💱 <b>인생역전 돈을 네온 호드 골드로 바꿀 수 있어요!</b> 더보기 메뉴의 '💱 네온 호드 환전'에서 <b>1조 = 1골드</b> (1경 = 1만 골드)로 환전해요. 하루 최대 50,000골드(= 5경)까지, 바꾼 골드는 네온 호드를 열면 들어와요. 로그인이 필요해요",
-    "🔒 환전한 골드는 영구 강화·캐릭터 해금처럼 <b>네온 호드 안에서만</b> 쓸 수 있어요. 되돌리기·주문서 같은 아이템은 환전 골드로 살 수 없어요",
-    "🪙 <b>오늘의 상점 가격이 8배로 올랐어요!</b> 💎 차원 조각 10,000개 80,000골드 · 🛡️ 되돌리기 1개 40,000 · 🍀 강화 주문서 ×1.5 40,000 / ×2 80,000 / ×2.5 160,000 · ⚔️ 검 배틀 1회 4,000골드 (하루 구매 횟수는 그대로). 캐릭터 해금과 외형 가격도 5배가 됐어요",
-    "🔓 <b>해금 조건이 훨씬 어려워졌어요.</b> 이미 해금한 캐릭터와 무기는 그대로 쓸 수 있고, 새로 해금하는 것부터 새 조건이 적용돼요",
-    "🛠️ <b>버그 수정:</b> 결과 화면 글씨가 화면을 넘어가던 문제, 정예 적·보스 탄막에 체력이 가득한데도 한 번에 쓰러지던 문제, 지뢰 무기가 진화하지 않던 문제를 고쳤어요"
-  ] };
-  function addNotice() {
-    try {
-      if (typeof patchNotes === "undefined" || !Array.isArray(patchNotes)) return;
-      for (var i = 0; i < patchNotes.length; i++) if (patchNotes[i] && patchNotes[i].version === NOTICE_VERSION) return;
-      patchNotes.unshift(NOTICE);
-      if (typeof updateNoticeBadge === "function") updateNoticeBadge();
-    } catch (e) {}
-  }
-
   function inject() {
     try {
       var anchor = $("noticeBtn");
@@ -159,7 +138,7 @@
       anchor.parentNode.insertBefore(b, anchor.nextSibling);
     } catch (e) {}
   }
-  function boot() { inject(); addNotice(); }
+  function boot() { inject(); }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
 })();
