@@ -24,7 +24,7 @@
       // 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
       // 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
       (function () {
-        var CURRENT_VERSION = "2026111702";
+        var CURRENT_VERSION = "2026111801";
         try {
           if (sessionStorage.getItem("lrVersionChecked") === CURRENT_VERSION)
             return;
@@ -11289,140 +11289,140 @@
         { name: "썩은 나뭇가지" },
         {
           name: "금 간 썩은 나뭇가지",
-          cost: 20000000,
+          cost: 100000000,
           success: 100,
           maintain: 99,
           destroy: 1,
         },
         {
           name: "때가 꼬질꼬질한 나뭇가지",
-          cost: 40000000,
+          cost: 300000000,
           success: 95,
           maintain: 2,
           destroy: 3,
         },
         {
           name: "테이프 붙인 나뭇가지",
-          cost: 80000000,
+          cost: 900000000,
           success: 90,
           maintain: 5,
           destroy: 5,
         },
         {
           name: "녹슬고 곰팡이 핀 나뭇가지",
-          cost: 160000000,
+          cost: 2700000000,
           success: 85,
           maintain: 8,
           destroy: 7,
         },
         {
           name: "나름 뾰족한 몽둥이",
-          cost: 320000000,
+          cost: 8100000000,
           success: 80,
           maintain: 11,
           destroy: 9,
         },
         {
           name: "단단히 다듬어진 몽둥이",
-          cost: 640000000,
+          cost: 24300000000,
           success: 75,
           maintain: 14,
           destroy: 11,
         },
         {
           name: "강철을 덧댄 몽둥이",
-          cost: 1280000000,
+          cost: 72900000000,
           success: 70,
           maintain: 17,
           destroy: 13,
         },
         {
           name: "피맛을 본 몽둥이",
-          cost: 2560000000,
+          cost: 218700000000,
           success: 65,
           maintain: 20,
           destroy: 15,
         },
         {
           name: "베테랑 용병의 몽둥이",
-          cost: 5120000000,
+          cost: 656100000000,
           success: 60,
           maintain: 23,
           destroy: 17,
         },
         {
           name: "칠흑의 피바람 검",
-          cost: 10240000000,
+          cost: 1968300000000,
           success: 55,
           maintain: 26,
           destroy: 19,
         },
         {
           name: "심연의 마귀 검",
-          cost: 20480000000,
+          cost: 4723920000000,
           success: 50,
           maintain: 29,
           destroy: 21,
         },
         {
           name: "광기의 처형자 검",
-          cost: 40960000000,
+          cost: 11337408000000,
           success: 45,
           maintain: 32,
           destroy: 23,
         },
         {
           name: "지옥불을 머금은 검",
-          cost: 81920000000,
+          cost: 27209779200000,
           success: 40,
           maintain: 35,
           destroy: 25,
         },
         {
           name: "영혼을 파멸하는 검",
-          cost: 163840000000,
+          cost: 65303470080000,
           success: 35,
           maintain: 38,
           destroy: 27,
         },
         {
           name: "발키리의 승리 검",
-          cost: 327680000000,
+          cost: 156728328192000,
           success: 30,
           maintain: 41,
           destroy: 29,
         },
         {
           name: "제우스의 뇌전 검",
-          cost: 655360000000,
+          cost: 376147987660800,
           success: 25,
           maintain: 44,
           destroy: 31,
         },
         {
           name: "포세이돈의 서리 파도 검",
-          cost: 1310720000000,
+          cost: 902755170385920,
           success: 20,
           maintain: 47,
           destroy: 33,
         },
         {
           name: "크로노스의 시공 베기 검",
-          cost: 2621440000000,
+          cost: 2166612408926208,
           success: 15,
           maintain: 50,
           destroy: 35,
         },
         {
           name: "종말의 카오스 검",
-          cost: 5242880000000,
+          cost: 5199869781422899,
           success: 10,
           maintain: 53,
           destroy: 37,
         },
         {
           name: "창세의 데미우르고스 검",
-          cost: 10485760000000,
+          cost: 12479687475414958,
           success: 5,
           maintain: 56,
           destroy: 39,
@@ -14746,6 +14746,13 @@
       // 함께 올려준다. lastSeenPatchVersion이 patchNotes[0].version과 다르면 "안 읽은 공지"로
       // 간주해 배지를 띄우고, 기존 유저가 접속하면 자동으로 한 번 띄워준다.
       const patchNotes = [
+        {
+          version: "2026111801",
+          date: "2026-11-18",
+          items: [
+            "⚔️ <b>검 강화 비용이 바뀌었어요!</b> +1강은 <b>1억 원</b>부터 시작해서 +10강까지 <b>3배씩</b>, +11강부터 +20강까지는 <b>2.4배씩</b> 올라요 (+10강 약 1.97조 → +20강 약 1.25경)",
+          ],
+        },
         {
           version: "2026111702",
           date: "2026-11-17",
