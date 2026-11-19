@@ -1,0 +1,45 @@
+--- newh/new.html	2026-11-18 05:16:24.719133655 +0000
++++ out/neno-horde/index.html	2026-11-18 22:07:32.907919475 +0000
+@@ -21,7 +21,7 @@
+ {hp:6500,sp:60,r:36,dmg:32,v:120,boss:1},{hp:7500,sp:52,r:40,dmg:36,v:200,boss:1},{hp:250,sp:150,r:11,dmg:0,v:20},{hp:12000,sp:46,r:44,dmg:38,v:300,boss:1},{hp:14000,sp:40,r:46,dmg:40,v:350,boss:1},{hp:9500,sp:60,r:38,dmg:36,v:320,boss:1},{hp:11000,sp:52,r:48,dmg:42,v:400,boss:1},{hp:90,sp:42,r:11,dmg:9,v:6},{hp:380,sp:30,r:17,dmg:16,v:10}];
+ const BOSS=[3,11,12,14,15,16,17],SBOSS=[3,11,12,0,14,15],ST2=s=>s.stage>3?s.stage-1:Math.min(s.stage,2),UNL=[[0,0],[1,45],[2,120],[4,180],[5,240],[6,300],[7,360],[8,400],[10,450]];
+ const ST=[{n:'Neon Grid',bg:'#05060f',gr:'80,110,255'},{n:'Crimson Void',bg:'#0f0510',gr:'255,70,140'},{n:'Solar Ruins',bg:'#100a04',gr:'255,160,60'},{n:'Endless',bg:'#03100d',gr:'46,255,192'},{n:'Glacier Core',bg:'#041016',gr:'90,220,255'},{n:'Toxic Foundry',bg:'#0b1204',gr:'150,255,60'}];
+-function base(seed){return{rand:rng(seed||1),t:0,id:0,over:false,win:false,pick:null,pend:0,kills:0,boss:false,sp:0,ob:0,mine:[],bm:[],bo:[],eb:[],pk:[],ls:[],da:0,coins:0,chests:0,inv:0,vac:0,ug:0,un:150,ut:[],mt:[],fl:[],tc:[],iz:[],vt:3,gw:[],lf:null,rl:[],rq:0,evPool:['ambush','storm','goblin','moon'],cm:1,gm:1,mut:{},mb:0,lock:{},nxEv:75,moon:0,storm:0,stA:0,ambN:0,av:60,bootsT:0,lastHp:0,stage:0,bt:600,nextE:150,got:{},ev:[],en:[],bu:[],gem:[],
++function base(seed){return{rand:rng(seed||1),t:0,id:0,over:false,win:false,pick:null,pend:0,kills:0,boss:false,sp:0,ob:0,mine:[],bm:[],bo:[],eb:[],pk:[],ls:[],da:0,coins:0,chests:0,inv:0,vac:0,ug:0,un:150,ut:[],mt:[],fl:[],tc:[],iz:[],vt:3,bdT:0,bdSum:0,gw:[],lf:null,rl:[],rq:0,evPool:['ambush','storm','goblin','moon'],cm:1,gm:1,mut:{},mb:0,lock:{},nxEv:75,moon:0,storm:0,stA:0,ambN:0,av:60,bootsT:0,lastHp:0,stage:0,bt:600,nextE:150,got:{},ev:[],en:[],bu:[],gem:[],
+  p:{x:0,y:0,hp:100,mhp:100,spd:150,dmg:10,rate:2,shots:1,pierce:0,mag:60,orbs:0,cd:0,xp:0,lv:1,next:5,magLv:0,magK:1,am:1,arm:1,regen:0,crit:0,xpm:1,luck:0,rev:0,aoe:1,splash:1,zapX:0,slowX:0,thorn:0,lifesteal:0,warp:1,chain:0,boots:0,autoVac:0,w:{nova:0,zap:0,mine:0,boom:0,bomb:0,laser:0,drone:0,meteor:0,flame:0,frost:0,grav:0,scatter:0,arc:0,quake:0,snipe:0,toxic:0,tesla:0},ev:{},tm:{nova:0,zap:0,mine:0,boom:0,bomb:0,laser:0,drone:0,meteor:0,flame:0,frost:0,grav:0,scatter:0,arc:0,quake:0,snipe:0,toxic:0,tesla:0}}};}
+ const MUT=[{id:'swarm',b:.2},{id:'giants',b:.2},{id:'fragile',b:.25},{id:'rush',b:.15},{id:'barren',b:.1},{id:'hex',b:.2},{id:'dark',b:.1},{id:'iron',b:.2},{id:'brutal',b:.2},{id:'horde',b:.25},{id:'elite',b:.3},{id:'famine',b:.2},{id:'narrow',b:.2},{id:'solo',b:.25},{id:'slow',b:.1},{id:'volatile',b:.2},{id:'unlucky',b:.15},{id:'chaos',b:.2}];
+ const RELICS=[
+@@ -152,6 +152,10 @@
+ const OT={t0:600,hp:1.18,dmg:.06,sp:.02,spMax:.5};
+ function od(s){return s.stage===3?Math.max(0,(s.t-OT.t0)/60):0;}
+ function spawnAt(s,type,x,y,hp){const B=T[type];if(!B.boss&&type!==9&&s.en.length>=260)return;const o=od(s),k=(B.boss?1:(1+s.t/125)*[1.1,1.8,2.1,2.1,2.6,3.2][s.stage]*(1+.1*s.asc))*Math.pow(OT.hp,B.boss?o*.5:o),h=hp||B.hp*k*(B.boss?1:(s.mut.swarm?.65:1)*(s.mut.giants?1.6:1)*(s.mut.iron?1.5:1))*(B.boss?1:Math.pow(1.15,Math.min(s.bk||0,25)))*(B.boss?(1+.08*s.asc)*(s.stage===3?2*(1+(s.bs||0)*.6):1):1)*(1+.5*(s.hell|0));s.en.push({id:++s.id,type,boss:!!B.boss,bt0:s.t,x,y,hp:h,mhp:h,sp:(B.boss?1:(s.mut.rush?1.25:1))*B.sp*(1+ST2(s)*.1)*(1+.03*s.asc)*(B.boss?1:1+Math.min(OT.spMax,OT.sp*o)),r:B.r*(s.mut.giants&&!B.boss?1.3:1),dmg:B.dmg*(1+ST2(s)*.35)*(1+.04*s.asc)*(1+OT.dmg*o)*(s.mut.brutal&&!B.boss?1.5:1)*(B.boss&&s.stage===3?1.5:1)*(B.boss?1:Math.pow(1.15,Math.min(s.bk||0,25)))*(1+.5*(s.hell|0)),v:B.v});}
++// 적 탄환 + 몸통 접촉 피해가 0.3초 안에 합쳐서 최대 체력의 BURST_CAP(35%)를 넘지 못한다.
++// 한 프레임에 여러 적이 겹쳐서 체력이 가득한데도 즉사하는 것을 막는 안전장치다. (끄려면 BURST_CAP 을 99 로)
++const BURST_CAP=.35;
++function hitP(s,dm){const p=s.p;dm=Math.max(0,Math.min(dm,p.mhp*BURST_CAP-s.bdSum));s.bdSum+=dm;p.hp-=dm;}
+ const AFX=['swift','tank','regen','split','volt','frenzy'];
+ function canElite(t){return t===0||t===1||t===2||t===4||t===5||t===6||t===7||t===10||t===18;}
+ function eliteP(s){return Math.min(.4,((s.t>=120?.02+(s.t-120)/6000:0)+(s.asc>=5?.04:0)+(s.stage>=1?.02:0)+.015*(s.hell|0))*(s.mut.elite?3:1));}
+@@ -199,10 +203,10 @@
+  case 16:e.bl=(e.bl===undefined?4:e.bl)-dt;if(e.bl<=0){const a=s.rand()*6.2832;e.x=p.x+Math.cos(a)*240;e.y=p.y+Math.sin(a)*240;for(let i=0;i<12;i++)shoot(s,e,i*.5236,200);e.bl=5-(e.hp<e.mhp*.5?1.5:0);}break;
+  case 17:if(e.cd<=0){e.ang=(e.ang||0)+.5;shoot(s,e,e.ang,170);shoot(s,e,e.ang+3.1416,170);e.cd=.18;}e.sm=(e.sm===undefined?7:e.sm)-dt;if(e.sm<=0){e.dash=1.1;e.sm=7;}if(e.dash>0){e.dash-=dt;sp=340;}break;
+  case 18:if(d<300)mv=0;if(e.cd<=0){const a=Math.atan2(dy,dx);for(let i=-1;i<=1;i++)shoot(s,e,a+i*.25,200);e.cd=3.6;}break;}
+- if(mv&&d>e.r+8){e.x+=dx/d*sp*dt;e.y+=dy/d*sp*dt;}else if(d<=e.r+8&&e.type!==8){p.hp-=e.dmg*dt*p.arm;e.hp-=p.thorn*dt;if(!s.hf){s.hf=1;s.ev.push({t:'hit'});}}}
++ if(mv&&d>e.r+8){e.x+=dx/d*sp*dt;e.y+=dy/d*sp*dt;}else if(d<=e.r+8&&e.type!==8){hitP(s,e.dmg*dt*p.arm);e.hp-=p.thorn*dt;if(!s.hf){s.hf=1;s.ev.push({t:'hit'});}}}
+ function step(s,dt,ix,iy){
+  if(s.over||s.pick)return;
+- const p=s.p;s.t+=dt;s.inv=Math.max(0,s.inv-dt);s.vac=Math.max(0,s.vac-dt);p.arm=s.inv>0?0:p.am;s.da+=1.6*dt;
++ const p=s.p;s.t+=dt;s.bdT-=dt;if(s.bdT<=0){s.bdT=.3;s.bdSum=0;}s.inv=Math.max(0,s.inv-dt);s.vac=Math.max(0,s.vac-dt);p.arm=s.inv>0?0:p.am;s.da+=1.6*dt;
+  const m=Math.hypot(ix,iy);let sl=1;for(const z of s.iz)if((p.x-z.x)**2+(p.y-z.y)**2<z.r*z.r){sl=.6;break;}if(m>0){const k=Math.min(1,m)/m;p.x+=ix*k*p.spd*sl*dt;p.y+=iy*k*p.spd*sl*dt;}
+  p.hp=Math.min(p.mhp,p.hp+(s.mut.hex?0:.8+p.regen)*dt);
+  s.sp-=dt;
+@@ -230,8 +234,7 @@
+   if(e.hp<=0){s.en.splice(i,1);s.kills++;if(s.gem.length>=600){const g0=s.gem[s.gem.length-1];g0.v+=e.v;g0.x=e.x;g0.y=e.y;}else s.gem.push({x:e.x,y:e.y,v:e.v});drop(s,e);if(p.chain){hurt(s,e.x,e.y,45*p.aoe,p.dmg*1.2);if(s.rand()<.3)s.ev.push({t:'blast',x:e.x,y:e.y,r:45});}if(e.amb&&--s.ambN===0)s.pk.push({x:e.x,y:e.y,k:'chest',l:60});if(!s.ut.length)s.ug=Math.min(s.un,s.ug+(e.boss?0:e.type===9?8:1));if(p.lifesteal)p.hp=Math.min(p.mhp,p.hp+p.lifesteal);s.ev.push({t:'kill',x:e.x,y:e.y,b:e.boss});if(e.type===5){spawnAt(s,0,e.x+8,e.y,10);spawnAt(s,0,e.x-8,e.y,10);}if(e.el)elDeath(s,e);if(e.type===19){for(let i=0;i<3;i++)spawnAt(s,1,e.x+(i-1)*10,e.y,8);}if(s.mut.volatile&&!e.boss&&s.rand()<.15){s.ev.push({t:'blast',x:e.x,y:e.y,r:60});if(Math.hypot(p.x-e.x,p.y-e.y)<60+e.r)p.hp-=10*p.arm;}if(e.boss){if(s.stage===3){s.bn=(s.bn||0)+1;s.bk=(s.bk||0)+1;s.boss=s.en.some(x=>x!==e&&x.boss&&x.hp>0);s.coins+=20;s.pk.push({x:e.x,y:e.y,k:'chest',l:60},{x:e.x+34,y:e.y,k:'chest',l:60});}else{s.over=true;s.win=true;s.ev.push({t:'win'});}}continue;}
+   const dx=p.x-e.x,dy=p.y-e.y,d=Math.hypot(dx,dy)||1;
+   ai(s,e,dt,dx,dy,d);}
+- s.bdT=(s.bdT||0)-dt;if(s.bdT<=0){s.bdT=.3;s.bdSum=0;}
+-  for(let i=s.eb.length-1;i>=0;i--){const b=s.eb[i];b.x+=b.vx*dt;b.y+=b.vy*dt;b.l-=dt;if((b.x-p.x)**2+(b.y-p.y)**2<144){{const dm=Math.max(0,Math.min(12*(1+ST2(s)*.35)*(1+.04*s.asc)*p.arm,p.mhp*.35-s.bdSum));s.bdSum+=dm;p.hp-=dm;}s.eb.splice(i,1);if(!s.hf){s.hf=1;s.ev.push({t:'hit'});}}else if(b.l<=0)s.eb.splice(i,1);}
++ for(let i=s.eb.length-1;i>=0;i--){const b=s.eb[i];b.x+=b.vx*dt;b.y+=b.vy*dt;b.l-=dt;if((b.x-p.x)**2+(b.y-p.y)**2<144){hitP(s,12*(1+ST2(s)*.35)*(1+.04*s.asc)*p.arm);s.eb.splice(i,1);if(!s.hf){s.hf=1;s.ev.push({t:'hit'});}}else if(b.l<=0)s.eb.splice(i,1);}
+  s.hf=0;
+  if(p.boots&&p.hp<s.lastHp-.01&&s.bootsT<=0&&p.hp>0){hurt(s,p.x,p.y,170*p.aoe,p.dmg*3);s.ev.push({t:'nova',r:170});s.bootsT=3;}
+  s.lastHp=p.hp;

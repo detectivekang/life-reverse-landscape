@@ -24,7 +24,7 @@
       // 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
       // 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
       (function () {
-        var CURRENT_VERSION = "2026111801";
+        var CURRENT_VERSION = "2026111802";
         try {
           if (sessionStorage.getItem("lrVersionChecked") === CURRENT_VERSION)
             return;
@@ -14747,6 +14747,16 @@
       // 간주해 배지를 띄우고, 기존 유저가 접속하면 자동으로 한 번 띄워준다.
       const patchNotes = [
         {
+          version: "2026111802",
+          date: "2026-11-18",
+          items: [
+            "🔥 <b>네온 호드에 지옥 모드가 생겼어요!</b> 솔라 룬스를 승급 25단계로 클리어하면 열려요. 지옥 1~10단계마다 적 체력·공격력이 +50%씩, 골드가 +25%씩 늘어요. 지옥 3단계·10단계를 클리어하면 새 캐릭터 <b>헬워커</b>와 <b>마왕</b>이 열려요 (캐릭터는 총 22명)",
+            "⚔️ <b>네온 호드가 더 어려워졌어요!</b> 무한 모드는 보스를 처치할수록 일반 적도 점점 강해지고 보스도 더 빨리 나와요. 이벤트와 상자는 덜 나와요",
+            "🪙 <b>네온 호드 가격이 한 번 더 올랐어요!</b> 캐릭터 해금과 외형 가격이 이전 공지의 10배(원래의 50배)가 됐고, 능력치 강화 비용도 훨씬 비싸졌어요",
+            "🛡️ 적이 한꺼번에 몸으로 닿아도 체력이 가득한 상태에서 한 번에 쓰러지지 않도록 보호를 넣었어요 (0.3초에 최대 체력의 35%까지만 피해)",
+          ],
+        },
+        {
           version: "2026111801",
           date: "2026-11-18",
           items: [
@@ -27202,8 +27212,8 @@
       switchMap(currentMap);
     </script>
       <script src="ui-v2.js?v=2026101412"></script>
-    <script src="ui-v3.js?v=2026111702"></script>
-    <script src="nh-exchange.js?v=2026111702"></script>
-    <script src="tap-fx.js?v=2026111702"></script>
+    <script src="ui-v3.js?v=2026111802"></script>
+    <script src="nh-exchange.js?v=2026111802"></script>
+    <script src="tap-fx.js?v=2026111802"></script>
   </body>
 </html>
