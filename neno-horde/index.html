@@ -1,4 +1,4 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no"><meta name="theme-color" content="#05060f"><title>NEON HORDE</title><style>html,body{margin:0;height:100%;background:#05060f;overflow:hidden;touch-action:none}canvas{display:block;width:100%;height:100%}</style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script></head><body><canvas id="c"></canvas><script>
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no"><meta name="theme-color" content="#05060f"><title>NEON HORDE</title><style>html,body{margin:0;height:100%;background:#05060f;overflow:hidden;touch-action:none}canvas{display:block;width:100%;height:100%}</style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script><script src="../native-bridge.js"></script></head><body><canvas id="c"></canvas><script>
 const Core=(function(){
 function rng(seed){let s=seed>>>0;return()=>{s=(s+0x6D2B79F5)>>>0;let t=s;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296;};}
 const UP=[
@@ -513,7 +513,7 @@ let W,H,sc,dpr;
 function rs(){dpr=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;cv.width=W*dpr;cv.height=H*dpr;sc=Math.min(W,H)/480;}
 addEventListener('resize',rs);rs();
 let best=0;try{best=+localStorage.getItem('nh_best')||0}catch(e){}
-const meta=Meta.load();let btns=[];let st=Core.create(1),mode='title',parts=[],fx=[],shake=0,t0=0,clock=0,ac=null,flash=0,hs=0,pang=0,wf=0,rvT=0,ultB=null,bolts=[],evB=null,csy=0,cdrag=null,chPage=-1,sty=0,stMax=0,msy=0,msMax=0,mlist=null,mty=0,mtMax=0,hintCh=-1,from='menu',nums=[],hpm=new Map(),master=null,mus=null;
+const meta=Meta.load();let btns=[];let st=Core.create(1),mode='title',adHold=false,parts=[],fx=[],shake=0,t0=0,clock=0,ac=null,flash=0,hs=0,pang=0,wf=0,rvT=0,ultB=null,bolts=[],evB=null,csy=0,cdrag=null,chPage=-1,sty=0,stMax=0,msy=0,msMax=0,mlist=null,mty=0,mtMax=0,hintCh=-1,from='menu',nums=[],hpm=new Map(),master=null,mus=null;
 const set=(()=>{try{return Object.assign({vol:1,music:1,shake:1},JSON.parse(localStorage.getItem('nh_set')))}catch(e){return{vol:1,music:1,shake:1}}})();
 function saveSet(){try{localStorage.setItem('nh_set',JSON.stringify(set))}catch(e){}}
 const keys={};let jo=null,jv={x:0,y:0};
@@ -540,7 +540,7 @@ function gamepad(){if(typeof navigator==='undefined'||!navigator.getGamepads)ret
  const b=i=>gp.buttons[i]&&gp.buttons[i].pressed,e=i=>b(i)&&!gpPrev[i];
  if(mode==='title'){if(e(14))I18N.cycle(-1);if(e(15))I18N.cycle(1);}
  if(mode==='play'&&st.pick){for(let i=0;i<3;i++)if(e(i))pick(i);}
- else if(e(0)){if(mode==='title')mode='menu';else if(mode==='menu')start();else if(mode==='over'&&t0>.6)mode='menu';else if(mode==='pause')mode=from;}
+ else if(e(0)){if(mode==='title')mode='menu';else if(mode==='menu')start();else if(mode==='over'&&t0>.6&&!adHold)mode='menu';else if(mode==='pause')mode=from;}
  if(mode==='play'&&!st.pick&&(e(3)||e(5)))castUlt();
  if(e(9)){if(mode==='play'&&!st.pick)pauseGame();else if(mode==='pause')mode=from;}
  gpPrev=gp.buttons.map(x=>x.pressed);
@@ -550,7 +550,7 @@ function hit(e){for(const b of btns)if(e.clientX>=b.x&&e.clientX<=b.x+b.w&&e.cli
 function burst(x,y,n,c){for(let i=0;i<n;i++){const a=Math.random()*6.283,s=40+Math.random()*140;parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,l:.35+Math.random()*.3,c});}}
 function start(){hintCh=-1;if(!(meta.own[meta.sel]||Meta.unlocked(meta,'ch:'+meta.sel)))meta.sel=0;if(meta.dly){const D=Meta.daily();st=Core.create(D.seed,{ch:meta.sel,m:{},stage:D.stage,asc:D.asc,locked:Meta.lockedCards(meta),mut:D.mut});st.daily=1;}else st=Core.create(Date.now(),{ch:meta.sel,m:meta,stage:meta.ssel,asc:meta.asc||0,hell:Math.min(meta.hell|0,meta.all?10:(meta.hellMax|0)),locked:Meta.lockedCards(meta),mut:meta.mut||[],mas:Meta.masLvl(Meta.masOf(meta,meta.sel))});mode='play';parts=[];snd(520,.15,'square',.08);musicStart();hpm.clear();nums=[];NHL.runStart(st.stage>3?2:st.stage);}
 function end(w){if(w&&!st.daily)Meta.winStage(meta,st.stage,st.asc,st.hell);st.gold=Meta.earn(meta,st);if(st.daily&&w)st.dbonus=Meta.dailyWin(meta);if(st.stage===3&&st.t>meta.rec.et){meta.rec.et=st.t;meta.rec.ek=st.kills;st.newRec=true;}{const ci=st.ch|0,x0=Meta.masOf(meta,ci),gx=Meta.masXp(st);meta.mas=meta.mas||{};meta.mas[ci]=x0+gx;const l0=Meta.masLvl(x0),l1=Meta.masLvl(x0+gx);st.mtxt=T('mas_gain',gx)+(l1>l0?'  '+T('mas_up',l1):'');}
- const ob=Meta.openKeys(meta);st.ach=Meta.check(meta,{kills:st.kills,t:st.t,win:st.win,stage:st.stage,lv:st.p.lv,evo:Object.keys(st.p.ev).length,chests:st.chests,bk:st.bk||0,coins:st.coins,elk:st.elk||0,rl:(st.rl||[]).length,mut:Object.keys(st.mut||{}).length,daily:st.daily?1:0,asc:st.asc||0});st.unl=Meta.openKeys(meta).filter(k=>!ob.includes(k));Meta.save(meta);musicStop();mode='over';t0=0;shake=.5;snd(w?800:120,.6,w?'triangle':'sawtooth',.12);if(st.kills>best){best=st.kills;try{localStorage.setItem('nh_best',best)}catch(e){}}NHL.runEnd(w);}
+ const ob=Meta.openKeys(meta);st.ach=Meta.check(meta,{kills:st.kills,t:st.t,win:st.win,stage:st.stage,lv:st.p.lv,evo:Object.keys(st.p.ev).length,chests:st.chests,bk:st.bk||0,coins:st.coins,elk:st.elk||0,rl:(st.rl||[]).length,mut:Object.keys(st.mut||{}).length,daily:st.daily?1:0,asc:st.asc||0});st.unl=Meta.openKeys(meta).filter(k=>!ob.includes(k));Meta.save(meta);musicStop();mode='over';t0=0;shake=.5;snd(w?800:120,.6,w?'triangle':'sawtooth',.12);if(st.kills>best){best=st.kills;try{localStorage.setItem('nh_best',best)}catch(e){}}NHL.runEnd(w);if(!w&&typeof window.LR_NativeInterstitialAd==='function'){adHold=true;window.LR_NativeInterstitialAd().catch(()=>false).then(()=>{adHold=false;t0=0;});}}
 const cw=()=>Math.min(W-32,380),cx=()=>(W-cw())/2,cy=()=>H*.26;
 function cardAt(x,y){for(let i=0;i<3;i++){const yy=cy()+i*94;if(x>=cx()&&x<=cx()+cw()&&y>=yy&&y<=yy+84)return i;}return-1;}
 function pick(i){Core.choose(st,i);snd(660,.15,'triangle',.08);}
@@ -561,15 +561,17 @@ addEventListener('pointerdown',e=>{
  if(mode==='menu'||mode==='pause'||mode==='stats'||mode==='cos'||mode==='mut'||mode==='hub'){hit(e);return;}
  if(mode==='codex'){if(!hit(e))cdrag={y:e.clientY,s:csy,m:false};return;}
  if(mode==='title'){if(!hit(e))mode='menu';return;}
- if(mode==='over'){if(t0>.6)mode='menu';return;}
+ if(mode==='over'){if(t0>.6&&!adHold)mode='menu';return;}
  if(!st.pick&&Math.hypot(e.clientX-(W-52),e.clientY-(H-70))<46){castUlt();return;}
  if(!st.pick&&e.clientX>W-52&&e.clientY>34&&e.clientY<74){pauseGame();return;}
  if(st.pick){const i=cardAt(e.clientX,e.clientY);if(i>=0)pick(i);return;}
  jo={x:e.clientX,y:e.clientY};jv={x:0,y:0};});
 addEventListener('pointermove',e=>{if(cdrag){const dy=e.clientY-cdrag.y;if(Math.abs(dy)>5)cdrag.m=true;if(cdrag.k==='menu')msy=Math.max(0,Math.min(msMax,cdrag.s-dy));else if(cdrag.k==='mut')mty=Math.max(0,Math.min(mtMax,cdrag.s-dy));else if(cdrag.k==='stats')sty=Math.max(0,Math.min(stMax,cdrag.s-dy));else csy=Math.max(0,Math.min(csMax,cdrag.s-dy));}if(jo){let dx=(e.clientX-jo.x)/50,dy=(e.clientY-jo.y)/50;const m=Math.hypot(dx,dy);if(m>1){dx/=m;dy/=m;}jv={x:dx,y:dy};}});
 addEventListener('pointerup',()=>{if(cdrag&&cdrag.k&&!cdrag.m&&cdrag.e)hit(cdrag.e);cdrag=null;jo=null;jv={x:0,y:0};});addEventListener('wheel',e=>{if(mode==='codex')csy=Math.max(0,Math.min(csMax,csy+e.deltaY));if(mode==='menu')msy=Math.max(0,Math.min(msMax,msy+e.deltaY));if(mode==='mut')mty=Math.max(0,Math.min(mtMax,mty+e.deltaY));if(mode==='stats')sty=Math.max(0,Math.min(stMax,sty+e.deltaY));});
-addEventListener('keydown',e=>{keys[e.code]=1;if(mode==='play'&&!e.repeat&&(e.code==='Space'||e.code==='KeyE'||e.code==='KeyQ')){castUlt();return;}if(mode==='title'&&(e.code==='ArrowLeft'||e.code==='ArrowRight')){I18N.cycle(e.code==='ArrowLeft'?-1:1);return;}if(e.code==='KeyP'||e.code==='Escape'){if(mode==='play')pauseGame();else if(mode==='pause')mode=from;}if(mode==='play'&&st.pick&&/Digit[123]/.test(e.code))pick(+e.code[5]-1);if(e.code==='Space'||e.code==='Enter'){if(mode==='menu')start();else if(mode==='title'||(mode==='over'&&t0>.6))mode='menu';}});
+addEventListener('keydown',e=>{keys[e.code]=1;if(mode==='play'&&!e.repeat&&(e.code==='Space'||e.code==='KeyE'||e.code==='KeyQ')){castUlt();return;}if(mode==='title'&&(e.code==='ArrowLeft'||e.code==='ArrowRight')){I18N.cycle(e.code==='ArrowLeft'?-1:1);return;}if(e.code==='KeyP'||e.code==='Escape'){if(mode==='play')pauseGame();else if(mode==='pause')mode=from;}if(mode==='play'&&st.pick&&/Digit[123]/.test(e.code))pick(+e.code[5]-1);if(e.code==='Space'||e.code==='Enter'){if(mode==='menu')start();else if(mode==='title'||(mode==='over'&&t0>.6&&!adHold))mode='menu';}});
 addEventListener('keyup',e=>{keys[e.code]=0;});addEventListener('blur',pauseGame);document.addEventListener('visibilitychange',()=>{if(document.hidden)pauseGame();});
+/* 안드로이드 앱의 뒤로가기(native-bridge.js 가 lr-back 이벤트로 전달): 플레이 중엔 바로 나가지 않고 일시정지, 일시정지 중엔 계속하기 */
+addEventListener('lr-back',e=>{if(mode==='play'){e.preventDefault();if(!st.pick)pauseGame();}else if(mode==='pause'){e.preventDefault();mode=from;}else if(mode==='over'&&adHold){e.preventDefault();}});
 function events(){for(const e of st.ev){
  if(e.t==='kill'){if(e.b){hs=.45;wf=.7;shake=.8;for(let i=0;i<3;i++)fx.push({k:'r',x:e.x,y:e.y,r:120+i*90,l:.5+i*.15,m:.5+i*.15,c:'255,228,90'});burst(e.x,e.y,140,'#ffe45a');burst(e.x,e.y,60,'#ff3bd4');sfxNoise(.8,.25,200);snd(70,.9,'sawtooth',.2);}burst(e.x,e.y,e.b?40:5,e.b?'#fff':'#f68');snd(200+Math.random()*100,.08,'square',.025);}
  else if(e.t==='gem')snd(700,.05,'sine',.025);
@@ -780,7 +782,7 @@ function frame(now){
   st.pick.forEach((u,i)=>{const y=cy()+i*94,col=u.rel?'#ffd23b':u.n.startsWith('EVOLVE')?'#ffd23b':isW(u.n)?'#38e1ff':'#7dff4f';GP.panel(g,cx(),y,cw(),84,col,true);
    g.fillStyle=GP.rgba(col,.14);GP.rr(g,cx()+10,y+12,60,60,12);g.fill();GP.icon(g,u.n,cx()+40,y+42,17,u.rel?(RC[u.id]||col):col);
    txt(cname(u),cx()+84,y+37,21,'#fff','left',cw()-110);txt(cdesc(u),cx()+84,y+62,14,'#a8c0f0','left',cw()-110);txt(String(i+1),cx()+cw()-18,y+26,13,'#6a7aa8','right');});}
- if(mode==='over'){g.fillStyle='rgba(2,3,14,.72)';g.fillRect(0,0,W,H);const w=Math.min(W-40,340),x=(W-w)/2,py=Math.max(8,H*.04),ph=H*.84-py,col=st.win?'#7dff4f':'#ff3b6b';GP.panel(g,x,py,w,ph,col,true);
+ if(mode==='over'&&adHold){g.fillStyle='#02030e';g.fillRect(0,0,W,H);}else if(mode==='over'){g.fillStyle='rgba(2,3,14,.72)';g.fillRect(0,0,W,H);const w=Math.min(W-40,340),x=(W-w)/2,py=Math.max(8,H*.04),ph=H*.84-py,col=st.win?'#7dff4f':'#ff3b6b';GP.panel(g,x,py,w,ph,col,true);
   const Rw=[],tw=w-20;
   Rw.push({n:1,t:st.win?T('victory'):T(st.gu?'gaveup':'defeated'),s:Math.min(W*.11,46),c:col});
   Rw.push({t:T('time',Math.floor(st.t/60)+':'+String(Math.floor(st.t)%60).padStart(2,'0')),s:18,c:'#fff'});Rw.push({t:T('kills_lv',st.kills,p.lv),s:18,c:'#fff'});Rw.push({t:T('best',best),s:13,c:'#8fb0ff'});
@@ -839,24 +841,27 @@ const NHL=(function(){
  const OFFERS=[{id:'shard',ic:'\u{1F48E}',price:80000,lim:1},{id:'undo',ic:'\u{1F6E1}',price:40000,lim:2},{id:'s15',ic:'\u{1F340}',price:40000,lim:1},{id:'s2',ic:'\u{1F340}',price:80000,lim:1},{id:'s25',ic:'\u{1F340}',price:160000,lim:1},{id:'bt',ic:'\u2694',price:4000,lim:10}];
  const tt=(k,...a)=>{const d=X[I18N.cur]||X.en;let s=d[k]!=null?d[k]:X.en[k]!=null?X.en[k]:k;a.forEach((v,i)=>{s=s.replace('{'+i+'}',v);});return s;};
  const nf=n=>Math.floor(Number(n)||0).toLocaleString();
- let db=null,user=null,loaded=false,info=null,rank=null,busy=false,runId=null,lastRun=null,tab=0,exAmt=100,msg='',msgAt=0,syncT=null,infoAt=0,rankAt=0,claiming=false,claimAt=-1e9;
+ const DEV=(()=>{try{let d=localStorage.getItem('nh_dev');if(!d){d=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():'d'+Date.now().toString(36)+Math.random().toString(36).slice(2);localStorage.setItem('nh_dev',d);}return d;}catch(e){return 'x'+Math.random().toString(36).slice(2);}})();
+ let db=null,user=null,loaded=false,lastUid=null,tok=null,lastSig=null,info=null,rank=null,busy=false,runId=null,lastRun=null,tab=0,exAmt=100,msg='',msgAt=0,syncT=null,infoAt=0,rankAt=0,claiming=false,claimAt=-1e9;
  function note(s){msg=s;msgAt=performance.now();}
   async function claimDeposits(){if(!db||!user||claiming)return;claiming=true;claimAt=performance.now();try{const r=await db.rpc('nh_claim_deposits');if(!r.error&&r.data&&r.data.ok&&(r.data.gold|0)>0){meta.gold+=r.data.gold|0;Meta.save(meta);note(tt('dep_ok',r.data.gold|0));}}catch(e){}claiming=false;}
  function nameOf(){let n='';try{n=localStorage.getItem('lifeReverseNickname')||'';}catch(e){}return n||(user&&user.name)||'Player';}
  const origSave=Meta.save;Meta.save=function(m){m.ts=Date.now();origSave(m);queueSync();};
  // ---------- 로그인: 인생역전과 같은 사이트라서 Supabase 세션(localStorage)을 그대로 공유한다 ----------
  try{if(window.supabase){db=window.supabase.createClient(URL_,KEY);
-  db.auth.onAuthStateChange((ev,s)=>{const u=s&&s.user;user=u?{id:u.id,name:(u.user_metadata&&u.user_metadata.full_name)||''}:null;
-   if(user){if(!loaded)cloudLoad();refreshInfo(true);}else{loaded=false;info=null;rank=null;}});}}catch(e){db=null;}
+  db.auth.onAuthStateChange((ev,s)=>{tok=(s&&s.access_token)||null;const u=s&&s.user;user=u?{id:u.id,name:(u.user_metadata&&u.user_metadata.full_name)||''}:null;
+   if(user){const fresh=lastUid!==user.id;lastUid=user.id;if(!loaded)cloudLoad();if(fresh)refreshInfo(true);}else{lastUid=null;loaded=false;info=null;rank=null;}});}}catch(e){db=null;}
  // ---------- 클라우드 세이브 ----------
  async function cloudLoad(){try{const r=await db.from('nh_saves').select('data').eq('user_id',user.id).maybeSingle();if(r.error)throw r.error;loaded=true;
    const c=r.data&&r.data.data;if(!c){if(((meta.stats&&meta.stats.runs)||0)>0)push();return;}
    const lr=(meta.stats&&meta.stats.runs)||0,cr=(c.stats&&c.stats.runs)||0;
-   if(cr>lr||(cr===lr&&(c.ts||0)>(meta.ts||0))){if(mode==='play'){loaded=false;return;}Object.assign(meta,Meta.def(),c);Meta.normalize(meta);Meta.migrate(meta);origSave(meta);note(tt('cloud'));}
+   const other=!!c.dev&&c.dev!==DEV;if(other||cr>lr||(cr===lr&&(c.ts||0)>(meta.ts||0))){if(mode==='play'){loaded=false;setTimeout(()=>{if(db&&user&&!loaded)cloudLoad();},8000);return;}Object.assign(meta,Meta.def(),c);Meta.normalize(meta);Meta.migrate(meta);origSave(meta);note(tt('cloud'));}
    else if(lr>cr||(meta.ts||0)>(c.ts||0))push();}catch(e){loaded=false;}}
- async function push(){if(!db||!user||!loaded)return;try{const r=await db.from('nh_saves').upsert({user_id:user.id,data:meta},{onConflict:'user_id'});if(r.error)throw r.error;}catch(e){}}
- function queueSync(){if(!db||!user||!loaded)return;clearTimeout(syncT);syncT=setTimeout(push,4000);}
- addEventListener('pagehide',()=>{clearTimeout(syncT);push();});
+ async function push(urgent){if(!db||!user||!loaded)return;const data=Object.assign({},meta,{dev:DEV});const sig=JSON.stringify(data,(k,v)=>k==='ts'?undefined:v);if(urgent===true&&sig===lastSig)return;
+  if(urgent===true&&tok){const body=JSON.stringify([{user_id:user.id,data:data}]);if(body.length<60000){try{fetch(URL_+'/rest/v1/nh_saves?on_conflict=user_id',{method:'POST',keepalive:true,headers:{apikey:KEY,Authorization:'Bearer '+tok,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'},body}).then(r=>{if(r.ok)lastSig=sig;}).catch(()=>{});return;}catch(e){}}}
+  try{const r=await db.from('nh_saves').upsert({user_id:user.id,data:data},{onConflict:'user_id'});if(r.error)throw r.error;lastSig=sig;}catch(e){}}
+ function queueSync(){if(!db||!user||!loaded||syncT)return;syncT=setTimeout(()=>{syncT=null;push();},600000);}
+ addEventListener('pagehide',()=>{clearTimeout(syncT);syncT=null;push(true);});document.addEventListener('visibilitychange',()=>{if(document.hidden){clearTimeout(syncT);syncT=null;push(true);}});
  // ---------- 판 시작/종료: 서버가 판을 검증해서 골드(환전용)와 시즌 점수를 인정한다 ----------
  function runStart(stage){runId=null;lastRun=null;if(!db||!user)return;db.rpc('nh_start_run',{p_stage:stage}).then(r=>{if(!r.error)runId=r.data;});}
  async function runEnd(win){const s=st,rid=runId;runId=null;
@@ -865,7 +870,7 @@ const NHL=(function(){
   try{const r=await db.rpc('nh_finish_run',{p_run:rid,p_time:s.t,p_kills:s.kills|0,p_win:!!win,p_asc:s.asc|0,p_bosskills:s.bk|0,p_coins:s.coins|0,p_gold:(s.gold/(1+.25*(s.hell|0)))|0,p_name:nameOf()});
    if(r.error)throw r.error;const d=r.data||{};lastRun={s:'ok',g:d.credited_gold||0,p:d.score_added||0};infoAt=rankAt=0;refreshInfo(true);}
   catch(e){lastRun={s:'err'};}
-  clearTimeout(syncT);push();}
+  clearTimeout(syncT);syncT=null;push();}
  function overLine(){if(!lastRun)return'';return lastRun.s==='ok'?tt('run_ok',nf(lastRun.p),nf(lastRun.g)):lastRun.s==='wait'?tt('run_wait'):lastRun.s==='err'?tt('run_err'):tt('run_no');}
  // ---------- 서버 조회 ----------
  async function refreshInfo(force){if(!db||!user)return;if(!force&&performance.now()-infoAt<8000)return;infoAt=performance.now();
@@ -876,7 +881,7 @@ const NHL=(function(){
   if(bought>=o.lim){note(tt('e_limit'));return;}
   if(!info||info.exchangeable<o.price||meta.gold<o.price){note(tt('e_not'));return;}
   busy=true;try{const r=await db.rpc('nh_buy',{p_item:o.id});if(r.error)throw r.error;const d=r.data||{};
-   meta.gold=Math.max(0,meta.gold-(d.gold>0?d.gold:o.price));Meta.save(meta);clearTimeout(syncT);push();
+   meta.gold=Math.max(0,meta.gold-(d.gold>0?d.gold:o.price));Meta.save(meta);clearTimeout(syncT);syncT=null;push();
    note(tt('buyOk',tt('it_'+o.id)));snd(900,.15,'triangle',.08);
    const sh=Object.assign({},info.shop);sh[o.id]=bought+1;
    info=Object.assign({},info,{exchangeable:d.exchangeable!=null?d.exchangeable:info.exchangeable-o.price,shop:d.bought||sh});infoAt=0;refreshInfo(true);}
@@ -884,13 +889,13 @@ const NHL=(function(){
   busy=false;}
  async function doExchange(){if(busy||!db||!user)return;const mx=maxEx();if(exAmt<1||exAmt>mx){note(tt(info&&info.day_left<=0?'e_limit':'e_not'));return;}
   busy=true;try{const r=await db.rpc('nh_exchange',{p_gold:exAmt});if(r.error)throw r.error;const d=r.data;
-   meta.gold=Math.max(0,meta.gold-d.gold);Meta.save(meta);clearTimeout(syncT);push();note(tt('exOk',nf(d.shards)));snd(900,.15,'triangle',.08);
+   meta.gold=Math.max(0,meta.gold-d.gold);Meta.save(meta);clearTimeout(syncT);syncT=null;push();note(tt('exOk',nf(d.shards)));snd(900,.15,'triangle',.08);
    info=Object.assign({},info,{exchangeable:d.exchangeable,day_left:d.day_left});exAmt=Math.min(exAmt,Math.max(1,maxEx()));infoAt=0;refreshInfo(true);}
   catch(e){const m=(e&&e.message)||'';note(tt(/NH_DAILY_LIMIT/.test(m)?'e_limit':/NH_NOT_ENOUGH/.test(m)?'e_not':'e_gen'));}
   busy=false;}
  function maxEx(){if(!info)return 0;return Math.max(0,Math.min(meta.gold|0,info.exchangeable|0,info.day_left|0));}
- async function goLR(){if(busy)return;busy=true;note(tt('confirmGo'));clearTimeout(syncT);try{await Promise.race([push(),new Promise(r=>setTimeout(r,2500))]);}catch(e){}location.href=LR_URL;}
- function signIn(){if(!db){note(tt('offline'));return;}db.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.href}});}
+ async function goLR(){if(busy)return;busy=true;note(tt('confirmGo'));clearTimeout(syncT);syncT=null;try{await Promise.race([push(),new Promise(r=>setTimeout(r,2500))]);}catch(e){}location.href=LR_URL;}
+ function signIn(){if(!db){note(tt('offline'));return;}if(typeof window.LR_NativeGoogleIdToken==='function'){window.LR_NativeGoogleIdToken().then(t=>db.auth.signInWithIdToken({provider:'google',token:t})).then(r=>{if(r&&r.error)throw r.error;}).catch(()=>note(tt('offline')));return;}db.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.href}});}
  // ---------- 화면 ----------
  function openHub(){mode='hub';tab=0;infoAt=rankAt=0;refreshInfo(true);refreshRank(true);}
  function menuBtn(){if(db&&user&&loaded&&!claiming&&performance.now()-claimAt>20000)claimDeposits();if(msg&&performance.now()-msgAt<4500){const mw=Math.min(W-24,360),my=H-112;GP.rr(g,W/2-mw/2,my,mw,26,13);g.fillStyle='rgba(0,0,0,.78)';g.fill();txt(msg,W/2,my+17,12,'#ffd23b',null,mw-16);}const w=124,x=W/2-w/2;GP.rr(g,x,2,w,18,9);g.fillStyle='rgba(56,225,255,.16)';g.fill();g.strokeStyle='rgba(56,225,255,.7)';g.lineWidth=1;g.stroke();

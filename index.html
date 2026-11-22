@@ -91,6 +91,114 @@
       name="twitter:image"
       content="https://life-reverse-landscape-4dbo.vercel.app/og-image.png"
     />
+    <script>
+      /* 안드로이드 스토어 빌드 표시: 주소에 ?store=android 로 한 번 열거나(이후 기억함) 앱 UA에 LifeReverseApp 이 있으면 켜진다.
+         스토어 빌드에서는 구글 플레이 정책/등급에 걸릴 수 있는 기능(카지노·로또, 웹 결제)을 숨기거나 막는다.
+         되돌리려면 ?store=off */
+      (function () {
+        var on = false;
+        try {
+          var q = new URLSearchParams(location.search);
+          if (q.get("store") === "android") localStorage.setItem("lrStoreBuild", "1");
+          else if (q.get("store") === "off") localStorage.removeItem("lrStoreBuild");
+          on = localStorage.getItem("lrStoreBuild") === "1" || /LifeReverseApp/.test(navigator.userAgent);
+        } catch (e) {}
+        window.LR_STORE = on;
+        if (on) document.documentElement.classList.add("store-build");
+
+        // 앱 시작 로딩 화면: 단계별로 진행률을 올리고, 어떤 경우에도 10초 안에는 닫는다.
+        var pct = 8, closed = false, timer = null;
+        function paint(msg) {
+          var f = document.getElementById("lrBootFill"), m = document.getElementById("lrBootMsg");
+          if (f) f.style.width = pct + "%";
+          if (m && msg) m.textContent = msg;
+        }
+        window.lrBoot = {
+          step: function (p, msg) {
+            if (closed) return;
+            if (p > pct) pct = p;
+            paint(msg);
+          },
+          done: function () {
+            if (closed) return;
+            closed = true;
+            clearInterval(timer);
+            pct = 100;
+            paint("");
+            var el = document.getElementById("lrBoot");
+            if (el) {
+              el.classList.add("lrb-out");
+              setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 400);
+            }
+          },
+        };
+        if (on) {
+          timer = setInterval(function () { if (pct < 80) { pct += 2; paint(); } }, 250);
+          setTimeout(function () { window.lrBoot.done(); }, 10000);
+          document.addEventListener("DOMContentLoaded", function () { window.lrBoot.step(35, "불러오는 중..."); });
+          window.addEventListener("load", function () { window.lrBoot.step(60, "로그인 확인 중..."); });
+        }
+      })();
+    </script>
+    <style>
+      #lrBoot {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 2147483647;
+        background: #0b0a08;
+        color: #e9e2cf;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 14px;
+        transition: opacity 0.3s ease;
+        font-family: "Noto Sans KR", system-ui, sans-serif;
+      }
+      .store-build #lrBoot {
+        display: flex;
+      }
+      #lrBoot.lrb-out {
+        opacity: 0;
+        pointer-events: none;
+      }
+      #lrBoot img {
+        width: 96px;
+        height: 96px;
+        border-radius: 22px;
+      }
+      #lrBoot .lrb-title {
+        font-size: 22px;
+        font-weight: 800;
+        letter-spacing: 1px;
+      }
+      #lrBoot .lrb-bar {
+        width: min(260px, 60vw);
+        height: 8px;
+        border-radius: 8px;
+        background: #2a2418;
+        overflow: hidden;
+      }
+      #lrBoot .lrb-bar i {
+        display: block;
+        height: 100%;
+        width: 8%;
+        background: linear-gradient(90deg, #c9a13b, #f1d27a);
+        border-radius: 8px;
+        transition: width 0.35s ease;
+      }
+      #lrBoot .lrb-msg {
+        font-size: 13px;
+        color: #b8ae93;
+      }
+      .store-build #mapBtn3,
+      .store-build #part3Screen,
+      .store-build #lottoBtn,
+      .store-build #deleteAccountWebHint {
+        display: none !important;
+      }
+    </style>
+    <script src="native-bridge.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -5582,6 +5690,12 @@
     <script src="assets/manifest.js"></script>
   </head>
   <body>
+    <div id="lrBoot" role="status" aria-live="polite">
+      <img src="icon-192.png" alt="" />
+      <div class="lrb-title">인생역전</div>
+      <div class="lrb-bar"><i id="lrBootFill"></i></div>
+      <div class="lrb-msg" id="lrBootMsg">불러오는 중...</div>
+    </div>
     <!-- ===== 배경음악 (맵별 트랙) =====
      실제 mp3 파일은 포함돼 있지 않습니다. /bgm/ 폴더를 만들고 아래 파일명으로
      루프 가능한 음원을 넣어주세요. 파일이 없으면 조용히 재생 실패만 하고
@@ -6727,6 +6841,13 @@
             style="display: none; margin-bottom: 8px"
           >
             로그아웃
+          </button>
+          <button
+            class="close-btn"
+            id="deleteAccountBtn"
+            style="display: none; margin-bottom: 8px; color: #e57373"
+          >
+            계정 삭제
           </button>
           <button class="close-btn" id="loginCloseBtn">닫기</button>
         </div>
@@ -16138,6 +16259,22 @@
           adBreakInProgress = false;
         };
 
+        // 안드로이드 앱: 네이티브 AdMob 보상형 광고 (native-bridge.js). 끝까지 봐야 보상이 나간다.
+        if (typeof window.LR_NativeRewardedAd === "function") {
+          showToast("광고 불러오는 중...");
+          window
+            .LR_NativeRewardedAd()
+            .then((ok) => {
+              if (ok) grantReward();
+              else showToast("광고를 끝까지 봐야 보상을 받을 수 있어요.");
+            })
+            .catch(() => {
+              showToast("지금은 시청 가능한 광고가 없어요. 잠시 후 다시 시도해주세요.");
+            })
+            .then(finishAdFlow);
+          return;
+        }
+
         // 애드센스 H5 Games Ads(리워드 광고) 스크립트가 아예 없거나 차단된 경우
         // (광고 모듈이 준비되지 않음). 가짜로 보상을 주지 않고 안내만 한다.
         if (typeof adBreak !== "function") {
@@ -16327,7 +16464,7 @@
             console.error("이동 전 저장 실패:", e);
           }
           setTimeout(() => {
-            location.href = "neno-horde/";
+            location.href = window.LR_STORE ? "neno-horde/index.html" : "neno-horde/";
           }, 600);
         });
       })();
@@ -16568,13 +16705,20 @@
 
       // ===== 인도 통행인 & 도로 버스 =====
       const walkerEmojis = ["🚶", "🚶‍♀️", "🐕", "🚲", "👵", "👦"];
+      // 화면이 넓을수록 같은 시간에 훨씬 먼 거리를 지나가서 너무 빠르게 느껴지므로,
+      // 폰 가로 화면 정도(900px)를 기준으로 화면 너비에 비례해 이동 시간을 늘린다 (최대 3배).
+      const WALK_REF_W = 900;
+      function walkScale(el) {
+        const w = (el && el.clientWidth) || window.innerWidth || WALK_REF_W;
+        return Math.min(3, Math.max(1, w / WALK_REF_W));
+      }
       function spawnWalkerInto(stripId, lines) {
         const strip = document.getElementById(stripId);
         if (!strip) return;
         const w = document.createElement("span");
         w.className = "walker";
         paintWalkerSprite(w);
-        const duration = 4.5 + Math.random() * 3.5;
+        const duration = (4.5 + Math.random() * 3.5) * walkScale(strip);
         w.style.animationDuration = duration + "s";
 
         w.addEventListener("click", (e) => {
@@ -16634,7 +16778,7 @@
             (bn === "bus" ? "🚌" : "🚕") +
             '" onerror="assetErr(this)">';
         }
-        const duration = 8 + Math.random() * 3;
+        const duration = (8 + Math.random() * 3) * walkScale(road);
         b.style.animationDuration = duration + "s";
         road.appendChild(b);
         setTimeout(() => b.remove(), duration * 1000 + 300);
@@ -16767,10 +16911,11 @@
           p.textContent = ["🚶", "🚶‍♀️", "🧑", "👩", "🧓"][
             Math.floor(Math.random() * 5)
           ];
-          p.style.animationDuration = 2.2 + Math.random() * 1.2 + "s";
+          const pd = (2.2 + Math.random() * 1.2) * walkScale(sidewalk);
+          p.style.animationDuration = pd + "s";
           p.style.left = "2%";
           sidewalk.appendChild(p);
-          setTimeout(() => p.remove(), 3600);
+          setTimeout(() => p.remove(), pd * 1000 + 200);
         }
         const activeShops = [];
         map2Jobs.forEach((j, i) => {
@@ -17179,6 +17324,7 @@
       }
 
       function switchMap(map) {
+        if (window.LR_STORE && map === "map3") map = "map1"; // 스토어 빌드: 카지노(행운의 거리) 비공개
         if (map === "map3" && activeChallenge === "no_casino") {
           showToast(
             "🎯 카지노 금지 챌린지 진행 중이에요! 다음 환생까지 행운의 거리를 이용할 수 없어요.",
@@ -18135,7 +18281,7 @@
             spawnConfettiBurst();
           }
           renderSeasonMedalBox(key);
-          saveGame({ forceCloud: true });
+          saveGame({ cloudNow: true });
         } catch (e) {
           console.error("시즌 메달 확인 실패(나중에 다시 시도):", e);
         } finally {
@@ -18379,7 +18525,7 @@
         }
         if (seasonNeedsSave) {
           seasonNeedsSave = false;
-          saveGame({ forceCloud: true });
+          saveGame({ cloudNow: true });
         }
         if (medalPendingKey && currentUser && db) processPendingMedals();
         if (currentUser && db) processNeoSeasonReward();
@@ -21088,7 +21234,7 @@
           claimedSwordSeasonRewards.push(prevKey);
           const gradeId = st.rank ? getSeasonRankGrade(st.rank, st.total) : null;
           if (!gradeId) {
-            saveGame({ forceCloud: true });
+            saveGame({ cloudNow: true });
             return;
           }
           const g = SEASON_RANK_GRADES[gradeId];
@@ -21118,7 +21264,7 @@
           mascotSay([
             `⚔️ 지난 시즌 검배틀 ${g.name} 등급 보상이 우편함에 도착했어! 30일 안에 받아가~`,
           ]);
-          saveGame({ forceCloud: true });
+          saveGame({ cloudNow: true });
         } catch (e) {
           console.error("검배틀 시즌 보상 확인 실패(나중에 다시 시도):", e);
         }
@@ -21136,7 +21282,7 @@
           claimedVoidSeasonRewards.push(prevKey);
           const gradeId = st.rank ? getSeasonRankGrade(st.rank, st.total) : null;
           if (!gradeId) {
-            saveGame({ forceCloud: true });
+            saveGame({ cloudNow: true });
             return;
           }
           const g = SEASON_RANK_GRADES[gradeId];
@@ -21159,7 +21305,7 @@
           mascotSay([
             `🌌 지난 시즌 공허 ${g.name} 등급 보상이 우편함에 도착했어! 30일 안에 받아가~`,
           ]);
-          saveGame({ forceCloud: true });
+          saveGame({ cloudNow: true });
         } catch (e) {
           console.error("공허 시즌 보상 확인 실패(나중에 다시 시도):", e);
         }
@@ -21194,7 +21340,7 @@
           claimedNeoSeasonRewards.push(prevKey);
           const gradeId = rank ? getSeasonRankGrade(rank, total) : null;
           if (!gradeId) {
-            saveGame({ forceCloud: true });
+            saveGame({ cloudNow: true });
             return true;
           }
           const g = SEASON_RANK_GRADES[gradeId];
@@ -21225,7 +21371,7 @@
           mascotSay([
             `🛸 지난 시즌 네온 호드 ${g.name} 등급 보상이 우편함에 도착했어! 30일 안에 받아가~`,
           ]);
-          saveGame({ forceCloud: true });
+          saveGame({ cloudNow: true });
           return true;
         } catch (e) {
           console.error("네온 호드 시즌 보상 확인 실패(나중에 다시 시도):", e);
@@ -21276,7 +21422,7 @@
           showToast(
             `📬 지난주 랭킹 ${rank + 1}위 보상이 우편함에 도착했어요! (30일 안에 받으세요)`,
           );
-          saveGame({ forceCloud: true });
+          saveGame({ cloudNow: true });
         } catch (e) {
           console.error("시즌 보상 확인 실패:", e);
         }
@@ -22146,8 +22292,10 @@
 
       // 로그인 상태가 바뀔 때마다 콜백을 호출한다. 로그아웃 상태면 null, 로그인 상태면
       // { uid, displayName }을 전달한다.
+      let authAccessToken = null; // 앱 종료 시 keepalive 저장에 쓰는 최신 액세스 토큰
       function authOnStateChange(callback) {
         db.auth.onAuthStateChange((_event, session) => {
+          authAccessToken = (session && session.access_token) || null;
           const user = session && session.user;
           callback(
             user
@@ -22165,6 +22313,16 @@
       // 구글 로그인 화면으로 이동한다 (Supabase는 팝업이 아니라 페이지 이동 방식 - 로그인 후
       // 이 페이지로 돌아온다). 실패하면 에러를 던진다(호출부에서 catch).
       function authSignInWithGoogle() {
+        // 안드로이드 앱(WebView)에서는 구글이 웹 로그인 화면을 막는다. 앱이 네이티브 구글 로그인으로 ID 토큰을 받아
+        // window.LR_NativeGoogleIdToken() (Promise<string>) 로 넘겨주면 그 토큰으로 로그인한다.
+        if (typeof window.LR_NativeGoogleIdToken === "function") {
+          return window
+            .LR_NativeGoogleIdToken()
+            .then((token) => db.auth.signInWithIdToken({ provider: "google", token }))
+            .then(({ error }) => {
+              if (error) throw error;
+            });
+        }
         return db.auth
           .signInWithOAuth({
             provider: "google",
@@ -22197,6 +22355,7 @@
       }
             let db = null;
       let currentUser = null; // { uid, provider: 'google', name }
+      let loginLoadedUid = null; // 이 페이지에서 로그인 불러오기를 이미 처리한 계정
       let customNickname = localStorage.getItem("lifeReverseNickname") || "";
 
       function initBackend() {
@@ -22205,16 +22364,26 @@
             console.warn(
               "[로그인] supabaseConfig가 비어있어 로그인 기능이 비활성 상태입니다.",
             );
+            if (window.lrBoot) window.lrBoot.done();
             return;
           }
           db = window.supabase.createClient(
             supabaseConfig.url,
             supabaseConfig.anonKey,
-            { global: { fetch: netGuardFetch } },
+            {
+              global: { fetch: netGuardFetch },
+              // 한 번 로그인하면 앱을 껐다 켜도 로그인이 유지된다 (세션을 저장하고 자동 갱신)
+              auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: !window.LR_STORE },
+            },
           );
           authInited = true;
           authOnStateChange((user) => {
             if (user) {
+              // 같은 계정으로 이미 불러오기를 마쳤다면(탭 복귀·토큰 갱신으로 같은 이벤트가 또 오는 경우)
+              // 서버에서 다시 불러오지 않는다. 로그인 시 불러오기는 페이지당 계정당 한 번만.
+              if (loginLoadedUid === user.uid && currentUser) return;
+              loginLoadedUid = user.uid;
+              if (window.lrBoot) window.lrBoot.step(85, "내 기록 불러오는 중...");
               currentUser = {
                 uid: user.uid,
                 provider: "google",
@@ -22222,10 +22391,12 @@
               };
               onLoginSuccess();
             } else {
+              loginLoadedUid = null;
               currentUser = null;
               cloudSeenKnown = false;
               deviceDisplaced = false;
               updateLoginUI();
+              if (window.lrBoot) window.lrBoot.done();
               // 주소가 바뀌면 브라우저 저장소가 새로 시작돼서 예전 진행이 안 보인다 → 로그인하면 불러온다고 한 번만 안내
               try {
                 if (WAS_FRESH_ORIGIN && !localStorage.getItem("lrMoveHint")) {
@@ -22244,9 +22415,11 @@
           });
         } catch (e) {
           console.error("Supabase 초기화 실패:", e);
+          if (window.lrBoot) window.lrBoot.done();
         }
       }
 
+      let loginExplicit = false; // 사용자가 직접 로그인 버튼을 누른 경우만 true (자동 로그인과 구분)
       function loginWithGoogle() {
         if (!authInited) {
           showToast(
@@ -22254,9 +22427,17 @@
           );
           return;
         }
+        loginExplicit = true;
         authSignInWithGoogle().catch((err) => {
+          loginExplicit = false;
           console.error(err);
-          showToast("구글 로그인에 실패했습니다.");
+          // 앱에서는 원인을 알 수 있게 오류 내용을 같이 보여준다 (취소는 조용히)
+          const msg = String((err && (err.message || err.code)) || "");
+          if (window.LR_STORE && /cancel|dismiss/i.test(msg)) return;
+          showToast(
+            "구글 로그인에 실패했습니다." +
+              (window.LR_STORE && msg ? " (" + msg.slice(0, 90) + ")" : ""),
+          );
         });
       }
 
@@ -22286,10 +22467,14 @@
         updateLoginUI();
         clearLoginGate();
         document.getElementById("loginModal").classList.remove("show");
-        showToast(
-          `👤 ${currentUser.name}님 환영합니다! 클라우드 저장이 활성화됐어요.`,
-        );
+        if (loginExplicit) {
+          loginExplicit = false;
+          showToast(
+            `👤 ${currentUser.name}님 환영합니다! 클라우드 저장이 활성화됐어요.`,
+          );
+        }
         cloudLoadGame().finally(() => {
+          if (window.lrBoot) window.lrBoot.done();
           if (window.Lotto) window.Lotto.onLogin();
           syncAdminGrants();
         });
@@ -22304,6 +22489,8 @@
         }
         const logoutBtn = document.getElementById("logoutBtn");
         if (logoutBtn) logoutBtn.style.display = currentUser ? "block" : "none";
+        const delBtn = document.getElementById("deleteAccountBtn");
+        if (delBtn) delBtn.style.display = currentUser ? "block" : "none";
         const nhFab = document.getElementById("nhFabBtn");
         if (nhFab) {
           nhFab.classList.toggle("show", !!currentUser);
@@ -22410,12 +22597,22 @@
         attributeFilter: ["class"],
       });
 
+      // 랭킹에 다른 사람에게 보이는 닉네임: 욕설/운영자 사칭 기본 차단 (목록은 필요하면 계속 추가)
+      const BAD_NICK = ["시발","씨발","ㅅㅂ","ㅆㅂ","병신","ㅂㅅ","좆","ㅈㄹ","지랄","개새끼","섹스","fuck","shit","bitch","nigg","porn","운영자","관리자","admin"];
+      function isBadNickname(n) {
+        const t = String(n).toLowerCase().replace(/[\s\-_.·ㆍ0-9!@#$%^&*()+=~`'",<>\/?\\|{}\[\];:]/g, "");
+        return BAD_NICK.some((w) => t.includes(w));
+      }
       function saveNickname() {
         if (!currentUser) return;
         const input = document.getElementById("nicknameInput");
         const newName = input.value.trim().slice(0, 10);
         if (!newName) {
           showToast("닉네임을 입력해주세요.");
+          return;
+        }
+        if (isBadNickname(newName)) {
+          showToast("사용할 수 없는 닉네임이에요. 다른 닉네임을 입력해주세요.");
           return;
         }
         customNickname = newName;
@@ -22497,7 +22694,7 @@
             "☁️ 최신 기록을 불러왔어요. 이제 이 화면에서 이어서 저장돼요",
           );
           if (window.Lotto) window.Lotto.onLogin(); // 저장 못 하고 남아 있던 로또 당첨금 메모가 있으면 복구
-          saveGame({ forceCloud: true });
+          saveGame({ cloudNow: true });
         } catch (e) {
           console.error("최신 기록 불러오기 실패:", e);
           btn.disabled = false;
@@ -22845,7 +23042,7 @@
         }
         if (labels.length) showToast("📬 " + labels.join(" · "));
         try {
-          saveGame({ forceCloud: true }); // 지급 결과를 바로 저장
+          saveGame({ cloudNow: true }); // 지급 결과를 바로 저장
         } catch (e) {
           console.warn("[우편] 저장 실패", e);
         }
@@ -23055,6 +23252,7 @@
       let chargeMethod = "kakao"; // 충전창에서 고른 결제 수단
       // 테스트 중에는 주소 뒤에 ?chargetest=1 을 붙이면 SHOP_CHARGE_OPEN 이 false 여도 충전이 열린다 (일반 유저에겐 계속 "준비 중").
       function chargeEnabled() {
+        if (window.LR_STORE) return false; // 구글 플레이 앱에서는 외부(웹) 결제 금지 → Play 결제 연동 전까지 닫아 둔다
         return (
           SHOP_CHARGE_OPEN || /[?&]chargetest=1(&|$)/.test(location.search)
         );
@@ -23380,6 +23578,13 @@
             renderShop(box, null, "로그인하면 상점을 이용할 수 있어요");
             return;
           }
+          // 앱에서만: 광고 보고 무료로 받는 아이템 정보 (실패해도 상점은 그대로 열린다)
+          try {
+            if (typeof window.LR_NativeRewardedAd === "function") {
+              const ad = await db.rpc("shop_ad_status");
+              if (!ad.error && ad.data && ad.data.enabled) data.ad = ad.data;
+            }
+          } catch (e) {}
           renderShop(box, data, "");
         } catch (e) {
           console.warn("[상점]", e);
@@ -23432,6 +23637,18 @@
           html += `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin:10px 0;padding:8px 10px;border-radius:12px;background:#1d2740;border:1px solid rgba(230,182,62,.4);">
       <div style="font-size:15px;font-weight:800;">${shopRuby(1.2)} ${nf(data.ruby)} <span style="font-size:11px;color:#a7b1c9;font-weight:400;">루비</span></div>
       <button id="shopChargeBtn" style="padding:7px 14px;border-radius:999px;border:2px solid #e6b63e;background:transparent;color:#e6b63e;font-weight:800;font-size:12px;cursor:pointer;">충전하기</button></div>`;
+          if (data.ad) {
+            const a = data.ad,
+              left = Math.max(0, a.daily_limit - a.claimed_today);
+            html += `<div style="text-align:left;background:linear-gradient(160deg,#1f3a2a,#1d2740);border:2px solid #7ddc8a;border-radius:12px;padding:10px 12px;margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><div style="font-weight:800;font-size:14px;color:#c9f5cf;">📺 광고 보고 무료로 받기</div><div style="font-size:11px;color:#a7b1c9;white-space:nowrap;">오늘 ${a.claimed_today}/${a.daily_limit}회</div></div>
+        <div style="font-size:12px;color:#eef1f8;margin-top:4px;">${SHOP_ICON[a.grant_item] || "🎁"} ${esc(a.name)} ×${nf(a.amount)} <span style="color:#a7b1c9;">· ${esc(a.desc || "")}</span></div>
+        ${
+          left > 0
+            ? `<button id="shopAdBtn" style="${btnCss}margin-top:8px;width:100%;flex:none;"><span style="font-size:13px;font-weight:800;">광고 보고 받기 (무료)</span></button>`
+            : `<div style="margin-top:8px;text-align:center;font-size:12px;color:#a7b1c9;">오늘은 모두 받았어요 (내일 0시에 다시 열려요)</div>`
+        }</div>`;
+          }
           html += swordRateTableHtml();
           for (const it of data.items || []) {
             const weekLeft =
@@ -23507,6 +23724,8 @@
             if (chargeEnabled()) openChargeDialog();
             else showToast("💳 루비 충전은 준비 중이에요. 곧 열려요!");
           };
+        const adBtn = card.querySelector("#shopAdBtn");
+        if (adBtn) adBtn.onclick = () => watchAdForShop(box, data.ad);
         card.querySelectorAll(".shopBuyBtn").forEach((b) => {
           b.onclick = () => {
             const it = (data.items || []).find((x) => x.id === b.dataset.id);
@@ -23519,6 +23738,49 @@
             buyShopItem(box, it, q);
           };
         });
+      }
+      // 광고를 끝까지 보면 서버(shop_ad_claim)에서 아이템을 받는다. 하루 횟수·간격은 서버가 정한다.
+      async function watchAdForShop(box, ad) {
+        if (shopBusy || typeof window.LR_NativeRewardedAd !== "function") return;
+        shopBusy = true;
+        try {
+          showToast("광고 불러오는 중...");
+          let ok = false;
+          try {
+            ok = await window.LR_NativeRewardedAd();
+          } catch (e) {
+            showToast("지금은 시청 가능한 광고가 없어요. 잠시 후 다시 시도해주세요.");
+            return;
+          }
+          if (!ok) {
+            showToast("광고를 끝까지 봐야 받을 수 있어요.");
+            return;
+          }
+          const { data, error } = await db.rpc("shop_ad_claim");
+          if (error) throw error;
+          showToast(`🎁 ${(data && data.name) || ad.name} 지급!`);
+          try {
+            await syncAdminGrants();
+            if (data && data.grant_id) {
+              const got = await takeMail(data.grant_id);
+              if (got) finishMailAccept(got);
+            }
+          } catch (e) {
+            console.warn("[상점] 광고 보상 자동 수령 실패(우편함에서 받을 수 있어요)", e);
+          }
+        } catch (e) {
+          const m = String((e && e.message) || e);
+          showToast(
+            /daily limit/.test(m)
+              ? "오늘 받을 수 있는 횟수를 모두 썼어요"
+              : /too fast/.test(m)
+                ? "잠시 후 다시 시도해주세요"
+                : "지급하지 못했어요. 잠시 후 다시 시도해 주세요",
+          );
+        } finally {
+          shopBusy = false;
+          if (document.body.contains(box)) loadShop(box);
+        }
       }
       async function buyShopItem(box, it, qty) {
         if (shopBusy) return;
@@ -23653,6 +23915,7 @@
         if (!document.hidden) setTimeout(syncAdminGrants, 1500);
       });
 
+      let lastCloudPushedSig = null; // 마지막으로 서버에 올린 저장 내용(시각 제외) — 변화 없으면 다시 안 올림
       async function cloudSaveGame(dataObj, opts) {
         if (!currentUser || !db) return;
         const rethrow = opts && opts.rethrow;
@@ -23679,7 +23942,39 @@
             ...sanitizeBigNumbersForFirestore(dataObj),
             serverSavedAt: dbServerTimestamp(),
           };
+          // 앱 종료 시점 저장: 이전에 올린 것과 내용이 같으면(시각만 다르면) 보내지 않는다 → 서버 요청 절약
+          const { serverSavedAt: _s, lastSaveTime: _t, ...sigBody } = payload;
+          const sig = JSON.stringify(sigBody);
+          if (opts && opts.noCheck && sig === lastCloudPushedSig) return;
+          // 종료 중인 페이지에서는 일반 요청이 취소되기 쉬워서, 브라우저가 페이지가 닫혀도 끝까지 보내주는
+          // keepalive 요청으로 직접 보낸다 (본문 64KB 제한 → 넘으면 일반 방식으로 보낸다).
+          if (opts && opts.noCheck && authAccessToken && !isServerWriteBlocked("saves")) {
+            const { serverSavedAt: _s2, ...rest } = payload;
+            const body = JSON.stringify([{ user_id: currentUser.uid, data: rest }]);
+            if (body.length < 60000) {
+              try {
+                fetch(supabaseConfig.url + "/rest/v1/saves?on_conflict=user_id", {
+                  method: "POST",
+                  keepalive: true,
+                  headers: {
+                    apikey: supabaseConfig.anonKey,
+                    Authorization: "Bearer " + authAccessToken,
+                    "Content-Type": "application/json",
+                    Prefer: "resolution=merge-duplicates,return=minimal",
+                  },
+                  body,
+                })
+                  .then((r) => { if (r.ok) lastCloudPushedSig = sig; })
+                  .catch(() => {});
+                cloudSeenDevice = DEVICE_ID;
+                return;
+              } catch (e) {
+                /* keepalive 실패하면 아래 일반 방식으로 */
+              }
+            }
+          }
           await dbSetDoc("saves", currentUser.uid, payload);
+          lastCloudPushedSig = sig;
           cloudSeenDevice = DEVICE_ID;
         } catch (e) {
           if (e && e.message === "device-conflict") {
@@ -23756,22 +24051,28 @@
                   {}
                 ).rank || 0
               : 0;
+            // 이 클라우드 저장을 마지막으로 쓴 기기가 "다른 브라우저/기기"면 이 브라우저의 로컬은 믿지 않고
+            // 서버 기록을 무조건 전부 가져온다. (deviceId가 없는 아주 예전 저장본만 예전 방식대로 비교)
+            const cloudFromOtherDevice =
+              !!cloudData.deviceId && cloudData.deviceId !== DEVICE_ID;
             const localIsAhead =
-              cloudRebirth < rebirthCount ||
+              !cloudFromOtherDevice &&
+              (cloudRebirth < rebirthCount ||
               (cloudRebirth <= rebirthCount &&
                 lastSaveTime > cloudLastSave + 5000 &&
                 (fromBigStorable(totalEarned) > cloudTotalEarned * 1.5 ||
                   mansionLevel > cloudMansionLevel ||
-                  getNameColorRank() > cloudNameColorRank));
+                  getNameColorRank() > cloudNameColorRank)));
 
             if (localIsAhead && !saveTamperFlag) {
               console.warn(
                 "클라우드 저장본이 로컬보다 뒤처져 있어 무시하고 로컬 진행을 다시 업로드합니다.",
               );
-              saveGame({ forceCloud: true });
+              saveGame({ cloudNow: true });
               refreshAllScreens();
             } else {
               applySaveData(cloudData, { checkOffline: true });
+              try { writeLocalSave(buildSaveData()); } catch (e) {} // 가져온 서버 기록으로 이 브라우저 로컬도 맞춘다
               refreshAllScreens();
               if (hasUnseenNotice()) {
                 setTimeout(openNoticeModal, 900);
@@ -24434,6 +24735,41 @@
         .getElementById("googleLoginBtn")
         .addEventListener("click", loginWithGoogle);
       document.getElementById("logoutBtn").addEventListener("click", logout);
+
+      // 계정 삭제 (구글 플레이 정책: 앱 안에서 계정과 데이터를 삭제할 수 있어야 함)
+      async function deleteMyAccount() {
+        if (!currentUser || !db) return;
+        if (
+          !confirm(
+            "계정을 삭제하면 서버에 저장된 모든 기록(진행 상황·랭킹·네온 호드·루비 등)이 영구 삭제되고 되돌릴 수 없어요.\n\n정말 삭제할까요?",
+          )
+        )
+          return;
+        const t = prompt("확인을 위해 '삭제' 라고 입력해 주세요.");
+        if ((t || "").trim() !== "삭제") {
+          showToast("계정 삭제를 취소했어요.");
+          return;
+        }
+        try {
+          const { error } = await db.rpc("delete_my_account");
+          if (error) throw error;
+          currentUser = null; // 종료 시 저장이 삭제된 계정으로 다시 올라가지 않게
+          authAccessToken = null;
+          try {
+            Object.keys(localStorage)
+              .filter((k) => /^(lifeReverse|lr|nh_|sb-)/i.test(k) && k !== "lrStoreBuild")
+              .forEach((k) => localStorage.removeItem(k));
+          } catch (e) {}
+          try {
+            await db.auth.signOut();
+          } catch (e) {}
+          alert("계정과 서버에 저장된 데이터가 삭제되었어요.");
+          location.reload();
+        } catch (e) {
+          showToast("계정 삭제에 실패했어요. 잠시 후 다시 시도하거나 문의해 주세요.");
+        }
+      }
+      document.getElementById("deleteAccountBtn").addEventListener("click", deleteMyAccount);
       initBackend();
 
       // ===== PWA: 서비스워커 등록 + 로컬 알림 =====
@@ -24441,7 +24777,7 @@
       // 지금 이 정적 호스팅 구조에선 안 되고, 대신 브라우저/기기가 떠 있는 동안(백그라운드
       // 포함) 예약한 시간에 알림을 띄우는 것까진 서비스워커로 가능하다. 완벽한 보장은
       // 아니지만, 탭을 완전히 종료하지 않는 대다수 상황에선 잘 동작한다.
-      if ("serviceWorker" in navigator) {
+      if ("serviceWorker" in navigator && !window.LR_STORE) {
         navigator.serviceWorker
           .register("./sw.js")
           .catch((e) => console.warn("서비스워커 등록 실패:", e));
@@ -24510,6 +24846,8 @@
 
       function scheduleGameNotifications() {
         if (
+          window.LR_STORE ||
+          typeof Notification === "undefined" ||
           !("serviceWorker" in navigator) ||
           Notification.permission !== "granted"
         )
@@ -24742,14 +25080,19 @@
         };
       }
 
-      let lastCloudSaveTime = 0;
-      const CLOUD_SAVE_MIN_INTERVAL = 120000; // 일반 자동저장은 최소 2분 간격 (로컬 저장은 즉시, 세션 종료 시엔 클라우드도 즉시 저장)
+      let lastCloudSaveTime = Date.now(); // 접속 직후엔 서버에서 막 받은 상태라 바로 올리지 않는다
+      // 서버 저장은 "앱 종료(탭 숨김/닫기/백그라운드)" 때만 한다. 그 사이엔 로컬(이 기기)에만 저장.
+      // 안전망: 화면을 켜둔 채 10분이 지나면 한 번 올린다 (0으로 바꾸면 안전망 끔 = 순수 종료 시에만 저장).
+      const CLOUD_SAFETY_INTERVAL = 600000;
+      const CLOUD_SAVE_MIN_INTERVAL = CLOUD_SAFETY_INTERVAL;
       const CLOUD_FORCE_MIN_INTERVAL = 20000; // 강제 저장(검 강화·구매 등)도 20초에 한 번으로 합친다 — 마지막 상태는 곧이어 한 번 더 저장됨
       let cloudForceTimer = null;
 
       function saveGame(opts) {
         if (deviceDisplaced) return; // 다른 기기가 먼저 저장한 상태에서는 이 화면이 저장(로컬 포함)하지 않는다
-        const forceCloud = opts && opts.forceCloud;
+        // forceCloud: 예전엔 서버에 곧바로 올리라는 뜻이었지만, 이제는 "종료 때 올릴 변경이 있음" 표시일 뿐이다.
+        // cloudNow: 지금 바로 서버에 올려야 하는 드문 경우(시즌 보상·우편 지급·서버 기록 복구 등)
+        const forceCloud = opts && opts.cloudNow;
         const data = buildSaveData();
 
         // 탭을 여러 개 켜놓으면(예: 예전에 켜놓고 잊어버린 탭 + 지금 쓰는 탭) 각자 따로
@@ -24791,8 +25134,9 @@
             urgent ||
             (forceCloud &&
               now - lastCloudSaveTime > CLOUD_FORCE_MIN_INTERVAL) ||
-            now - lastCloudSaveTime >
-              (document.hidden ? 1800000 : CLOUD_SAVE_MIN_INTERVAL)
+            (CLOUD_SAFETY_INTERVAL > 0 &&
+              !document.hidden &&
+              now - lastCloudSaveTime > CLOUD_SAFETY_INTERVAL)
           ) {
             // 화면이 가려진 방치 탭은 10분마다만 (닫거나 가릴 때 이미 한 번 저장함)
             if (cloudForceTimer) {
@@ -24805,7 +25149,7 @@
             cloudForceTimer = setTimeout(
               () => {
                 cloudForceTimer = null;
-                saveGame({ forceCloud: true });
+                saveGame({ cloudNow: true });
               },
               CLOUD_FORCE_MIN_INTERVAL - (now - lastCloudSaveTime) + 300,
             );
@@ -27157,7 +27501,10 @@
             localStorage.setItem("lottoMuted", muted ? "1" : "0");
             $("ltMute").textContent = muted ? "🔇" : "🔊";
           };
-          $("lottoBtn").addEventListener("click", open);
+          $("lottoBtn").addEventListener("click", function () {
+            if (window.LR_STORE) return;
+            open();
+          });
           document.addEventListener("visibilitychange", () => {
             if (!document.hidden && enabled()) refresh();
           });
