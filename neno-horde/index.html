@@ -548,7 +548,7 @@ function gamepad(){if(typeof navigator==='undefined'||!navigator.getGamepads)ret
 function pauseGame(){if(mode==='play'){gvAt=-1e9;from='play';mode='pause';jo=null;jv={x:0,y:0};}}
 function hit(e){if(cbuy>=0){for(const b of mbtns)if(e.clientX>=b.x&&e.clientX<=b.x+b.w&&e.clientY>=b.y&&e.clientY<=b.y+b.h){b.fn();return true;}cbuy=-1;return true;}for(const b of btns)if(e.clientX>=b.x&&e.clientX<=b.x+b.w&&e.clientY>=b.y&&e.clientY<=b.y+b.h){b.fn();return true;}return false;}
 function burst(x,y,n,c){for(let i=0;i<n;i++){const a=Math.random()*6.283,s=40+Math.random()*140;parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,l:.35+Math.random()*.3,c});}}
-function start(){hintCh=-1;if(!(meta.own[meta.sel]||Meta.unlocked(meta,'ch:'+meta.sel)))meta.sel=0;if(meta.dly){const D=Meta.daily();st=Core.create(D.seed,{ch:meta.sel,m:{},stage:D.stage,asc:D.asc,locked:Meta.lockedCards(meta),mut:D.mut});st.daily=1;}else st=Core.create(Date.now(),{ch:meta.sel,m:meta,stage:meta.ssel,asc:meta.asc||0,hell:Math.min(meta.hell|0,meta.all?10:(meta.hellMax|0)),locked:Meta.lockedCards(meta),mut:meta.mut||[],mas:Meta.masLvl(Meta.masOf(meta,meta.sel))});mode='play';parts=[];snd(520,.15,'square',.08);musicStart();hpm.clear();nums=[];NHL.runStart(st.stage>3?2:st.stage);}
+function start(){hintCh=-1;if(!(meta.own[meta.sel]||Meta.unlocked(meta,'ch:'+meta.sel)))meta.sel=0;if(meta.dly){const D=Meta.daily();st=Core.create(D.seed,{ch:meta.sel,m:{},stage:D.stage,asc:D.asc,locked:Meta.lockedCards(meta),mut:D.mut});st.daily=1;}else st=Core.create(Date.now(),{ch:meta.sel,m:meta,stage:meta.ssel,asc:meta.asc||0,hell:Math.min(meta.hell|0,meta.all?10:(meta.hellMax|0)),locked:Meta.lockedCards(meta),mut:meta.mut||[],mas:Meta.masLvl(Meta.masOf(meta,meta.sel))});mode='play';armTrap();parts=[];snd(520,.15,'square',.08);musicStart();hpm.clear();nums=[];NHL.runStart(st.stage>3?2:st.stage);}
 function end(w){if(w&&!st.daily)Meta.winStage(meta,st.stage,st.asc,st.hell);st.gold=Meta.earn(meta,st);if(st.daily&&w)st.dbonus=Meta.dailyWin(meta);if(st.stage===3&&st.t>meta.rec.et){meta.rec.et=st.t;meta.rec.ek=st.kills;st.newRec=true;}{const ci=st.ch|0,x0=Meta.masOf(meta,ci),gx=Meta.masXp(st);meta.mas=meta.mas||{};meta.mas[ci]=x0+gx;const l0=Meta.masLvl(x0),l1=Meta.masLvl(x0+gx);st.mtxt=T('mas_gain',gx)+(l1>l0?'  '+T('mas_up',l1):'');}
  const ob=Meta.openKeys(meta);st.ach=Meta.check(meta,{kills:st.kills,t:st.t,win:st.win,stage:st.stage,lv:st.p.lv,evo:Object.keys(st.p.ev).length,chests:st.chests,bk:st.bk||0,coins:st.coins,elk:st.elk||0,rl:(st.rl||[]).length,mut:Object.keys(st.mut||{}).length,daily:st.daily?1:0,asc:st.asc||0});st.unl=Meta.openKeys(meta).filter(k=>!ob.includes(k));Meta.save(meta);musicStop();mode='over';t0=0;shake=.5;snd(w?800:120,.6,w?'triangle':'sawtooth',.12);if(st.kills>best){best=st.kills;try{localStorage.setItem('nh_best',best)}catch(e){}}NHL.runEnd(w);if(!w&&typeof window.LR_NativeInterstitialAd==='function'){adHold=true;window.LR_NativeInterstitialAd().catch(()=>false).then(()=>{adHold=false;t0=0;});}}
 const cw=()=>Math.min(W-32,380),cx=()=>(W-cw())/2,cy=()=>H*.26;
@@ -571,6 +571,14 @@ addEventListener('pointerup',()=>{if(cdrag&&cdrag.k&&!cdrag.m&&cdrag.e)hit(cdrag
 addEventListener('keydown',e=>{keys[e.code]=1;if(mode==='play'&&!e.repeat&&(e.code==='Space'||e.code==='KeyE'||e.code==='KeyQ')){castUlt();return;}if(mode==='title'&&(e.code==='ArrowLeft'||e.code==='ArrowRight')){I18N.cycle(e.code==='ArrowLeft'?-1:1);return;}if(e.code==='Escape'&&cbuy>=0){cbuy=-1;return;}if(e.code==='KeyP'||e.code==='Escape'){if(mode==='play')pauseGame();else if(mode==='pause')mode=from;}if(mode==='play'&&st.pick&&/Digit[123]/.test(e.code))pick(+e.code[5]-1);if(e.code==='Space'||e.code==='Enter'){if(mode==='menu')start();else if(mode==='title'||(mode==='over'&&t0>.6&&!adHold))mode='menu';}});
 addEventListener('keyup',e=>{keys[e.code]=0;});addEventListener('blur',pauseGame);document.addEventListener('visibilitychange',()=>{if(document.hidden)pauseGame();});
 /* 안드로이드 앱의 뒤로가기(native-bridge.js 가 lr-back 이벤트로 전달): 플레이 중엔 바로 나가지 않고 일시정지, 일시정지 중엔 계속하기 */
+/* 브라우저/PWA 뒤로가기(제스처 포함): 플레이 중엔 바로 나가지 않고 일시정지 화면을 띄운다 */
+let trapOn=false;
+function armTrap(){if(trapOn)return;try{history.pushState({nhTrap:1},'');trapOn=true;}catch(e){}}
+addEventListener('popstate',()=>{if(!trapOn)return;trapOn=false;
+ if(mode==='play'){if(!st.pick)pauseGame();armTrap();}
+ else if(mode==='pause'){mode=from;armTrap();}
+ else if(cbuy>=0){cbuy=-1;armTrap();}
+ else history.back();});
 addEventListener('lr-back',e=>{if(cbuy>=0){e.preventDefault();cbuy=-1;return;}if(mode==='play'){e.preventDefault();if(!st.pick)pauseGame();}else if(mode==='pause'){e.preventDefault();mode=from;}else if(mode==='over'&&adHold){e.preventDefault();}});
 function events(){for(const e of st.ev){
  if(e.t==='kill'){if(e.b){hs=.45;wf=.7;shake=.8;for(let i=0;i<3;i++)fx.push({k:'r',x:e.x,y:e.y,r:120+i*90,l:.5+i*.15,m:.5+i*.15,c:'255,228,90'});burst(e.x,e.y,140,'#ffe45a');burst(e.x,e.y,60,'#ff3bd4');sfxNoise(.8,.25,200);snd(70,.9,'sawtooth',.2);}burst(e.x,e.y,e.b?40:5,e.b?'#fff':'#f68');snd(200+Math.random()*100,.08,'square',.025);}
@@ -603,7 +611,7 @@ function drawLang(){btns=[];const n=I18N.order.length,gap=8,w=(W-40-gap*(n-1))/n
 const GP=Gfx,PC=['#7fe8ff','#ff5ad0','#ffb02e','#7dff4f','#ff6a3a','#7fd8ff','#ff8a3a','#6aa8ff','#b45cff','#ffe04a','#ffb86b','#9ad7ff','#c49a6c','#e8f0ff','#a8ff5a','#4dd0e1','#ff3b3b','#d08cff','#ffcc66','#ff7bd5','#ff4a1a','#d11a5a'],PKC={heart:'#ff4a7a',vac:'#38e1ff',coin:'#ffd23b',chest:'#ffd23b'};const deco=[];for(let i=0;i<18;i++)deco.push({type:[0,1,2,4,5,6,7,9,10][i%9],x:Math.random()*900,y:Math.random()*1000,vx:(Math.random()-.5)*26,vy:(Math.random()-.5)*26,r:9+Math.random()*10});
 let last=performance.now();
 function btn(x,y,w,h,fn){btns.push({x,y,w,h,fn});}
-function drawCbuy(){if(cbuy<0)return;mbtns=[];const i=cbuy,c=Core.CH[i],tc=TC[c.tier],cost=Meta.CHCOST[i],can=meta.gold>=cost;
+function drawCbuy(){if(cbuy<0)return;mbtns=[];const i=cbuy,c=Core.CH[i],tc=TC[c.tier],cost=Meta.CHCOST[i],op=!!(meta.own[i]||Meta.unlocked(meta,'ch:'+i)),can=op&&meta.gold>=cost;
  g.fillStyle='rgba(2,3,14,.86)';g.fillRect(0,0,W,H);
  const parts=String(T('ch.'+i+'.d')).split(' \u00b7 ').filter(Boolean);parts.push(T('wsn',Core.TIER[c.tier].ws));
  const w=Math.min(W-30,340),h=Math.min(H-16,170+parts.length*21+20),x=(W-w)/2,y=(H-h)/2;
@@ -611,7 +619,7 @@ function drawCbuy(){if(cbuy<0)return;mbtns=[];const i=cbuy,c=Core.CH[i],tc=TC[c.
  txt('\u2605'.repeat(c.tier+1),W/2,y+64,12,tc,null,w-20);txt(T('ch.'+i+'.n'),W/2,y+88,20,'#fff',null,w-20);
  let ty=y+114;parts.forEach(p=>{txt(p,W/2,ty,13,'#cfe3ff',null,w-24);ty+=21;});
  ty+=6;txt(tt('cbuyPrice',kfmt(cost))+'  \u00b7  '+tt('cbuyHave',kfmt(meta.gold)),W/2,ty,12,can?'#ffd23b':'#ff9a6a',null,w-20);
- ty+=20;txt(can?tt('cbuyAsk'):tt('cbuyNoGold'),W/2,ty,12,can?'#9bb8ff':'#ff9a6a',null,w-20);
+ ty+=20;{const u_=Meta.UNL['ch:'+i];txt(!op?(T('locked')+': '+(u_?T('hint.'+u_.t,u_.n):'')):can?tt('cbuyAsk'):tt('cbuyNoGold'),W/2,ty,12,can?'#9bb8ff':'#ff9a6a',null,w-20);}
  const bw=(w-36)/2,by=y+h-52;
  GP.panel(g,x+12,by,bw,40,'#7a8ab0',false);txt(tt('cbuyCancel'),x+12+bw/2,by+26,15,'#fff',null,bw-10);mbtns.push({x:x+12,y:by,w:bw,h:40,fn:()=>{cbuy=-1;}});
  GP.panel(g,x+24+bw,by,bw,40,can?'#7dff9a':'#555',false);txt(tt('cbuyBtn'),x+24+bw+bw/2,by+26,15,can?'#fff':'#888',null,bw-10);
@@ -655,7 +663,7 @@ function drawMenu(){
  Core.CH.forEach((c,i)=>{if(Math.floor(i/pp)!==chPage)return;const jj=i%pp,x=xL+(jj%per)*(cc+6),y=54+Math.floor(jj/per)*(chH+6),sel=meta.sel===i,tc=TC[c.tier],open=meta.own[i]||Meta.unlocked(meta,'ch:'+i);GP.panel(g,x,y,cc,chH,tc,sel);
   GP.ship(g,x+cc/2,y+20,-1.5708,PC[i%PC.length]);txt('\u2605'.repeat(c.tier+1),x+3,y+10,8,tc,'left');{const ml_=Meta.masLvl(Meta.masOf(meta,i));if(ml_>0)txt('M'+ml_,x+cc-3,y+10,8,ml_>=10?'#7dff4f':'#ffd23b','right');}
   txt(T('ch.'+i+'.n'),x+cc/2,y+42,11,'#fff',null,cc-4);txt(!open?T('locked'):meta.own[i]?(sel?T('selected'):T('owned')):kfmt(Meta.CHCOST[i])+'g',x+cc/2,y+56,10,!open?'#ff9a6a':meta.own[i]?'#7dff9a':'#ffd23b',null,cc-4);if(!open){g.fillStyle='rgba(4,6,20,.5)';GP.rr(g,x,y,cc,chH,12);g.fill();}
-  btn(x,y,cc,chH,()=>{if(!open){hintCh=i;return;}hintCh=-1;if(meta.own[i]){meta.sel=i;Meta.save(meta);}else cbuy=i;});});
+  btn(x,y,cc,chH,()=>{hintCh=-1;if(meta.own[i]){meta.sel=i;Meta.save(meta);}else cbuy=i;});});
  const sc_=Core.CH[meta.sel];if(hintCh>=0&&!(meta.own[hintCh]||Meta.unlocked(meta,'ch:'+hintCh))){const u_=Meta.UNL['ch:'+hintCh];txt(T('ch.'+hintCh+'.n')+' – '+T('hint.'+u_.t,u_.n),dcx,200,12,'#ff9a6a',null,cw_-95);}else txt('\u2605'.repeat(sc_.tier+1)+' '+T('ch.'+meta.sel+'.n')+' \u2013 '+T('ch.'+meta.sel+'.d')+' \u00b7 '+T('wsn',Core.TIER[sc_.tier].ws),dcx,200,12,TC[sc_.tier],null,cw_-95);
  if(pages>1){txt('\u25c0 '+(chPage+1)+'/'+pages+' \u25b6',xL+cw_-42,200,12,'#8fb0ff',null,84);btn(xL+cw_-84,186,42,24,()=>{chPage=(chPage+pages-1)%pages;});btn(xL+cw_-42,186,42,24,()=>{chPage=(chPage+1)%pages;});};
  const DD=Meta.daily(),unl=i=>i<4?i<meta.stg:i<6?(meta.xs|0)>=i-3:true,cur0=meta.dly?6:Math.min(meta.ssel|0,5),cur=unl(cur0)?cur0:0,sy=208,sh=32,ul=[0,1,2,3,4,5,6].filter(unl);
@@ -847,8 +855,8 @@ const NHL=(function(){
    e_limit:'已达今日兑换上限',e_not:'已验证的金币不足',e_gen:'兑换失败',season:'{0} 赛季',rkEmpty:'本赛季暂无记录',me:'我',pts:'{0}分',
    load:'加载中...',refresh:'刷新',offline:'离线 - 无法使用排名/兑换',run_ok:'排名 +{0}分  /  可兑换 +{1}金币',run_no:'不计入（需登录游玩）',run_err:'无法验证本局',run_wait:'正在确认结果...',
    cloud:'已读取云存档',cloudUp:'云存档已更新',confirmGo:'前往中...'}};
- Object.assign(X.en,{cbuyPrice:'Price {0}g',cbuyHave:'Owned {0}g',cbuyAsk:'Buy this character?',cbuyNoGold:'Not enough gold',cbuyCancel:'Cancel',cbuyBtn:'Buy'});
-Object.assign(X.ko,{cbuyPrice:'\uAC00\uACA9 {0}g',cbuyHave:'\uBCF4\uC720 {0}g',cbuyAsk:'\uC774 \uCE90\uB9AD\uD130\uB97C \uAD6C\uB9E4\uD560\uAE4C\uC694?',cbuyNoGold:'\uACE8\uB4DC\uAC00 \uBD80\uC871\uD574\uC694',cbuyCancel:'\uCDE8\uC18C',cbuyBtn:'\uAD6C\uB9E4'});
+ Object.assign(X.en,{cbuyPrice:'Price {0}g',cbuyHave:'Owned {0}g',cbuyAsk:'Buy this character?',cbuyNoGold:'Not enough gold',cbuyCancel:'Close',cbuyBtn:'Buy'});
+Object.assign(X.ko,{cbuyPrice:'\uAC00\uACA9 {0}g',cbuyHave:'\uBCF4\uC720 {0}g',cbuyAsk:'\uC774 \uCE90\uB9AD\uD130\uB97C \uAD6C\uB9E4\uD560\uAE4C\uC694?',cbuyNoGold:'\uACE8\uB4DC\uAC00 \uBD80\uC871\uD574\uC694',cbuyCancel:'\uB2EB\uAE30',cbuyBtn:'\uAD6C\uB9E4'});
 Object.assign(X.en,{syncOkL:'Synced ({0}) \u00B7 tap to sync now',justNow:'just now',minAgo:'{0}m ago',syncLoadL:'Syncing...',syncErrL:'Sync error: {0} \u00B7 tap to retry',syncTap:'Tap to sync now',syncDone:'Synced with the server',syncFail:'Sync failed: {0}'});
 Object.assign(X.ko,{syncOkL:'\uC11C\uBC84\uC640 \uB3D9\uAE30\uD654\uB428 ({0}) \u00B7 \uD0ED\uD558\uBA74 \uC9C0\uAE08 \uB3D9\uAE30\uD654',justNow:'\uBC29\uAE08',minAgo:'{0}\uBD84 \uC804',syncLoadL:'\uB3D9\uAE30\uD654 \uC911...',syncErrL:'\uB3D9\uAE30\uD654 \uC624\uB958: {0} \u00B7 \uD0ED\uD574\uC11C \uB2E4\uC2DC \uC2DC\uB3C4',syncTap:'\uD0ED\uD558\uBA74 \uC9C0\uAE08 \uB3D9\uAE30\uD654',syncDone:'\uC11C\uBC84\uC640 \uB3D9\uAE30\uD654\uD588\uC5B4\uC694',syncFail:'\uB3D9\uAE30\uD654\uC5D0 \uC2E4\uD328\uD588\uC5B4\uC694: {0}'});
 Object.assign(X.en,{shopT:'Daily Shop',reset:'Resets daily',buy:'BUY',sold:'SOLD OUT',today:'Today {0}/{1}',buyOk:'{0} sent to your Life Reverse mailbox!',it_shard:'Dimension Shards x10,000',it_undo:'Undo Shield',it_s15:'Enhance Scroll x1.5',it_s2:'Enhance Scroll x2',it_s25:'Enhance Scroll x2.5',it_bt:'Sword Battle x1'});
