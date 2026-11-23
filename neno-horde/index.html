@@ -611,7 +611,7 @@ function drawLang(){btns=[];const n=I18N.order.length,gap=8,w=(W-40-gap*(n-1))/n
 const GP=Gfx,PC=['#7fe8ff','#ff5ad0','#ffb02e','#7dff4f','#ff6a3a','#7fd8ff','#ff8a3a','#6aa8ff','#b45cff','#ffe04a','#ffb86b','#9ad7ff','#c49a6c','#e8f0ff','#a8ff5a','#4dd0e1','#ff3b3b','#d08cff','#ffcc66','#ff7bd5','#ff4a1a','#d11a5a'],PKC={heart:'#ff4a7a',vac:'#38e1ff',coin:'#ffd23b',chest:'#ffd23b'};const deco=[];for(let i=0;i<18;i++)deco.push({type:[0,1,2,4,5,6,7,9,10][i%9],x:Math.random()*900,y:Math.random()*1000,vx:(Math.random()-.5)*26,vy:(Math.random()-.5)*26,r:9+Math.random()*10});
 let last=performance.now();
 function btn(x,y,w,h,fn){btns.push({x,y,w,h,fn});}
-function drawCbuy(){if(cbuy<0)return;mbtns=[];const i=cbuy,c=Core.CH[i],tc=TC[c.tier],cost=Meta.CHCOST[i],op=!!(meta.own[i]||Meta.unlocked(meta,'ch:'+i)),can=op&&meta.gold>=cost;
+function drawCbuy(){if(cbuy<0)return;mbtns=[];const tt=(...a)=>window.NH_tt?window.NH_tt(...a):String(a[0]);const i=cbuy,c=Core.CH[i],tc=TC[c.tier],cost=Meta.CHCOST[i],op=!!(meta.own[i]||Meta.unlocked(meta,'ch:'+i)),can=op&&meta.gold>=cost;
  g.fillStyle='rgba(2,3,14,.86)';g.fillRect(0,0,W,H);
  const parts=String(T('ch.'+i+'.d')).split(' \u00b7 ').filter(Boolean);parts.push(T('wsn',Core.TIER[c.tier].ws));
  const w=Math.min(W-30,340),h=Math.min(H-16,170+parts.length*21+20),x=(W-w)/2,y=(H-h)/2;
@@ -864,7 +864,7 @@ Object.assign(X.en,{shopT:'Daily Shop',reset:'Resets daily',buy:'BUY',sold:'SOLD
  Object.assign(X.ja,{shopT:'今日のショップ',reset:'毎日リセット',buy:'購入',sold:'売切',today:'本日 {0}/{1}',buyOk:'{0} を人生逆転のメールボックスへ送りました！',it_shard:'次元の欠片 10,000個',it_undo:'巻き戻し',it_s15:'強化の巻物 x1.5',it_s2:'強化の巻物 x2',it_s25:'強化の巻物 x2.5',it_bt:'剣バトル 1回'});
  Object.assign(X.zh,{shopT:'今日商店',reset:'每日重置',buy:'购买',sold:'售罄',today:'今日 {0}/{1}',buyOk:'{0} 已发送到人生逆转邮箱！',it_shard:'次元碎片 10,000个',it_undo:'回溯',it_s15:'强化卷轴 x1.5',it_s2:'强化卷轴 x2',it_s25:'强化卷轴 x2.5',it_bt:'剑斗 1次'});
  const OFFERS=[{id:'shard',ic:'\u{1F48E}',price:80000,lim:1},{id:'undo',ic:'\u{1F6E1}',price:40000,lim:2},{id:'s15',ic:'\u{1F340}',price:40000,lim:1},{id:'s2',ic:'\u{1F340}',price:80000,lim:1},{id:'s25',ic:'\u{1F340}',price:160000,lim:1},{id:'bt',ic:'\u2694',price:4000,lim:10}];
- const tt=(k,...a)=>{const d=X[I18N.cur]||X.en;let s=d[k]!=null?d[k]:X.en[k]!=null?X.en[k]:k;a.forEach((v,i)=>{s=s.replace('{'+i+'}',v);});return s;};
+ const tt=(k,...a)=>{const d=X[I18N.cur]||X.en;let s=d[k]!=null?d[k]:X.en[k]!=null?X.en[k]:k;a.forEach((v,i)=>{s=s.replace('{'+i+'}',v);});return s;};window.NH_tt=tt;
  const nf=n=>Math.floor(Number(n)||0).toLocaleString();
  const DEV=(()=>{try{let d=localStorage.getItem('nh_dev');if(!d){d=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():'d'+Date.now().toString(36)+Math.random().toString(36).slice(2);localStorage.setItem('nh_dev',d);}return d;}catch(e){return 'x'+Math.random().toString(36).slice(2);}})();
  let db=null,user=null,loaded=false,lastUid=null,tok=null,lastSig=null,info=null,rank=null,busy=false,runId=null,lastRun=null,tab=0,exAmt=100,msg='',msgAt=0,syncT=null,infoAt=0,rankAt=0,claiming=false,claimAt=-1e9;
