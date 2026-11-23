@@ -614,16 +614,16 @@ function btn(x,y,w,h,fn){btns.push({x,y,w,h,fn});}
 function drawCbuy(){if(cbuy<0)return;mbtns=[];const tt=(...a)=>window.NH_tt?window.NH_tt(...a):String(a[0]);const i=cbuy,c=Core.CH[i],tc=TC[c.tier],cost=Meta.CHCOST[i],op=!!(meta.own[i]||Meta.unlocked(meta,'ch:'+i)),can=op&&meta.gold>=cost;
  g.fillStyle='rgba(2,3,14,.86)';g.fillRect(0,0,W,H);
  const parts=String(T('ch.'+i+'.d')).split(' \u00b7 ').filter(Boolean);parts.push(T('wsn',Core.TIER[c.tier].ws));
- const w=Math.min(W-30,340),h=Math.min(H-16,170+parts.length*21+20),x=(W-w)/2,y=(H-h)/2;
+ const w=Math.min(W-30,340),h=Math.min(H-16,200+parts.length*21+20),x=(W-w)/2,y=(H-h)/2;
  GP.panel(g,x,y,w,h,tc,true);GP.ship(g,W/2,y+34,-1.5708,PC[i%PC.length]);
  txt('\u2605'.repeat(c.tier+1),W/2,y+64,12,tc,null,w-20);txt(T('ch.'+i+'.n'),W/2,y+88,20,'#fff',null,w-20);
  let ty=y+114;parts.forEach(p=>{txt(p,W/2,ty,13,'#cfe3ff',null,w-24);ty+=21;});
  ty+=6;txt(tt('cbuyPrice',kfmt(cost))+'  \u00b7  '+tt('cbuyHave',kfmt(meta.gold)),W/2,ty,12,can?'#ffd23b':'#ff9a6a',null,w-20);
  ty+=20;{const u_=Meta.UNL['ch:'+i];txt(!op?(T('locked')+': '+(u_?T('hint.'+u_.t,u_.n):'')):can?tt('cbuyAsk'):tt('cbuyNoGold'),W/2,ty,12,can?'#9bb8ff':'#ff9a6a',null,w-20);}
  const bw=(w-36)/2,by=y+h-52;
- GP.panel(g,x+12,by,bw,40,'#7a8ab0',false);txt(tt('cbuyCancel'),x+12+bw/2,by+26,15,'#fff',null,bw-10);mbtns.push({x:x+12,y:by,w:bw,h:40,fn:()=>{cbuy=-1;}});
- GP.panel(g,x+24+bw,by,bw,40,can?'#7dff9a':'#555',false);txt(tt('cbuyBtn'),x+24+bw+bw/2,by+26,15,can?'#fff':'#888',null,bw-10);
- mbtns.push({x:x+24+bw,y:by,w:bw,h:40,fn:()=>{if(!can)return;if(Meta.unlock(meta,i)){meta.sel=i;Meta.save(meta);cbuy=-1;}}});}
+ GP.panel(g,x+24+bw,by,bw,40,'#7a8ab0',false);txt(tt('cbuyCancel'),x+24+bw+bw/2,by+26,15,'#fff',null,bw-10);mbtns.push({x:x+24+bw,y:by,w:bw,h:40,fn:()=>{cbuy=-1;}});
+ GP.panel(g,x+12,by,bw,40,can?'#7dff9a':'#555',false);txt(tt('cbuyBtn'),x+12+bw/2,by+26,15,can?'#fff':'#888',null,bw-10);
+ mbtns.push({x:x+12,y:by,w:bw,h:40,fn:()=>{if(!can)return;if(Meta.unlock(meta,i)){meta.sel=i;Meta.save(meta);cbuy=-1;}}});}
 function isW(n){return /Nova|Lightning|Mines|Boomerang|Orbit Blade|Bomb|Laser|Drone|Meteor|Flame|Frost|Gravity/.test(n);}
 let gvAt=-1e9;
 function drawPause(){btns=[];const w=Math.min(W-40,320),x=(W-w)/2;let y=H*.2;GP.ntxt(g,T('paused'),W/2,y,34,'#38e1ff');y+=30;
