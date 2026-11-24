@@ -24,7 +24,7 @@
       // 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
       // 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
       (function () {
-        var CURRENT_VERSION = "2026111802";
+        var CURRENT_VERSION = "2026112404";
         try {
           if (sessionStorage.getItem("lrVersionChecked") === CURRENT_VERSION)
             return;
@@ -3819,6 +3819,10 @@
         background: #2c3a5c;
         border-color: var(--gold);
       }
+      #fateCards {
+        max-height: 46vh;
+        overflow-y: auto;
+      }
       .fate-icon {
         font-size: 28px;
         flex: 0 0 auto;
@@ -6304,12 +6308,13 @@
           <p id="prestigeDesc">
             지금까지 번 돈을 바탕으로 특성 포인트를 얻고,<br />처음(노숙자)부터
             다시 시작합니다.<br />컬렉션·특성·업적·명예 메달은 그대로
-            유지되고,<br />환생할 때마다 🎴운명 카드 한 장을 고릅니다.
+            유지되고,<br />환생할 때마다 🎴운명 카드 한 장을 고릅니다.<br />시즌 랭킹 점수(시즌 누적 수입)는 환생해도 줄지 않아요.
           </p>
           <div class="info-stats">
             <div>현재 생산 배율<b id="prestigeCurrentMult">x1.00</b></div>
             <div>획득 포인트<b id="prestigeGainPoints">+0</b></div>
             <div>환생 후 보유 포인트<b id="prestigeNextMult">0P</b></div>
+            <div>이번 시즌 환생 횟수<b id="prestigeSeasonInfo">0회</b></div>
           </div>
           <div
             id="prestigeExtra"
@@ -8565,7 +8570,9 @@
         // 레벨당 배율도 절반으로 낮췄다 (2%/2%/1% -> 1%/1%/0.5%). 포인트 자체가 이제 훨씬
         // 짜게 나오는데 레벨당 효율까지 예전 그대로면, 몇 번 환생만 해도 배율이 너무 세져서
         // "환생을 반복할수록 눈덩이처럼 세진다"는 문제가 그대로 남는다.
-        prestigeMult = 1 + talentLevels.production * 0.01;
+        prestigeMult =
+          (1 + talentLevels.production * 0.01) *
+          (1 + getRebirthStepBonus() * Math.min(PRESTIGE_MAX_STEPS, seasonRebirths)); // 환생 1회당 영구 수입 +10%(시즌 기준, 최대 15회, 환생의 달엔 +12%)
         clickTalentMult = 1 + talentLevels.click * 0.01;
         casinoTalentMult = 1 + talentLevels.casino * 0.005;
       }
@@ -8579,6 +8586,123 @@
       let ownedCollectibles = [];
       let unlockedAchievements = [];
       let rebirthCount = 0;
+      // ===== 환생 개편(시즌 환생 횟수 / 시즌 누적 수입) =====
+      // seasonBase: 이번 시즌에 이전 생(환생 전)에서 번 수입 합계. 랭킹/서버에 올라가는 totalEarned는
+      //   "seasonBase + 이번 생 totalEarned" 라서 환생해도 줄지 않고, 시즌(월)이 바뀔 때만 0으로 돌아간다.
+      // seasonRebirths: 이번 시즌에 한 환생 횟수. 환생 허들(1경 x 회차)과 영구 수입 보너스(+10%/회, 최대 15회)에 쓰고
+      //   시즌이 바뀌면 0으로 초기화된다(특성 포인트는 그대로 유지).
+      let seasonBase = 0;
+      let seasonRebirths = 0;
+      const PRESTIGE_HURDLE_BASE = 1e16; // 1회차 허들 = 1경
+      const PRESTIGE_MAX_STEPS = 15; // 허들/보너스 최대 15회차
+      function getSeasonEarned() {
+        return seasonBase + totalEarned;
+      }
+      function getPrestigeHurdle() {
+        return PRESTIGE_HURDLE_BASE * Math.min(PRESTIGE_MAX_STEPS, seasonRebirths + 1);
+      }
+      // ===== 환생 사업장: 이번 시즌 환생 횟수에 따라 새 사업장이 열린다 (저장할 값 없음: 횟수만 보면 됨) =====
+      // income/click/casino/coin = 곱셈 배율, cards = 운명 카드 선택지 +장, startMoney/startPoints = 새 생 시작 때 지급
+      const REBIRTH_SHOPS = [
+        { id: "conv", icon: "🏪", name: "편의점", need: 1, desc: "패시브 수입 +5%", income: 1.05 },
+        { id: "lab", icon: "🔬", name: "연구소", need: 2, desc: "클릭 수입 +15%", click: 1.15 },
+        { id: "lounge", icon: "🎰", name: "VIP 카지노 라운지", need: 3, desc: "카지노 배당 +4% · 행운의 코인 +25%", casino: 1.04, coin: 1.25 },
+        { id: "oracle", icon: "🔮", name: "운명 점집", need: 4, desc: "운명 카드 선택지 +1장", cards: 1 },
+        { id: "bank", icon: "🏦", name: "투자 은행", need: 6, desc: "새 생 시작 자금 +1,000만원", startMoney: 1e7 },
+        { id: "space", icon: "🚀", name: "우주 정거장", need: 8, desc: "패시브 수입 +15%", income: 1.15 },
+        { id: "hq", icon: "🏛️", name: "환생 본부", need: 10, desc: "운명 카드 선택지 +1장 · 새 생 시작 특성 포인트 +1P", cards: 1, startPoints: 1 },
+        { id: "tower", icon: "🗼", name: "초고층 타워", need: 13, desc: "패시브·클릭 수입 +10%", income: 1.1, click: 1.1 },
+      ];
+      function getRebirthShopMult(key) {
+        let m = 1;
+        for (const sh of REBIRTH_SHOPS)
+          if (seasonRebirths >= sh.need && sh[key]) m *= sh[key];
+        return m;
+      }
+      function getRebirthShopSum(key) {
+        let t = 0;
+        for (const sh of REBIRTH_SHOPS)
+          if (seasonRebirths >= sh.need && sh[key]) t += sh[key];
+        return t;
+      }
+      // ===== 시즌 테마: 달마다 자동으로 바뀌는 규칙(전 유저 공통, 서버 불필요) =====
+      // fav = 이번 달 테마 카드(해금돼 있으면 운명 카드 선택지에 항상 등장), step = 환생 1회당 수입 보너스 추가분
+      const SEASON_THEMES = [
+        { id: "casino", icon: "🎰", name: "카지노의 달", desc: "카지노 배당 +10% · 행운의 코인 +30%", casino: 1.1, coin: 1.3, fav: "high_roller" },
+        { id: "click", icon: "👆", name: "클릭의 달", desc: "클릭 수입 +40%", click: 1.4, fav: "berserker" },
+        { id: "auto", icon: "🏭", name: "자동화의 달", desc: "패시브 수입 +15%", income: 1.15, fav: "all_rounder" },
+        { id: "night", icon: "🌙", name: "야행성의 달", desc: "밤 10시~아침 6시 패시브 수입 +30%", night: 1.3, fav: "night_owl" },
+        { id: "rebirth", icon: "♻️", name: "환생의 달", desc: "환생 포인트 +25% · 환생 1회당 수입 보너스 +12%", prestige: 1.25, step: 0.02, fav: "sprinter" },
+        { id: "luck", icon: "🍀", name: "행운의 달", desc: "운명 카드 선택지 +1장 · 행운의 코인 +20%", cards: 1, coin: 1.2, fav: "lottery" },
+      ];
+      function getSeasonTheme() {
+        const d = new Date();
+        return SEASON_THEMES[(d.getFullYear() * 12 + d.getMonth()) % SEASON_THEMES.length];
+      }
+      function getThemeMult(key) {
+        return getSeasonTheme()[key] || 1;
+      }
+      function getThemeNightMult() {
+        const t = getSeasonTheme();
+        if (!t.night) return 1;
+        const h = new Date().getHours();
+        return h >= 22 || h < 6 ? t.night : 1;
+      }
+      function getRebirthStepBonus() {
+        return 0.1 + (getSeasonTheme().step || 0);
+      }
+      // ===== 월간 환생 미션: 업데이트 이후 "직접 한" 환생만 센다(소급 파밍 방지). 매달 초기화. =====
+      let missionMonth = "";
+      let missionRebirths = 0;
+      let missionClaims = []; // ["2026-11:m1", ...]
+      const MONTHLY_MISSIONS = [
+        { id: "m1", need: 1, desc: "이번 달 환생 1회", reward: { coins: 20 }, label: "🎟️ 행운의 코인 20" },
+        { id: "m2", need: 5, desc: "이번 달 환생 5회", reward: { points: 5 }, label: "특성 포인트 +5P" },
+        { id: "m3", need: 10, desc: "이번 달 환생 10회", reward: { coins: 100, title: true }, label: "🎟️ 행운의 코인 100 + 한정 칭호" },
+      ];
+      function monthKeyNow() {
+        const d = new Date();
+        return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+      }
+      function syncMissionMonth() {
+        const k = monthKeyNow();
+        if (missionMonth !== k) {
+          missionMonth = k;
+          missionRebirths = 0;
+          missionClaims = missionClaims.filter((c) => c.startsWith(k + ":"));
+        }
+      }
+      function checkMissions() {
+        syncMissionMonth();
+        for (const m of MONTHLY_MISSIONS) {
+          const key = missionMonth + ":" + m.id;
+          if (missionRebirths < m.need || missionClaims.includes(key)) continue;
+          missionClaims.push(key);
+          let msg = `📜 미션 달성! ${m.desc} → ${m.label}`;
+          if (m.reward.coins) luckyCoins += m.reward.coins;
+          if (m.reward.points) {
+            prestigePoints += m.reward.points;
+            updateTalentPointBadge();
+          }
+          if (m.reward.title) {
+            const th = getSeasonTheme();
+            const tid = "mission_" + th.id;
+            if (!seasonTitles.some((t) => t.id === tid && t.key === missionMonth))
+              seasonTitles.push({ id: tid, key: missionMonth });
+            msg += ` (${SEASON_TITLE_DEFS[tid]})`;
+          }
+          showToast(msg);
+        }
+      }
+      function missionHtml() {
+        syncMissionMonth();
+        const rows = MONTHLY_MISSIONS.map((m) => {
+          const done = missionClaims.includes(missionMonth + ":" + m.id);
+          const th = getSeasonTheme();
+          return `<div class="fate-card" style="cursor:default"><span class="fate-icon">${done ? "✅" : "📜"}</span><span><div class="fate-name">${m.desc}</div><div class="fate-desc">보상: ${m.label}${m.reward.title ? ` (${th.icon} ${th.name} 칭호)` : ""}</div><div class="fate-desc" style="color:${done ? "#7dff9a" : "var(--gold)"}">${done ? "달성 완료" : `진행 ${Math.min(missionRebirths, m.need)}/${m.need}`}</div></span></div>`;
+        }).join("");
+        return `<div style="text-align:left;font-weight:bold;margin:6px 2px">📜 이번 달 환생 미션 <span style="font-weight:normal;font-size:12px">(직접 환생한 횟수 기준 · 매달 초기화)</span></div>${rows}<div style="text-align:left;font-weight:bold;margin:10px 2px 6px">🏙️ 사업장</div>`;
+      }
       let casinoPlaysCount = 0;
       let casinoTotalWagered = 0;
       let casinoWinCount = 0;
@@ -13628,6 +13752,7 @@
       const BIG_NUMBER_FIELDS = [
         "money",
         "totalEarned",
+        "lifeEarned",
         "casinoTotalWagered",
         "casinoTotalWinnings",
         "weeklyWinnings",
@@ -14867,6 +14992,42 @@
       // 함께 올려준다. lastSeenPatchVersion이 patchNotes[0].version과 다르면 "안 읽은 공지"로
       // 간주해 배지를 띄우고, 기존 유저가 접속하면 자동으로 한 번 띄워준다.
       const patchNotes = [
+        {
+          version: "2026112404",
+          date: "2026-11-24",
+          items: [
+            "📜 <b>월간 환생 미션이 생겼어요!</b> 이번 달 직접 환생한 횟수로 보상을 받아요: 1회 🎟️행운의 코인 20 · 5회 특성 포인트 +5P · 10회 🎟️코인 100 + <b>그 달 시즌 테마 한정 칭호</b>(예: 🍀 행운 마스터)",
+            "🏙️ 미션은 더보기 메뉴의 '환생 사업장' 창에서 진행도를 볼 수 있고, 받은 칭호는 명예의 전당의 '내 전용 칭호'에 모여요. 매달 초기화돼요",
+          ],
+        },
+        {
+          version: "2026112403",
+          date: "2026-11-24",
+          items: [
+            "🎭 <b>시즌 테마가 생겼어요!</b> 달마다 규칙이 바뀌어요: 🎰카지노의 달(배당·코인↑) · 👆클릭의 달(클릭 +40%) · 🏭자동화의 달(패시브 +15%) · 🌙야행성의 달(밤 패시브 +30%) · ♻️환생의 달(환생 포인트 +25%, 환생당 수입 +12%) · 🍀행운의 달(카드 선택지 +1장)",
+            "⭐ 이번 달 <b>테마 카드</b>는 운명 카드 선택지에 항상 등장해요. 더보기 메뉴의 '🏙️ 환생 사업장'에서 이번 달 테마를 볼 수 있어요",
+          ],
+        },
+        {
+          version: "2026112402",
+          date: "2026-11-24",
+          items: [
+            "🏙️ <b>환생 사업장이 생겼어요!</b> 이번 시즌 환생 횟수가 쌓일수록 새 사업장이 열려요: 🏪편의점(1회) · 🔬연구소(2회) · 🎰VIP 카지노 라운지(3회) · 🔮운명 점집(4회) · 🏦투자 은행(6회) · 🚀우주 정거장(8회) · 🏛️환생 본부(10회) · 🗼초고층 타워(13회). 더보기 메뉴의 '🏙️ 환생 사업장'에서 확인해요",
+            "🎴 <b>운명 카드가 7장 늘었어요!</b> 환생을 거듭할수록 선택지에 새 카드가 섞여 나와요: 🐿️알뜰살뜰 · 🏃초반 질주 · 🌙올빼미 · 🔥광전사 · 💎하이롤러 · 🧩만능 일꾼 · 👑환생의 달인(전설). 사업장에 따라 카드 선택지가 최대 5장까지 늘어나요",
+            "♻️ 환생 창과 랭킹 카드에서 이번 시즌 환생 횟수를 볼 수 있어요",
+          ],
+        },
+        {
+          version: "2026112401",
+          date: "2026-11-24",
+          items: [
+            "♻️ <b>환생 시스템이 크게 바뀌었어요!</b> 환생 허들은 <b>1회차 1경 → 2회차 2경 → … 최대 15경</b>(이번 시즌 환생 횟수 기준)이에요",
+            "🎁 환생 포인트가 훨씬 후해졌어요: <b>1경 10P · 4경 20P · 25경 50P · 100경 100P</b> (이번 생 총 수입 기준). <b>평생 첫 환생에는 +50P 선물</b>도 드려요",
+            "🚀 <b>환생 1회당 영구 수입 +10%</b>! 이번 시즌 최대 15회, 누적 +150%(2.5배)까지 쌓여요. 시즌이 바뀌면 횟수 보너스만 초기화되고, 특성 포인트와 특성은 그대로 유지돼요",
+            "🏆 <b>재산 랭킹이 '시즌 누적 수입'으로 바뀌었어요.</b> 이제 환생해도 순위 점수가 0이 되지 않아요 (시즌이 바뀔 때만 0부터 다시 집계). 마음 놓고 환생하세요!",
+            "📊 더보기 메뉴의 ♻️ 환생 버튼에 환생까지 진행률(%)이 보여요. 지금까지 환생하신 분은 환생 횟수만큼 보너스가 소급 적용돼요(최대 15회)",
+          ],
+        },
         {
           version: "2026111802",
           date: "2026-11-18",
@@ -17599,18 +17760,96 @@
       // 특성 배율이 계속 복리로 세지는 게 후반 폭주(환생 반복 → 극원까지 도달)의
       // 핵심 원인이었다. 초반 페이싱(30분≈1억)은 이미 맞춰둔 상태라 그건 안 건드리고,
       // "환생을 얼마나 쉽게/자주 반복할 수 있는가"만 여기서 확실히 조인다.
-      function calcPrestigeGain() {
-        if (totalEarned < 1e16) return 0;
-        return Math.max(0, Math.floor(Math.pow(totalEarned / 1e16, 0.25)));
+      // 환생 허들: 1회차 1경, 2회차 2경 ... (시즌 기준, 최대 15경). 포인트는 10 x sqrt(이번 생 총 수입 / 1경)
+      //   -> 1경 10P, 4경 20P, 25경 50P, 100경 100P, 546경 233P (초반은 후하게, 상위권은 완만하게)
+      // forSettle=true 는 시즌 정산용: 회차와 상관없이 1경만 넘으면 포인트를 준다.
+      function calcPrestigeGain(forSettle) {
+        const need = forSettle ? PRESTIGE_HURDLE_BASE : getPrestigeHurdle();
+        if (totalEarned < need) return 0;
+        return Math.max(
+          0,
+          Math.floor(
+            10 * Math.sqrt(totalEarned / PRESTIGE_HURDLE_BASE) * getThemeMult("prestige"),
+          ),
+        );
       }
+      function updatePrestigeBtnLabel() {
+        const btn = document.getElementById("prestigeBtn");
+        if (!btn) return;
+        const need = getPrestigeHurdle();
+        const gain = calcPrestigeGain();
+        const label =
+          gain > 0
+            ? `♻️ 환생 가능! (+${gain}P)`
+            : `♻️ 환생 (${Math.min(99, Math.floor((totalEarned / need) * 100) || 0)}%)`;
+        if (btn.textContent.trim() !== label) btn.textContent = label;
+      }
+      setInterval(updatePrestigeBtnLabel, 4000);
+      (function setupRebirthShops() {
+        const pb = document.getElementById("prestigeBtn");
+        if (!pb) return;
+        const btn = document.createElement("button");
+        btn.className = "close-btn more-menu-item";
+        btn.id = "rebirthShopBtn";
+        btn.style.textAlign = "left";
+        btn.textContent = "🏙️ 환생 사업장";
+        pb.insertAdjacentElement("afterend", btn);
+        const ov = document.createElement("div");
+        ov.className = "modal-overlay";
+        ov.id = "rebirthShopModal";
+        ov.innerHTML =
+          '<div class="modal-box"><h2>🏙️ 환생 사업장</h2><p id="rebirthShopDesc"></p><div id="rebirthShopList" style="max-height:50vh;overflow-y:auto"></div><button class="close-btn" id="rebirthShopClose">닫기</button></div>';
+        document.body.appendChild(ov);
+        function render() {
+          const th = getSeasonTheme();
+          document.getElementById("rebirthShopDesc").innerHTML =
+            `<div style="border:1px solid var(--gold);border-radius:12px;padding:8px 10px;margin-bottom:8px;text-align:left"><b>${th.icon} 이번 달 테마 · ${th.name}</b><br />${th.desc}<br />⭐ 테마 카드: ${FATE_CARDS[th.fav] ? FATE_CARDS[th.fav].icon + " " + FATE_CARDS[th.fav].name : ""}</div>` +
+            `이번 시즌 환생 <b>${seasonRebirths}회</b> · 환생할수록 새 사업장이 열려요.<br />시즌이 바뀌면 횟수가 초기화돼서 매달 새로 열어가요.`;
+          document.getElementById("rebirthShopList").innerHTML = missionHtml() + REBIRTH_SHOPS.map(
+            (sh) => {
+              const on = seasonRebirths >= sh.need;
+              return `<div class="fate-card" style="cursor:default;${on ? "" : "opacity:.5;"}"><span class="fate-icon">${on ? sh.icon : "🔒"}</span><span><div class="fate-name">${sh.name}${on ? " ✅" : ""}</div><div class="fate-desc">${sh.desc}</div><div class="fate-desc" style="color:${on ? "#7dff9a" : "var(--gold)"}">${on ? "가동 중" : `시즌 환생 ${sh.need}회 필요 (${seasonRebirths}/${sh.need})`}</div></span></div>`;
+            },
+          ).join("");
+        }
+        try {
+          const th = getSeasonTheme();
+          const d = new Date();
+          const key = "themeSeen_" + d.getFullYear() + "_" + d.getMonth();
+          if (!localStorage.getItem(key)) {
+            localStorage.setItem(key, "1");
+            setTimeout(
+              () => showToast(`${th.icon} 이번 달 테마: ${th.name} — ${th.desc}`),
+              5000,
+            );
+          }
+        } catch (e) {}
+        btn.addEventListener("click", () => {
+          render();
+          ov.classList.add("show");
+        });
+        document
+          .getElementById("rebirthShopClose")
+          .addEventListener("click", () => ov.classList.remove("show"));
+        ov.addEventListener("click", (e) => {
+          if (e.target === ov) ov.classList.remove("show");
+        });
+      })();
 
       function openPrestigeModal() {
         const gain = calcPrestigeGain();
         document.getElementById("prestigeCurrentMult").textContent =
           "x" + prestigeMult.toFixed(2);
-        document.getElementById("prestigeGainPoints").textContent = "+" + gain;
+        const firstGiftNow = rebirthCount === 0 && gain > 0 ? 50 : 0;
+        document.getElementById("prestigeGainPoints").textContent =
+          "+" + gain + (firstGiftNow ? " (+첫 환생 선물 50)" : "");
         document.getElementById("prestigeNextMult").textContent =
-          prestigePoints + gain + "P";
+          prestigePoints + gain + firstGiftNow + "P";
+        document.getElementById("prestigeSeasonInfo").textContent =
+          `${seasonRebirths}회 → ${seasonRebirths + 1}회 · 수입 +${Math.round(Math.min(PRESTIGE_MAX_STEPS, seasonRebirths) * getRebirthStepBonus() * 100)}% → +${Math.round(Math.min(PRESTIGE_MAX_STEPS, seasonRebirths + 1) * getRebirthStepBonus() * 100)}%` +
+          (REBIRTH_SHOPS.find((x) => x.need === seasonRebirths + 1)
+            ? ` · 🏙️ 새 사업장 해금!`
+            : "");
         const noteEl = document.getElementById("challengeCompleteNote");
         const offerRow = document.getElementById("challengeOfferRow");
         if (activeChallenge === "no_casino") {
@@ -17623,8 +17862,10 @@
         offerRow.style.display = "none"; // 도전과제 신청은 환생 직후 운명 카드 화면에서 한다
         refreshPrestigeExtra();
         if (gain <= 0) {
+          const need = getPrestigeHurdle();
+          const pct = Math.min(99, Math.floor((totalEarned / need) * 100) || 0);
           showToast(
-            `아직 환생으로 얻을 게 없어요. 총 수입 1경원 이상 벌어보세요! (시즌 종료까지 ${getSeasonDaysLeft()}일)`,
+            `♻️ 환생까지 ${pct}% · 이번 생 총 수입 ${formatWon(need)}원이 필요해요 (${seasonRebirths + 1}회차, 시즌 종료까지 ${getSeasonDaysLeft()}일)`,
           );
           return;
         }
@@ -17635,8 +17876,14 @@
         const gain = calcPrestigeGain();
         const challengeSucceeded = activeChallenge === "no_casino";
         const finalGain = challengeSucceeded ? gain * 2 : gain;
-        prestigePoints += finalGain;
+        const firstGift = rebirthCount === 0 ? 50 : 0; // 평생 첫 환생 선물
+        prestigePoints += finalGain + firstGift;
+        seasonBase += totalEarned; // 시즌 누적 수입 보존 (아래 resetLifeProgress 가 totalEarned 를 0으로 만들기 전에)
+        seasonRebirths++;
         rebirthCount++;
+        syncMissionMonth();
+        missionRebirths++;
+        updateTalentMultipliers();
         unlockVoidAfterRebirth();
         if (
           challengeSucceeded &&
@@ -17659,6 +17906,20 @@
             `♻️ 환생 완료! 특성 포인트 ${finalGain}P를 획득했어요. 이제 운명 카드를 골라보세요!`,
           );
         }
+        if (firstGift)
+          setTimeout(
+            () => showToast("🎁 첫 환생 선물! 특성 포인트 +50P를 더 받았어요"),
+            1800,
+          );
+        {
+          const ns = REBIRTH_SHOPS.find((x) => x.need === seasonRebirths);
+          if (ns)
+            setTimeout(
+              () => showToast(`🏙️ 새 사업장 해금! ${ns.icon} ${ns.name} — ${ns.desc}`),
+              firstGift ? 3600 : 1800,
+            );
+        }
+        setTimeout(checkMissions, 2600);
         setTimeout(() => mascotSay(MASCOT_LINES.rebirth), 900);
         beginFateSelection(true);
         saveGame();
@@ -17762,28 +18023,93 @@
           desc: "즉시 특성 포인트 +2P",
           startPoints: 2,
         },
+        // ----- 환생을 거듭할수록(평생 환생 횟수 min) 선택지에 섞여 나오는 카드 -----
+        hoarder: {
+          icon: "🐿️",
+          name: "알뜰살뜰",
+          desc: "시작 자금 +1,000만원 · 패시브 수입 +3%",
+          income: 1.03,
+          startMoney: 1e7,
+          min: 2,
+        },
+        sprinter: {
+          icon: "🏃",
+          name: "초반 질주",
+          desc: "매월 1~10일 패시브 +50% → 11일부터 -10%",
+          early: true,
+          min: 3,
+        },
+        night_owl: {
+          icon: "🌙",
+          name: "올빼미",
+          desc: "밤 10시~아침 6시 패시브 +35% · 낮에는 -5%",
+          night: true,
+          min: 3,
+        },
+        berserker: {
+          icon: "🔥",
+          name: "광전사",
+          desc: "클릭 수입 +100% · 패시브 수입 -30%",
+          click: 2,
+          income: 0.7,
+          min: 5,
+        },
+        high_roller: {
+          icon: "💎",
+          name: "하이롤러",
+          desc: "카지노 배당 +15% · 행운의 코인 1.5배 · 패시브 -15%",
+          casino: 1.15,
+          coinMult: 1.5,
+          income: 0.85,
+          min: 5,
+        },
+        all_rounder: {
+          icon: "🧩",
+          name: "만능 일꾼",
+          desc: "패시브 +12% · 클릭 +12% · 카지노 배당 +4%",
+          income: 1.12,
+          click: 1.12,
+          casino: 1.04,
+          min: 8,
+        },
+        legend: {
+          icon: "👑",
+          name: "환생의 달인",
+          desc: "패시브 +40% · 클릭 +40% · 즉시 특성 포인트 +3P (전설)",
+          income: 1.4,
+          click: 1.4,
+          startPoints: 3,
+          min: 12,
+        },
       };
       function getFateCard() {
         return fateCardId ? FATE_CARDS[fateCardId] || null : null;
       }
       function getFateIncomeMult() {
         const f = getFateCard();
-        if (!f) return 1;
-        let m = f.income || 1;
-        if (f.late) m *= new Date().getDate() >= 15 ? 1.4 : 0.8;
-        return m;
+        let m = 1;
+        if (f) {
+          m = f.income || 1;
+          if (f.late) m *= new Date().getDate() >= 15 ? 1.4 : 0.8;
+          if (f.early) m *= new Date().getDate() <= 10 ? 1.5 : 0.9;
+          if (f.night) {
+            const h = new Date().getHours();
+            m *= h >= 22 || h < 6 ? 1.35 : 0.95;
+          }
+        }
+        return m * getRebirthShopMult("income") * getThemeMult("income") * getThemeNightMult(); // 환생 사업장 + 시즌 테마 보너스 포함
       }
       function getFateClickMult() {
         const f = getFateCard();
-        return f && f.click ? f.click : 1;
+        return (f && f.click ? f.click : 1) * getRebirthShopMult("click") * getThemeMult("click");
       }
       function getFateCasinoMult() {
         const f = getFateCard();
-        return f && f.casino ? f.casino : 1;
+        return (f && f.casino ? f.casino : 1) * getRebirthShopMult("casino") * getThemeMult("casino");
       }
       function getFateCoinMult() {
         const f = getFateCard();
-        return f && f.coinMult ? f.coinMult : 1;
+        return (f && f.coinMult ? f.coinMult : 1) * getRebirthShopMult("coin") * getThemeMult("coin");
       }
 
       // ----- 역대 랭커 특전(명예 점수) -----
@@ -17909,12 +18235,19 @@
 
       // ----- 운명 카드 -----
       function pickFateOffer() {
-        const ids = Object.keys(FATE_CARDS);
+        const ids = Object.keys(FATE_CARDS).filter(
+          (id) => (FATE_CARDS[id].min || 0) <= rebirthCount,
+        );
         for (let i = ids.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
           [ids[i], ids[j]] = [ids[j], ids[i]];
         }
-        return ids.slice(0, 3);
+        const theme = getSeasonTheme();
+        const n = Math.min(ids.length, 3 + getRebirthShopSum("cards") + (theme.cards || 0));
+        const out = ids.slice(0, n);
+        if (theme.fav && ids.includes(theme.fav) && !out.includes(theme.fav))
+          out[out.length - 1] = theme.fav; // 이번 달 테마 카드는 항상 선택지에 등장
+        return out;
       }
       function beginFateSelection(openNow) {
         fateCardId = null;
@@ -17928,7 +18261,7 @@
           .map((id) => {
             const f = FATE_CARDS[id];
             if (!f) return "";
-            return `<button class="fate-card" data-fate="${id}"><span class="fate-icon">${f.icon}</span><span><div class="fate-name">${f.name}</div><div class="fate-desc">${f.desc}</div></span></button>`;
+            return `<button class="fate-card" data-fate="${id}"><span class="fate-icon">${f.icon}</span><span><div class="fate-name">${f.name}${id === getSeasonTheme().fav ? " ⭐" : ""}</div><div class="fate-desc">${f.desc}${id === getSeasonTheme().fav ? " · 이번 달 테마 카드" : ""}</div></span></button>`;
           })
           .join("");
         wrap
@@ -17958,6 +18291,14 @@
         }
         if (f.startPoints) {
           prestigePoints += f.startPoints;
+          updateTalentPointBadge();
+        }
+        // 환생 사업장 보너스: 새 생을 시작할 때 지급
+        const shopMoney = getRebirthShopSum("startMoney");
+        if (shopMoney) creditMoney(shopMoney);
+        const shopPts = getRebirthShopSum("startPoints");
+        if (shopPts) {
+          prestigePoints += shopPts;
           updateTalentPointBadge();
         }
         let challengeStarted = false;
@@ -17995,17 +18336,23 @@
       // 안전하게), 보고서 모달은 seasonTick()이 게임 화면이 준비된 뒤에 띄운다.
       function settleSeason(prevKey, snap) {
         if (seasonHistory.some((h) => h.key === prevKey)) return; // 이미 정산한 시즌이면 포인트 중복 지급/재초기화 방지
-        const earned = totalEarned;
+        const earned = getSeasonEarned(); // 환생해도 안 줄어드는 시즌 누적 수입
         bestSeasonEarned = Math.max(bestSeasonEarned, earned);
         bestMonthlyCasino = Math.max(bestMonthlyCasino, snap.casino);
-        if (earned < SEASON_MIN_TOTAL) return; // 막 시작한 유저는 그대로 이어서 진행
+        if (earned < SEASON_MIN_TOTAL) {
+          // 막 시작한 유저는 그대로 이어서 진행하되, 시즌 환생 횟수/누적 수입은 새 시즌 기준으로 맞춘다
+          seasonBase = 0;
+          seasonRebirths = 0;
+          updateTalentMultipliers();
+          return;
+        }
 
         const titleIdx = getWealthTitleIndex();
         const title = wealthTitles[titleIdx];
         const grade =
           SEASON_GRADES.find((g) => titleIdx >= g.min) ||
           SEASON_GRADES[SEASON_GRADES.length - 1];
-        const baseGain = calcPrestigeGain(); // 1경 이상 벌었을 때만 생기는 일반 환생 포인트
+        const baseGain = calcPrestigeGain(true); // 1경 이상 벌었을 때만 생기는 일반 환생 포인트
         const challengeOk = activeChallenge === "no_casino";
         const rebirthPts = challengeOk ? baseGain * 2 : baseGain;
         const honorPts = getHonorSeasonBonusPoints();
@@ -18038,6 +18385,9 @@
         prestigePoints += total;
         rebirthCount++;
         seasonCount++;
+        seasonBase = 0; // 새 시즌: 시즌 누적 수입/환생 횟수 보너스 초기화 (특성 포인트는 유지)
+        seasonRebirths = 0;
+        updateTalentMultipliers();
         unlockVoidAfterRebirth();
         if (
           challengeOk &&
@@ -18556,7 +18906,7 @@
       }
       // settleSeason()과 같은 계산으로 "지금 정산되면" 받을 보상을 미리 계산해 보여준다 (상태는 바꾸지 않음). 정산 규칙을 바꾸면 여기도 같이 고칠 것.
       function previewSeasonSettle() {
-        if (totalEarned < SEASON_MIN_TOTAL) return null;
+        if (getSeasonEarned() < SEASON_MIN_TOTAL) return null;
         const titleIdx = getWealthTitleIndex(),
           title = wealthTitles[titleIdx];
         const grade =
@@ -18623,7 +18973,7 @@
         const bar = document.getElementById("seasonWarnBar");
         const left = getSeasonEndMs() - Date.now();
         if (
-          !(totalEarned >= SEASON_MIN_TOTAL && left > 0 && left <= 3 * 86400000)
+          !(getSeasonEarned() >= SEASON_MIN_TOTAL && left > 0 && left <= 3 * 86400000)
         ) {
           if (bar.style.display !== "none") bar.style.display = "none";
           if (isModalShown("seasonWarnModal")) closeSeasonWarn(); // 정산이 시작되면 안내 창은 닫고 보고서로 넘어간다
@@ -18665,7 +19015,7 @@
         if (
           left <= 3 &&
           localStorage.getItem("lrSeasonWarnDay") !== todayKey &&
-          totalEarned >= SEASON_MIN_TOTAL
+          getSeasonEarned() >= SEASON_MIN_TOTAL
         ) {
           localStorage.setItem("lrSeasonWarnDay", todayKey);
           showToast(
@@ -19131,7 +19481,7 @@
     <span class="my-rank-icon">${isMoney ? "💰" : "📈"}</span>
     <div style="flex:1;">
       <div class="my-rank-name">${isMoney ? "재산 · 보유금" : "재산 · 월간 수익"} <span style="font-size:10px; color:var(--paper-dim); font-weight:normal;">${isMoney ? "(지금 가진 돈 기준)" : "(이번 시즌 총 수입 기준)"}</span></div>
-      <div class="my-rank-sub">${isMoney ? `내 보유금 ${formatWon(money)}원` : `이번 시즌 총 수입 ${formatWon(totalEarned)}원 · 환생하면 0부터 다시 집계돼요`}</div>
+      <div class="my-rank-sub">${isMoney ? `내 보유금 ${formatWon(money)}원` : `이번 시즌 총 수입 ${formatWon(getSeasonEarned())}원 · 환생해도 유지되고, 시즌이 바뀌면 0부터 다시 집계돼요 (♻️ 이번 시즌 환생 ${seasonRebirths}회)`}</div>
       <div class="my-rank-sub" id="myRankPosition" style="color:var(--gold);">내 순위 불러오는 중...</div>
     </div>
   `;
@@ -22725,6 +23075,13 @@
       const SEASON_TITLE_DEFS = {
         sword_champion: "⚔️ 검배틀 챔피언",
         void_conqueror: "🌌 공허 정복자",
+        // 월간 환생 미션(10회) 한정 칭호: 그 달의 시즌 테마 이름으로 발급
+        mission_casino: "🎰 카지노 마스터",
+        mission_click: "👆 클릭 마스터",
+        mission_auto: "🏭 자동화 마스터",
+        mission_night: "🌙 야행성 마스터",
+        mission_rebirth: "♻️ 환생 마스터",
+        mission_luck: "🍀 행운 마스터",
       };
       let adminGrantBusy = false;
       function purgeExpiredMails() {
@@ -24060,7 +24417,7 @@
               (cloudRebirth < rebirthCount ||
               (cloudRebirth <= rebirthCount &&
                 lastSaveTime > cloudLastSave + 5000 &&
-                (fromBigStorable(totalEarned) > cloudTotalEarned * 1.5 ||
+                (getSeasonEarned() > cloudTotalEarned * 1.5 ||
                   mansionLevel > cloudMansionLevel ||
                   getNameColorRank() > cloudNameColorRank)));
 
@@ -24103,6 +24460,8 @@
               data.money > LOGIN_REQUIRED_THRESHOLD
             ) {
               data.totalEarned = clampedTotalEarned;
+              data.lifeEarned = Math.min(data.lifeEarned, LOGIN_REQUIRED_THRESHOLD);
+              seasonBase = 0;
               data.money = clampedMoney;
               // 서버에 올라간 값과 화면에 보이는 값을 일치시켜야 하니, 실제 게임 상태도 함께 내림
               totalEarned = clampedTotalEarned;
@@ -24863,7 +25222,7 @@
             delayMs: 16 * 3600 * 1000,
           });
           // 시즌 정산(매월 1일 0시) 24시간 / 1시간 전 알림. (타이머 한도 때문에 7일 안쪽 것만 예약하고, 백그라운드로 갈 때마다 다시 건다)
-          if (totalEarned >= SEASON_MIN_TOTAL) {
+          if (getSeasonEarned() >= SEASON_MIN_TOTAL) {
             const seasonEnd = getSeasonEndMs(),
               nowMs = Date.now();
             [
@@ -24965,7 +25324,12 @@
           gameVersion: GAME_VERSION,
           tamperFlag: saveTamperFlag,
           money,
-          totalEarned,
+          totalEarned: getSeasonEarned(), // 랭킹·서버 검증용: 환생해도 줄지 않는 시즌 누적 수입
+          lifeEarned: totalEarned, // 이번 생(환생 후)의 수입
+          seasonRebirths,
+          missionMonth,
+          missionRebirths,
+          missionClaims,
           stageIndex,
           baseClickValue,
           clickUpgradeLevel,
@@ -25183,7 +25547,7 @@
           // totalEarned로 되돌리지 않는다).
           if (
             incomingRebirth > rebirthCount ||
-            (incomingRebirth >= rebirthCount && incomingTotal > totalEarned + 1)
+            (incomingRebirth >= rebirthCount && incomingTotal > getSeasonEarned() + 1)
           ) {
             applySaveData(incoming, {
               checkOffline: false,
@@ -25298,6 +25662,21 @@
         }
         mansionLevel = num("mansionLevel", mansionLevel, 0, 1000, true);
         rebirthCount = num("rebirthCount", rebirthCount, 0, 100000, true);
+        // 예전 저장본은 지금까지의 환생 횟수만큼 시즌 환생 횟수로 소급 적용(최대 15회)
+        seasonRebirths =
+          data.seasonRebirths !== undefined && data.seasonRebirths !== null
+            ? Math.max(0, Math.floor(Number(data.seasonRebirths) || 0))
+            : Math.min(PRESTIGE_MAX_STEPS, rebirthCount);
+        missionMonth =
+          typeof data.missionMonth === "string" ? data.missionMonth.slice(0, 7) : "";
+        missionRebirths = Math.max(0, Math.floor(Number(data.missionRebirths) || 0));
+        missionClaims = Array.isArray(data.missionClaims)
+          ? data.missionClaims
+              .filter((x) => typeof x === "string")
+              .map((x) => x.slice(0, 24))
+              .slice(-40)
+          : [];
+        syncMissionMonth();
         if (fixed.length)
           console.warn(
             "불가능한 저장 값을 범위 안으로 되돌렸어요:",
@@ -25315,7 +25694,17 @@
         // 클라우드에서 온 데이터(tamperFlag 없음)를 적용하면 플래그가 풀리고, 의심되는 로컬 저장본을 적용하면 켜진다.
         saveTamperFlag = !!(opts.tampered || (data && data.tamperFlag));
         money = sanitizeBalance(fromBigStorable(data.money) || 0);
-        totalEarned = sanitizeBalance(fromBigStorable(data.totalEarned) || 0);
+        {
+          const savedTotal = sanitizeBalance(fromBigStorable(data.totalEarned) || 0);
+          if (data.lifeEarned !== undefined && data.lifeEarned !== null) {
+            totalEarned = sanitizeBalance(fromBigStorable(data.lifeEarned) || 0);
+            seasonBase = Math.max(0, savedTotal - totalEarned);
+          } else {
+            // 예전 저장본: totalEarned 가 곧 이번 생 수입
+            totalEarned = savedTotal;
+            seasonBase = 0;
+          }
+        }
         stageIndex = data.stageIndex || 0;
         baseClickValue = data.baseClickValue || 1;
         infiniteUpgradeLevel = data.infiniteUpgradeLevel || 0;
@@ -27559,8 +27948,8 @@
       switchMap(currentMap);
     </script>
       <script src="ui-v2.js?v=2026101412"></script>
-    <script src="ui-v3.js?v=2026111802"></script>
-    <script src="nh-exchange.js?v=2026111802"></script>
-    <script src="tap-fx.js?v=2026111802"></script>
+    <script src="ui-v3.js?v=2026112404"></script>
+    <script src="nh-exchange.js?v=2026112404"></script>
+    <script src="tap-fx.js?v=2026112404"></script>
   </body>
 </html>
