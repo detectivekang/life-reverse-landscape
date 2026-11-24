@@ -24,7 +24,7 @@
       // 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
       // 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
       (function () {
-        var CURRENT_VERSION = "2026112404";
+        var CURRENT_VERSION = "2026112405";
         try {
           if (sessionStorage.getItem("lrVersionChecked") === CURRENT_VERSION)
             return;
@@ -8417,6 +8417,7 @@
       let voidShopResetKey = ""; // 상점 강화 초기화를 마지막으로 쓴 시즌(월) 키 — 시즌당 1회
       let claimedVoidSeasonRewards = []; // 공허 랭킹 시즌 보상을 이미 받은 시즌(월) 목록 (중복 지급 방지)
       let claimedNeoSeasonRewards = []; // 네온 호드(네오) 랭킹 시즌 보상을 이미 받은 시즌(월) 목록 (중복 지급 방지)
+      let claimedRebirthSeasonRewards = []; // 환생왕 랭킹 시즌 보상을 이미 받은 시즌(월) 목록 (중복 지급 방지)
       let seasonTitles = []; // 시즌 랭킹 1위 전용 칭호 [{id, key}] (우편으로 받으면 쌓임)
       const VOID_SHOP_REFUND_VERSION = 1;
       let voidShopRefundVersion = VOID_SHOP_REFUND_VERSION; // 새 게임은 이미 최신 버전으로 시작
@@ -8599,7 +8600,7 @@
         return seasonBase + totalEarned;
       }
       function getPrestigeHurdle() {
-        return PRESTIGE_HURDLE_BASE * Math.min(PRESTIGE_MAX_STEPS, seasonRebirths + 1);
+        return PRESTIGE_HURDLE_BASE * (seasonRebirths + 1); // 상한 없음: N회차 = N경 (환생이 점점 힘들어진다)
       }
       // ===== 환생 사업장: 이번 시즌 환생 횟수에 따라 새 사업장이 열린다 (저장할 값 없음: 횟수만 보면 됨) =====
       // income/click/casino/coin = 곱셈 배율, cards = 운명 카드 선택지 +장, startMoney/startPoints = 새 생 시작 때 지급
@@ -14993,6 +14994,15 @@
       // 간주해 배지를 띄우고, 기존 유저가 접속하면 자동으로 한 번 띄워준다.
       const patchNotes = [
         {
+          version: "2026112405",
+          date: "2026-11-24",
+          items: [
+            "👑 <b>환생왕 랭킹이 생겼어요!</b> 이번 시즌에 직접 환생한 횟수로 순위를 매겨요. 랭킹 맨 앞 탭에서 볼 수 있어요 (동점이면 시즌 누적 수입이 높은 쪽이 앞서요)",
+            "📈 환생 허들에 <b>상한이 없어졌어요</b>: N회차는 N경이 필요해요(1경, 2경, 3경 …). 환생할수록 점점 힘들어져요. 환생 횟수 수입 보너스(+10%)는 최대 15회까지예요",
+            "🎁 <b>시즌 종료 시 환생왕 등급 보상</b>(특성 포인트 + 되돌리기 + 강화 주문서)을 우편함으로 드려요. 1위는 <b>👑 환생왕</b> 전용 칭호! 12월 시즌 종료분부터 지급돼요",
+          ],
+        },
+        {
           version: "2026112404",
           date: "2026-11-24",
           items: [
@@ -15021,7 +15031,7 @@
           version: "2026112401",
           date: "2026-11-24",
           items: [
-            "♻️ <b>환생 시스템이 크게 바뀌었어요!</b> 환생 허들은 <b>1회차 1경 → 2회차 2경 → … 최대 15경</b>(이번 시즌 환생 횟수 기준)이에요",
+            "♻️ <b>환생 시스템이 크게 바뀌었어요!</b> 환생 허들은 <b>1회차 1경 → 2회차 2경 → 3회차 3경 …</b> 이번 시즌 환생 횟수만큼 계속 올라가요",
             "🎁 환생 포인트가 훨씬 후해졌어요: <b>1경 10P · 4경 20P · 25경 50P · 100경 100P</b> (이번 생 총 수입 기준). <b>평생 첫 환생에는 +50P 선물</b>도 드려요",
             "🚀 <b>환생 1회당 영구 수입 +10%</b>! 이번 시즌 최대 15회, 누적 +150%(2.5배)까지 쌓여요. 시즌이 바뀌면 횟수 보너스만 초기화되고, 특성 포인트와 특성은 그대로 유지돼요",
             "🏆 <b>재산 랭킹이 '시즌 누적 수입'으로 바뀌었어요.</b> 이제 환생해도 순위 점수가 0이 되지 않아요 (시즌이 바뀔 때만 0부터 다시 집계). 마음 놓고 환생하세요!",
@@ -17760,7 +17770,7 @@
       // 특성 배율이 계속 복리로 세지는 게 후반 폭주(환생 반복 → 극원까지 도달)의
       // 핵심 원인이었다. 초반 페이싱(30분≈1억)은 이미 맞춰둔 상태라 그건 안 건드리고,
       // "환생을 얼마나 쉽게/자주 반복할 수 있는가"만 여기서 확실히 조인다.
-      // 환생 허들: 1회차 1경, 2회차 2경 ... (시즌 기준, 최대 15경). 포인트는 10 x sqrt(이번 생 총 수입 / 1경)
+      // 환생 허들: 1회차 1경, 2회차 2경 ... (시즌 기준, 상한 없음). 포인트는 10 x sqrt(이번 생 총 수입 / 1경)
       //   -> 1경 10P, 4경 20P, 25경 50P, 100경 100P, 546경 233P (초반은 후하게, 상위권은 완만하게)
       // forSettle=true 는 시즌 정산용: 회차와 상관없이 1경만 넘으면 포인트를 준다.
       function calcPrestigeGain(forSettle) {
@@ -18878,7 +18888,10 @@
           saveGame({ cloudNow: true });
         }
         if (medalPendingKey && currentUser && db) processPendingMedals();
-        if (currentUser && db) processNeoSeasonReward();
+        if (currentUser && db) {
+          processNeoSeasonReward();
+          processRebirthSeasonReward();
+        }
         if (isModalShown("seasonModal") && lastSeasonReportKey())
           renderSeasonMedalBox(lastSeasonReportKey());
       }
@@ -19284,6 +19297,7 @@
       //  재산(wealth_*)은 leaderboard 보드가 아니라 서버 함수 wealth_ranking()(saves 테이블의 money/totalEarned 집계)로 가져온다.
       // 개편: 상시 노출은 검배틀·공허·재산(월간 수익) 3개. 나머지(보유금·미니게임·소각·검 강화·현재검)는 "기록"으로 모았다.
       const RANK_CATS = [
+        { id: "rebirth", subs: [{ period: "rebirth_king", label: "👑 환생왕" }] },
         { id: "sword", subs: [{ period: "sword", label: "⚔️ 배틀" }] },
         { id: "void", subs: [{ period: "void", label: "🌌 최고 웨이브" }] },
         { id: "wealth", subs: [{ period: "wealth_monthly", label: "📈 월간 수익" }] },
@@ -19312,7 +19326,8 @@
         return (
           period === "wealth_money" ||
           period === "wealth_monthly" ||
-          period === "nh_season"
+          period === "nh_season" ||
+          period === "rebirth_king"
         );
       }
       function wealthKindOf(period) {
@@ -19472,7 +19487,100 @@
           );
         }
       }
+      // ----- 환생왕 랭킹: 서버 함수(rebirth_king.sql 의 rebirth_ranking) 호출 -----
+      let rebirthMissing = false;
+      let rebirthCache = null;
+      function fetchRebirthRank() {
+        if (!db || !currentUser) return Promise.resolve(null);
+        if (rebirthCache && Date.now() - rebirthCache.at < 8000) return rebirthCache.promise;
+        const promise = (async () => {
+          try {
+            const { data, error } = await db.rpc("rebirth_ranking", {
+              p_season: null,
+              p_limit: LEADERBOARD_TOP_N,
+            });
+            if (error) throw error;
+            rebirthMissing = false;
+            return data && data.ok ? data : null;
+          } catch (e) {
+            if (
+              e &&
+              (e.code === "PGRST202" ||
+                e.code === "42883" ||
+                /could not find the function|does not exist/i.test(e.message || ""))
+            )
+              rebirthMissing = true;
+            else console.error("환생왕 랭킹 조회 실패:", e);
+            return null;
+          }
+        })();
+        rebirthCache = { at: Date.now(), promise };
+        promise.then((r) => {
+          if (r === null && rebirthCache && rebirthCache.promise === promise) rebirthCache = null;
+        });
+        return promise;
+      }
+      async function renderRebirthCard() {
+        const card = document.getElementById("myRankCard");
+        card.innerHTML = `
+    <span class="my-rank-icon">👑</span>
+    <div style="flex:1;">
+      <div class="my-rank-name">환생왕 <span style="font-size:10px; color:var(--paper-dim); font-weight:normal;">(이번 시즌 직접 환생한 횟수)</span></div>
+      <div class="my-rank-sub">환생할 때마다 필요 수입이 1경씩 늘어나요(N회차 = N경) · 시즌(월)이 바뀌면 새로 시작해요 · 내 횟수 ${missionRebirths}회</div>
+      <div class="my-rank-sub" id="myRankPosition" style="color:var(--gold);">내 순위 불러오는 중...</div>
+      <div class="season-grade-line" id="myRankGrade"></div>
+      ${seasonGuideHtml("rebirth")}
+    </div>
+  `;
+        if (!currentUser) {
+          document.getElementById("myRankPosition").textContent = "로그인하면 전체 순위를 볼 수 있어요.";
+          return;
+        }
+        const res = await fetchRebirthRank();
+        if (currentLeaderboardPeriod !== "rebirth_king") return;
+        const el = document.getElementById("myRankPosition");
+        if (!el) return;
+        if (!res)
+          el.textContent = rebirthMissing
+            ? "🚧 준비 중이에요. 조금만 기다려주세요!"
+            : "순위를 불러오지 못했어요.";
+        else if (!res.me) {
+          el.textContent = "이번 시즌 환생 기록이 아직 없어요. 환생하면 순위에 올라요! (저장 후 최대 30초)";
+          renderSeasonGradeLine("rebirth_king", null);
+        } else {
+          el.textContent = `📍 전체 ${res.total.toLocaleString("ko-KR")}명 중 ${res.me.rank.toLocaleString("ko-KR")}위 · 환생 ${Number(res.me.score).toLocaleString("ko-KR")}회`;
+          renderSeasonGradeLine("rebirth_king", { rank: res.me.rank, total: Number(res.total) || 0 });
+        }
+      }
+      async function renderRebirthList() {
+        const lbEl = document.getElementById("leaderboardList");
+        lbEl.innerHTML = `<p style="font-size:11px; color:var(--paper-dim);">불러오는 중...</p>`;
+        const res = await fetchRebirthRank();
+        if (currentLeaderboardPeriod !== "rebirth_king") return;
+        if (!res) {
+          lbEl.innerHTML = `<p style="font-size:11px; color:var(--paper-dim);">${rebirthMissing ? "🚧 환생왕 랭킹은 준비 중이에요. 조금만 기다려주세요!" : "환생왕 랭킹을 불러오지 못했어요. 잠시 후 다시 시도해주세요."}</p>`;
+          return;
+        }
+        if (!res.list.length) {
+          lbEl.innerHTML = `<p style="font-size:11px; color:var(--paper-dim);">아직 이번 시즌 환생 기록이 없어요. 첫 번째 환생왕이 되어보세요! 👑</p>`;
+          return;
+        }
+        const row = (p, me) => `
+    <div class="lb-row${me ? " me" : ""}">
+      <span class="lb-rank">${p.rank}</span><span class="lb-name">${hofEsc(p.name)}${me ? " (나)" : ""}</span>
+      <span class="lb-tier">${seasonGradeTag(p.rank, Number(res.total) || 0)}♻️ ${Number(p.score).toLocaleString("ko-KR")}회</span>
+    </div>`;
+        lbEl.innerHTML = res.list.map((p) => row(p, p.uid === currentUser.uid)).join("");
+        if (res.me && !res.list.some((p) => p.uid === currentUser.uid)) {
+          lbEl.insertAdjacentHTML(
+            "beforeend",
+            `<div style="text-align:center; font-size:10px; color:var(--paper-dim); margin:4px 0;">⋯</div>` +
+              row({ rank: res.me.rank, name: currentUser.name, score: res.me.score }, true),
+          );
+        }
+      }
       async function renderWealthCard(period) {
+        if (period === "rebirth_king") return renderRebirthCard();
         if (period === "nh_season") return renderNhCard();
         const card = document.getElementById("myRankCard");
         const kind = wealthKindOf(period),
@@ -19505,6 +19613,7 @@
           el.textContent = `📍 전체 ${res.total.toLocaleString("ko-KR")}명 중 ${res.me.rank.toLocaleString("ko-KR")}위`;
       }
       async function renderWealthList(period) {
+        if (period === "rebirth_king") return renderRebirthList();
         if (period === "nh_season") return renderNhList();
         const lbEl = document.getElementById("leaderboardList");
         const kind = wealthKindOf(period),
@@ -19722,6 +19831,7 @@
         return a.join(" + ");
       }
       function seasonRewardText(kind, gid, rank) {
+        if (kind === "rebirth") return rebirthSeasonRewardText(gid);
         if (kind === "nh") return neoSeasonRewardText(gid, rank);
         return kind === "sword" ? swordSeasonRewardText(gid) : voidSeasonRewardText(gid, rank);
       }
@@ -19740,14 +19850,14 @@
       function renderSeasonGradeLine(period, info) {
         const el = document.getElementById("myRankGrade");
         if (!el) return;
-        const kind = period === "sword" ? "sword" : period === "nh_season" ? "nh" : "void";
+        const kind = period === "sword" ? "sword" : period === "nh_season" ? "nh" : period === "rebirth_king" ? "rebirth" : "void";
         if (!currentUser) {
           el.innerHTML = "";
           return;
         }
         const gid = info && info.rank ? getSeasonRankGrade(info.rank, info.total) : null;
         if (!gid) {
-          el.innerHTML = `🎯 ${kind === "sword" ? "승점을 올리면" : kind === "nh" ? "네온 호드 점수를 쌓으면" : "웨이브를 깨면"} 시즌 등급이 정해지고, 등급별 보상을 받아요.`;
+          el.innerHTML = `🎯 ${kind === "sword" ? "승점을 올리면" : kind === "nh" ? "네온 호드 점수를 쌓으면" : kind === "rebirth" ? "환생을 거듭하면" : "웨이브를 깨면"} 시즌 등급이 정해지고, 등급별 보상을 받아요.`;
           return;
         }
         const g = SEASON_RANK_GRADES[gid];
@@ -19812,6 +19922,7 @@
           wealth_money: "보유금",
           wealth_monthly: "월간 수익",
           nh_season: "네온 호드",
+          rebirth_king: "환생왕",
         };
         const periodLabel = periodLabels[currentLeaderboardPeriod] || "";
         if (!currentUser) {
@@ -21521,6 +21632,23 @@
         silver: { revive: 2, scroll: ["x15", 2] },
         bronze: { revive: 0, scroll: ["x15", 1] },
       };
+      // 환생왕 랭킹(이번 시즌 환생 횟수) 시즌 종료 보상: 특성 포인트 + 되돌리기 + 강화 주문서 (+ 1위 전용 칭호)
+      const REBIRTH_SEASON_REWARDS = {
+        champion: { prestige: 60, revive: 12, scroll: ["x25", 6], title: "rebirth_king" },
+        master: { prestige: 40, revive: 8, scroll: ["x20", 6] },
+        platinum: { prestige: 28, revive: 6, scroll: ["x15", 8] },
+        gold: { prestige: 18, revive: 4, scroll: ["x15", 4] },
+        silver: { prestige: 10, revive: 2, scroll: ["x15", 2] },
+        bronze: { prestige: 6, revive: 0, scroll: ["x15", 2] },
+      };
+      function rebirthSeasonRewardText(gid) {
+        const rw = REBIRTH_SEASON_REWARDS[gid];
+        const a = [`특성 포인트 ${rw.prestige}P`];
+        if (rw.revive > 0) a.push(`되돌리기 ${rw.revive}회`);
+        a.push(`${MAIL_BOOST_LABEL[rw.scroll[0]]} 주문서 ${rw.scroll[1]}개`);
+        if (rw.title) a.push("전용 칭호 👑 환생왕");
+        return a.join(" + ");
+      }
       // 공허(시즌 최고 웨이브) 시즌 보상: 차원 조각. 마스터는 2위/3위가 다르다.
       function getVoidSeasonRewards(gradeId, rank) {
         switch (gradeId) {
@@ -21726,6 +21854,71 @@
         } catch (e) {
           console.error("네온 호드 시즌 보상 확인 실패(나중에 다시 시도):", e);
           return false;
+        }
+      }
+      // 환생왕 랭킹 시즌 보상 (서버 rebirth_scores 에 남아 있는 지난 시즌 순위 기준)
+      const REBIRTH_REWARD_FIRST_SEASON = "2026-12"; // 이 시즌부터 지급 (도입 전 11월 기록은 연습으로 보고 지급 안 함)
+      async function checkRebirthSeasonReward(prevKey) {
+        if (!currentUser || !db) return false;
+        if (claimedRebirthSeasonRewards.includes(prevKey)) return true;
+        if (prevKey < REBIRTH_REWARD_FIRST_SEASON) return true;
+        try {
+          const { data, error } = await db.rpc("rebirth_ranking", { p_season: prevKey, p_limit: 1 });
+          if (error || !data || !data.ok) throw error || new Error("rebirth_ranking 응답 없음");
+          const total = Number(data.total) || 0;
+          const rank = data.me && typeof data.me.rank === "number" ? data.me.rank : null;
+          claimedRebirthSeasonRewards.push(prevKey);
+          const gradeId = rank ? getSeasonRankGrade(rank, total) : null;
+          if (!gradeId) {
+            saveGame({ cloudNow: true });
+            return true;
+          }
+          const g = SEASON_RANK_GRADES[gradeId];
+          const rw = REBIRTH_SEASON_REWARDS[gradeId];
+          const rewards = [{ t: "prestige", n: rw.prestige }];
+          const parts = [`특성 포인트 ${rw.prestige}P`];
+          if (rw.revive > 0) {
+            rewards.push({ t: "revive", n: rw.revive });
+            parts.push(`되돌리기 ${rw.revive}회`);
+          }
+          rewards.push({ t: "boost", k: rw.scroll[0], n: rw.scroll[1] });
+          parts.push(`${MAIL_BOOST_LABEL[rw.scroll[0]]} 강화 주문서 ${rw.scroll[1]}개`);
+          if (rw.title) {
+            rewards.push({ t: "title", id: rw.title, key: prevKey });
+            parts.push(`[${SEASON_TITLE_DEFS[rw.title]}] 칭호`);
+          }
+          addLocalMail({
+            title: `👑 지난 시즌 환생왕 ${g.icon}${g.name} 보상 (${rank}위)`,
+            gift: parts.join(" + "),
+            message: `전체 ${total.toLocaleString("ko-KR")}명 중 ${rank}위! 환생왕 시즌 랭킹 보상이에요.`,
+            rewards,
+          });
+          showToast(`📬 지난 시즌 환생왕 ${g.icon}${g.name}(${rank}위) 보상이 우편함에 도착했어요! (30일 안에 받으세요)`);
+          mascotSay([`👑 지난 시즌 환생왕 ${g.name} 등급 보상이 우편함에 도착했어! 30일 안에 받아가~`]);
+          saveGame({ cloudNow: true });
+          return true;
+        } catch (e) {
+          console.error("환생왕 시즌 보상 확인 실패(나중에 다시 시도):", e);
+          return false;
+        }
+      }
+      let rebirthRewardBusy = false;
+      let rebirthRewardTries = 0;
+      let rebirthRewardNextAt = 0;
+      async function processRebirthSeasonReward() {
+        if (rebirthRewardBusy || !currentUser || !db || rebirthRewardTries >= 5) return;
+        if (Date.now() < rebirthRewardNextAt) return;
+        const key = prevMonthKey(getMonthKey(new Date()));
+        if (!key || key < REBIRTH_REWARD_FIRST_SEASON || claimedRebirthSeasonRewards.includes(key)) return;
+        rebirthRewardBusy = true;
+        try {
+          const ok = await checkRebirthSeasonReward(key);
+          if (!ok) {
+            rebirthRewardTries++;
+            rebirthRewardNextAt = Date.now() + 60000;
+          }
+        } finally {
+          rebirthRewardBusy = false;
         }
       }
       // seasonTick(2초마다)에서 부른다. 지난달 키를 직접 계산하므로 월 정산 시점과 상관없이 로그인 후 한 번 확인되고,
@@ -23076,6 +23269,7 @@
         sword_champion: "⚔️ 검배틀 챔피언",
         void_conqueror: "🌌 공허 정복자",
         // 월간 환생 미션(10회) 한정 칭호: 그 달의 시즌 테마 이름으로 발급
+        rebirth_king: "👑 환생왕",
         mission_casino: "🎰 카지노 마스터",
         mission_click: "👆 클릭 마스터",
         mission_auto: "🏭 자동화 마스터",
@@ -25423,6 +25617,7 @@
           claimedSwordSeasonRewards,
           claimedVoidSeasonRewards,
           claimedNeoSeasonRewards,
+          claimedRebirthSeasonRewards,
           seasonTitles,
           voidShopResetKey,
           swordStoreOwned,
@@ -25914,6 +26109,9 @@
           : [];
         claimedNeoSeasonRewards = Array.isArray(data.claimedNeoSeasonRewards)
           ? data.claimedNeoSeasonRewards
+          : [];
+        claimedRebirthSeasonRewards = Array.isArray(data.claimedRebirthSeasonRewards)
+          ? data.claimedRebirthSeasonRewards.filter((x) => typeof x === "string").slice(-24)
           : [];
         seasonTitles = Array.isArray(data.seasonTitles)
           ? data.seasonTitles
@@ -27948,8 +28146,8 @@
       switchMap(currentMap);
     </script>
       <script src="ui-v2.js?v=2026101412"></script>
-    <script src="ui-v3.js?v=2026112404"></script>
-    <script src="nh-exchange.js?v=2026112404"></script>
-    <script src="tap-fx.js?v=2026112404"></script>
+    <script src="ui-v3.js?v=2026112405"></script>
+    <script src="nh-exchange.js?v=2026112405"></script>
+    <script src="tap-fx.js?v=2026112405"></script>
   </body>
 </html>
