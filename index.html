@@ -24,7 +24,7 @@
       // 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
       // 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
       (function () {
-        var CURRENT_VERSION = "2026112405";
+        var CURRENT_VERSION = "2026112406";
         try {
           if (sessionStorage.getItem("lrVersionChecked") === CURRENT_VERSION)
             return;
@@ -6687,7 +6687,7 @@
               검배틀
             </button>
             <button class="rank-cat-btn" data-cat="void">🌌 공허</button>
-            <button class="rank-cat-btn" data-cat="wealth">💰 재산</button>
+            <button class="rank-cat-btn" data-cat="rebirth">👑 환생왕</button>
             <button class="rank-cat-btn" data-cat="records">📚 기록</button>
             <button class="rank-cat-btn" data-cat="nh" style="grid-column: 1 / -1">🛸 네온 호드 (콜라보)</button>
           </div>
@@ -14994,6 +14994,13 @@
       // 간주해 배지를 띄우고, 기존 유저가 접속하면 자동으로 한 번 띄워준다.
       const patchNotes = [
         {
+          version: "2026112406",
+          date: "2026-11-25",
+          items: [
+            "🛠️ 접속할 때 <b>이번 시즌 환생 횟수와 월간 미션 진행도가 0으로 돌아오던 오류</b>를 고쳤어요. 이전 버전에서 환생하신 분은 지금까지의 환생 횟수만큼 이번 시즌 횟수가 복구돼요(최대 15회)",
+          ],
+        },
+        {
           version: "2026112405",
           date: "2026-11-24",
           items: [
@@ -19297,14 +19304,14 @@
       //  재산(wealth_*)은 leaderboard 보드가 아니라 서버 함수 wealth_ranking()(saves 테이블의 money/totalEarned 집계)로 가져온다.
       // 개편: 상시 노출은 검배틀·공허·재산(월간 수익) 3개. 나머지(보유금·미니게임·소각·검 강화·현재검)는 "기록"으로 모았다.
       const RANK_CATS = [
-        { id: "rebirth", subs: [{ period: "rebirth_king", label: "👑 환생왕" }] },
         { id: "sword", subs: [{ period: "sword", label: "⚔️ 배틀" }] },
         { id: "void", subs: [{ period: "void", label: "🌌 최고 웨이브" }] },
-        { id: "wealth", subs: [{ period: "wealth_monthly", label: "📈 월간 수익" }] },
+        { id: "rebirth", subs: [{ period: "rebirth_king", label: "👑 환생왕" }] },
         { id: "nh", subs: [{ period: "nh_season", label: "🛸 네온 호드" }] },
         {
           id: "records",
           subs: [
+            { period: "wealth_monthly", label: "📈 월간 수익" },
             { period: "wealth_money", label: "💰 보유금" },
             { period: "weekly", label: "🎮 주간" },
             { period: "monthly", label: "🎮 월간" },
@@ -25521,6 +25528,7 @@
           totalEarned: getSeasonEarned(), // 랭킹·서버 검증용: 환생해도 줄지 않는 시즌 누적 수입
           lifeEarned: totalEarned, // 이번 생(환생 후)의 수입
           seasonRebirths,
+          rebirthFixed: true,
           missionMonth,
           missionRebirths,
           missionClaims,
@@ -25857,21 +25865,6 @@
         }
         mansionLevel = num("mansionLevel", mansionLevel, 0, 1000, true);
         rebirthCount = num("rebirthCount", rebirthCount, 0, 100000, true);
-        // 예전 저장본은 지금까지의 환생 횟수만큼 시즌 환생 횟수로 소급 적용(최대 15회)
-        seasonRebirths =
-          data.seasonRebirths !== undefined && data.seasonRebirths !== null
-            ? Math.max(0, Math.floor(Number(data.seasonRebirths) || 0))
-            : Math.min(PRESTIGE_MAX_STEPS, rebirthCount);
-        missionMonth =
-          typeof data.missionMonth === "string" ? data.missionMonth.slice(0, 7) : "";
-        missionRebirths = Math.max(0, Math.floor(Number(data.missionRebirths) || 0));
-        missionClaims = Array.isArray(data.missionClaims)
-          ? data.missionClaims
-              .filter((x) => typeof x === "string")
-              .map((x) => x.slice(0, 24))
-              .slice(-40)
-          : [];
-        syncMissionMonth();
         if (fixed.length)
           console.warn(
             "불가능한 저장 값을 범위 안으로 되돌렸어요:",
@@ -25899,6 +25892,27 @@
             totalEarned = savedTotal;
             seasonBase = 0;
           }
+        }
+        {
+          // 시즌 환생 횟수/월간 미션 불러오기
+          const rbLifetime = Math.max(0, Math.floor(Number(data.rebirthCount) || 0));
+          seasonRebirths =
+            data.seasonRebirths !== undefined && data.seasonRebirths !== null
+              ? Math.max(0, Math.floor(Number(data.seasonRebirths) || 0))
+              : Math.min(PRESTIGE_MAX_STEPS, rbLifetime); // 예전 저장본: 지금까지의 환생 횟수만큼 소급(최대 15회)
+          // [복구] 이전 빌드의 불러오기 버그로 횟수가 0으로 덮어써진 저장본을 한 번 되살린다
+          if (!data.rebirthFixed)
+            seasonRebirths = Math.max(seasonRebirths, Math.min(PRESTIGE_MAX_STEPS, rbLifetime));
+          missionMonth =
+            typeof data.missionMonth === "string" ? data.missionMonth.slice(0, 7) : "";
+          missionRebirths = Math.max(0, Math.floor(Number(data.missionRebirths) || 0));
+          missionClaims = Array.isArray(data.missionClaims)
+            ? data.missionClaims
+                .filter((x) => typeof x === "string")
+                .map((x) => x.slice(0, 24))
+                .slice(-40)
+            : [];
+          syncMissionMonth();
         }
         stageIndex = data.stageIndex || 0;
         baseClickValue = data.baseClickValue || 1;
@@ -28146,8 +28160,8 @@
       switchMap(currentMap);
     </script>
       <script src="ui-v2.js?v=2026101412"></script>
-    <script src="ui-v3.js?v=2026112405"></script>
-    <script src="nh-exchange.js?v=2026112405"></script>
-    <script src="tap-fx.js?v=2026112405"></script>
+    <script src="ui-v3.js?v=2026112406"></script>
+    <script src="nh-exchange.js?v=2026112406"></script>
+    <script src="tap-fx.js?v=2026112406"></script>
   </body>
 </html>
