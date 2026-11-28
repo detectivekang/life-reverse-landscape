@@ -24,7 +24,7 @@
       // 배포(파일 교체 후 git push)할 때마다 아래 CURRENT_VERSION 숫자만 바꿔주면 됩니다(현재 시간 등 아무 값이나 이전과 다르면 됨).
       // 접속 시 캐시를 무시하고 서버의 실제 최신 파일을 확인해서, 버전이 다르면 자동으로 한 번 새로고침합니다.
       (function () {
-        var CURRENT_VERSION = "2026112406";
+        var CURRENT_VERSION = "2026112407";
         try {
           if (sessionStorage.getItem("lrVersionChecked") === CURRENT_VERSION)
             return;
@@ -14994,6 +14994,13 @@
       // 간주해 배지를 띄우고, 기존 유저가 접속하면 자동으로 한 번 띄워준다.
       const patchNotes = [
         {
+          version: "2026112407",
+          date: "2026-11-25",
+          items: [
+            "👑 환생한 직후에도 <b>환생왕 랭킹에 바로 반영</b>되도록 고쳤어요. 환생하면 서버에 곧바로 저장하고, 환생왕 탭을 열 때도 최신 기록을 먼저 올려요",
+          ],
+        },
+        {
           version: "2026112406",
           date: "2026-11-25",
           items: [
@@ -17939,7 +17946,7 @@
         setTimeout(checkMissions, 2600);
         setTimeout(() => mascotSay(MASCOT_LINES.rebirth), 900);
         beginFateSelection(true);
-        saveGame();
+        saveGame({ cloudNow: true }); // 환생왕 랭킹용: 환생 직후 서버에도 바로 올린다(20초 이내)
         updateTalentPointBadge();
       }
 
@@ -19527,6 +19534,15 @@
         });
         return promise;
       }
+      let lastRebirthRankSync = 0;
+      async function syncRebirthBeforeRank() {
+        if (!currentUser || !db || missionRebirths <= 0) return;
+        if (Date.now() - lastRebirthRankSync < 20000) return;
+        lastRebirthRankSync = Date.now();
+        saveGame({ cloudNow: true });
+        await new Promise((r) => setTimeout(r, 1800));
+        rebirthCache = null;
+      }
       async function renderRebirthCard() {
         const card = document.getElementById("myRankCard");
         card.innerHTML = `
@@ -19543,6 +19559,7 @@
           document.getElementById("myRankPosition").textContent = "로그인하면 전체 순위를 볼 수 있어요.";
           return;
         }
+        await syncRebirthBeforeRank();
         const res = await fetchRebirthRank();
         if (currentLeaderboardPeriod !== "rebirth_king") return;
         const el = document.getElementById("myRankPosition");
@@ -19552,7 +19569,7 @@
             ? "🚧 준비 중이에요. 조금만 기다려주세요!"
             : "순위를 불러오지 못했어요.";
         else if (!res.me) {
-          el.textContent = "이번 시즌 환생 기록이 아직 없어요. 환생하면 순위에 올라요! (저장 후 최대 30초)";
+          el.textContent = "이번 시즌 환생 기록이 아직 없어요. 환생하면 순위에 올라요! (환생 후 서버에 저장되면 바로 반영돼요)";
           renderSeasonGradeLine("rebirth_king", null);
         } else {
           el.textContent = `📍 전체 ${res.total.toLocaleString("ko-KR")}명 중 ${res.me.rank.toLocaleString("ko-KR")}위 · 환생 ${Number(res.me.score).toLocaleString("ko-KR")}회`;
@@ -19562,6 +19579,7 @@
       async function renderRebirthList() {
         const lbEl = document.getElementById("leaderboardList");
         lbEl.innerHTML = `<p style="font-size:11px; color:var(--paper-dim);">불러오는 중...</p>`;
+        await syncRebirthBeforeRank();
         const res = await fetchRebirthRank();
         if (currentLeaderboardPeriod !== "rebirth_king") return;
         if (!res) {
@@ -28160,8 +28178,8 @@
       switchMap(currentMap);
     </script>
       <script src="ui-v2.js?v=2026101412"></script>
-    <script src="ui-v3.js?v=2026112406"></script>
-    <script src="nh-exchange.js?v=2026112406"></script>
-    <script src="tap-fx.js?v=2026112406"></script>
+    <script src="ui-v3.js?v=2026112407"></script>
+    <script src="nh-exchange.js?v=2026112407"></script>
+    <script src="tap-fx.js?v=2026112407"></script>
   </body>
 </html>
